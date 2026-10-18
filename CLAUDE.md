@@ -12,6 +12,10 @@ Engine behavior that took a capture, a crash, or a source read to find, and that
 
 Feature and tool work follows [plans/README.md](plans/README.md).
 
+## Research
+
+[research/README.md](research/README.md) indexes notes on radiance cascades and related GI techniques. Check it before designing a feature.
+
 ## GDScript
 
 Read [.claude/rules/gdscript.md](.claude/rules/gdscript.md) before creating a `.gd` file.

@@ -1,0 +1,49 @@
+# DexRT: sparse, mipmapped tracing for radiance cascades
+
+| | |
+|---|---|
+| Author | Christopher Osborne |
+| Date | 2025-11 (arXiv) |
+| Kind | Paper, plus the DexRT code (C++20, Apache 2.0) |
+| Link | https://arxiv.org/abs/2511.08498 (published as "A Simple Ray Acceleration Structure for Non-LTE Radiative Transfer", RASTI, https://doi.org/10.1093/rasti/rzaf055), code https://github.com/Goobley/DexRT |
+| Related | [2024_osborne_radiance_cascades_radiative_transfer.md](2024_osborne_radiance_cascades_radiative_transfer.md) |
+
+DexRT is the astrophysics RC solver. This paper speeds up its interval tracing about 8× by letting each cascade march a coarser mip of the scene and by skipping empty blocks with a hierarchical DDA. The domain is solar plasma, but the tracing scheme carries over to a voxel scene for graphics, and the code shows the merge variants and memory tricks in a mature, tested form.
+
+## Scene representation
+
+- The volume is split into blocks (16² in 2D, 8³ in 3D). Each block has one 3-bit state: empty, or the highest mip level it may be sampled at. 21 states pack into one 64-bit word, so a 512² model needs 392 bytes of block map.
+- Each mip averages 2×2 (or 2×2×2) children of the level below. Mip storage is allocated only for active blocks, in Morton order, which costs 1.33× the base level in 2D and 1.14× in 3D.
+- **Variance-limited mipmapping:** a parent is accepted only if its children agree. The test is the index of dispersion `|Var/Mean|` of `ln(χ·Δs)` and of `ln(η·Δs)` over the children, limit 1.0, checked only when some child has optical depth `χ·Δs > 0.25` (thin regions always average). A block's level rises only while every parent in it passes. This keeps sharp structure at full resolution and lets smooth or thin regions coarsen.
+- **Per-cascade mip cap:** cascade `n` may sample at most mip `[0, 0, 1, 2, 3, 4][n]`. Near intervals keep full resolution; far intervals read coarse proxies, which is where most of the run time goes.
+
+## Tracing
+
+- Hierarchical DDA (Museth 2014): step through cells whose size is `2^level` of the current block, jump whole blocks when empty, and recompute the cell and next-plane distances when the level changes. Each segment gets its exact path length, so no fixed-step oversampling.
+- Per segment with constant emission and opacity: `I = I·exp(−τ) + (η/χ)·(1 − exp(−τ))`, with `τ = χ·dt` and `1 − exp(−τ)` computed with `expm1` for precision.
+- Robustness: entering an empty region pushes `t` forward by 0.01 cell; the next-plane `t` must always exceed the current `t`; a level change adds 1e−3. Negative coordinates use an arithmetic shift, not division, so `−1 >> 4 = −1`.
+- Intervals are marched from the far end toward the probe.
+
+## Cascades (2D defaults)
+
+- Cascade 0: one probe per cell, interval 1.5 cells, 4 azimuth directions times 4 inclinations. Branching factor 2: probes halve per axis, directions ×4, interval end ×4 (`[0, 1.5], [1.5, 6], [6, 24], …`), so every cascade has the same memory. Six cascades; the top one is extended to 2×10⁴ cells so it reaches the boundary.
+- **Ping-pong storage:** only two cascade buffers, each sized for the largest cascade, alternate between read and write during the top-down merge.
+- **Direction-by-direction:** cascade 0's 4 directions are processed as 4 separate passes through all cascades, each pass storing only the upper directions that descend from one cascade 0 direction. Storage drops to a quarter. It cannot be combined with the parallax fixes, which read neighboring directions.
+- Upper probe `k` sits at `(2k + 1)·2^n` and lower probe `c` at `(c + 0.5)·2^n`, so bilinear fractions are 0.25 or 0.75; the first row and column clamp to weight 1.
+
+## Merge variants in the code
+
+| Variant | What it does | Note in the code |
+|---|---|---|
+| Vanilla (default) | trace once; upper value is the bilinear mix of 4 upper probes times the mean of 4 upper directions | rings around small, bright, optically thick sources |
+| BilinearFix | for each of the 4 upper probes, re-trace from this ray's start to that probe's interval start (taken along its middle child direction), merge with that probe only, then weight bilinearly | "near-exact" at 4× the rays |
+| ParallaxFix | interpolate the upper direction toward the ray's end point | applied only above cascade 1, since the lowest cascades have their own artifacts; adding a commented-out alternative direction caused ringing |
+| ParallaxFixInner | second pass that needs stored optical depth per texel | doubles cascade memory |
+
+## 3D settings
+
+The 3D solver uses blocks of 8³, a cascade 0 interval of 6 cells, 12 azimuth rays from a HEALPix order 1 sphere with ×4 per cascade, and interval ends that **double** per cascade (`6·2^n`), not quadruple. The 3D merge uses 8 trilinear corners and 4 upper rays; a trilinear fix exists but is turned off.
+
+## Results
+
+On a 512×768 prominence model with 880 wavelengths (RTX 4070), sparsity plus mips cut one iteration from 95 s to 11.8 s (8×), with the 99.9th percentile error under 0.5% and a peak of about 12% in a few cells. Mipmapping alone gave 3.5×; sparsity alone gave 1.5× on this half-empty model.
