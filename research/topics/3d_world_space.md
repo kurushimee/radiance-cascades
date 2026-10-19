@@ -33,7 +33,7 @@ World-space RC stores its probes in the scene instead of on the screen. It sees 
   - [A simple lock-free GPU hash table](#a-simple-lock-free-gpu-hash-table)
   - [GPUSorting](#gpusorting)
   - [Morton codes](#morton-codes)
-  - [What carries to `RenderingDevice`](#what-carries-to-renderingdevice)
+  - [In Godot's `RenderingDevice`](#in-godots-renderingdevice)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
 - [Open questions](#open-questions)
@@ -203,7 +203,7 @@ The key layouts in use:
 
 Sources: [Split RC](../sources/2026_freeman_split_radiance_cascades.md#implementation-details), [implementations](3d_world_space_implementations.md), [sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#probe-placement-and-levels-of-detail).
 
-**Under `RenderingDevice`** the Vulkan driver enables no 64-bit atomics ([RenderingDevice notes](../../docs/rendering_device.md)), so Split RC's 64-bit compare-and-swap is not available. Two existing layouts already avoid it: wroughtinator's native build splits the key across 32-bit words and claims a slot with a 32-bit signature and token, and the 30-bit level-plus-Z-order key fits a single word within a 512-cell window (inference).
+**Under Godot's `RenderingDevice`** the Vulkan driver enables no 64-bit atomics ([RenderingDevice notes](../../docs/rendering_device.md)), so Split RC's 64-bit compare-and-swap is not available. Two existing layouts already avoid it: wroughtinator's native build splits the key across 32-bit words and claims a slot with a 32-bit signature and token, and the 30-bit level-plus-Z-order key fits a single word within a 512-cell window (inference).
 
 ## Ray splitting
 
@@ -415,7 +415,7 @@ Every open Split RC code blends over time even though the paper's table is singl
 
 ## GPU building blocks
 
-Sparse and surfel RC designs link these for storing probes only where surfaces are: a hash table keyed by cell coordinates, a sort to group work, and Morton codes to order cells ([GPU hash tables](../sources/2026_gpu_hash_tables_and_sorting.md)). All five use only integer atomics, which `RenderingDevice` compute shaders have. Definitions are in the [glossary](supporting_techniques.md).
+Sparse and surfel RC designs link these for storing probes only where surfaces are: a hash table keyed by cell coordinates, a sort to group work, and Morton codes to order cells ([GPU hash tables](../sources/2026_gpu_hash_tables_and_sorting.md)). All five use only integer atomics, which Godot's `RenderingDevice` compute shaders also have. Definitions are in the [glossary](supporting_techniques.md).
 
 | Source | Author | Date | Link |
 |---|---|---|---|
@@ -485,7 +485,7 @@ The post caches AO hit ratios in a world-space hash table whose cells grow with 
 
 Sources: [GPU hash tables](../sources/2026_gpu_hash_tables_and_sorting.md).
 
-### What carries to `RenderingDevice`
+### In Godot's `RenderingDevice`
 
 - The AO cache and nosferalatu's table need only 32-bit compare-and-swap and add, so they port directly; Split RC's 64-bit keys do not (no 64-bit atomics in Godot's Vulkan driver, [RenderingDevice notes](../../docs/rendering_device.md)).
 - The AO post's 16-bit packed counters overflow at 65,535 samples; RC deposits as fixed-point sums need the same care, which wroughtinator handles with a scale of 4096 and a clamp at 16, and the Unreal port with `uint(value·10000)` (inference).
@@ -508,9 +508,9 @@ Sources: [GPU hash tables](../sources/2026_gpu_hash_tables_and_sorting.md).
 
 - **Split RC is the evidence.** It is the first full world-space 3D RC with a published evaluation and the only one with a published single-frame evaluation: 8.6 ms in Sponza and 11.5 ms in San Miguel on an RTX 3080 Laptop with hardware RT and fp32 storage, one diffuse bounce, no temporal reuse. Sannikov's sparse videos (60 to 100 fps, then 60 fps with hardware RT, all from scratch) point the same way without numbers, and Blackline's single-frame results without RT hardware come from a surface atlas, not a world grid ([surface probes](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive)).
 - **Its noise floor is the cascade 0 near field.** With one ray per pixel, each direction cell gets `s = A/16` rays per frame for an `A`-pixel probe: one ray at 4×4-pixel probes, so cascade 0's transmittance is binary per direction in a frame, while far light is averaged over `s·4^n` rays (derived). The single-frame levers are bigger probes (more `s`, less detail), more rays per pixel (which grew cost 11× for 3× rays in one build), and a cascade −1 for contact light.
-- **Without hardware ray queries the trace dominates.** Scaling by the measured 3.5 to 4× software penalty puts Sponza's trace at 4.5 to 5.2 ms and San Miguel's at 15.8 to 18.0 ms (derived), against a 1.3 to 4.5 ms deposit and merge budget. A compute tracer whose cost grows slowly with ray length (a BVH or a hierarchical DDA, [scene representation](scene_representation_and_tracing.md)) is a precondition for splitting under `RenderingDevice`; with a fixed-step marcher, per-probe tracing on filtered proxies is the consistent alternative (inference).
+- **Without hardware ray queries the trace dominates.** Scaling by the measured 3.5 to 4× software penalty puts Sponza's trace at 4.5 to 5.2 ms and San Miguel's at 15.8 to 18.0 ms (derived), against a 1.3 to 4.5 ms deposit and merge budget. A compute tracer whose cost grows slowly with ray length (a BVH or a hierarchical DDA, [scene representation](scene_representation_and_tracing.md)) is a precondition for splitting under Godot's `RenderingDevice`; with a fixed-step marcher, per-probe tracing on filtered proxies is the consistent alternative (inference).
 - **The atomics have to be 32-bit.** Hash keys must fit 32-bit words or a multi-word slot (wroughtinator's five-word slots), and deposits must be fixed-point integer sums with a clamp, since Godot's driver has neither float nor 64-bit atomics ([RenderingDevice notes](../../docs/rendering_device.md)).
-- **No CPU round trips.** chandra reads probe and ray counts back to the CPU twice per frame to size dispatches; a single-frame Godot pipeline sizes them with indirect dispatch arguments written on the GPU, as wroughtinator's compaction does (inference).
+- **No CPU round trips.** chandra reads probe and ray counts back to the CPU twice per frame to size dispatches; a single-frame pipeline sizes them with indirect dispatch arguments written on the GPU, as wroughtinator's compaction does and as Godot's `RenderingDevice` supports (inference).
 - **One bounce per frame.** Split RC's multi-bounce feeds a coarser secondary cache over frames. A single-frame second bounce needs a second solve, and the measurements give no figure for it; one bounce plus an ambient or sky term is the single-frame baseline (inference).
 - **Dense grids are out for whole scenes.** At 128³ and 32 directions a dense stack is 1 GiB in fp16 and 132 M rays (derived). A 32³ to 64³ local volume (16 to 252 MiB) fits memory and could light a bounded fog region ([volumetric](volumetric_and_radiative_transfer.md)).
 - **Leaks without history.** Ray splitting removes probes firing from inside walls for free; merge leaks then need a binary parent test, of which the one-bit hit mask (+50% merge time) and the parent hit-distance test (free) need no extra rays (inference).

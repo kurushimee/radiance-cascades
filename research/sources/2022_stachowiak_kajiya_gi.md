@@ -7,7 +7,7 @@
 | Link | https://github.com/h3r2tic/kajiya/blob/main/docs/gi-overview.md |
 | Code | https://github.com/h3r2tic/kajiya (Apache-2.0, Rust and HLSL, needs hardware ray tracing) |
 
-A research renderer's real-time GI: half-resolution ReSTIR GI for the first bounce and a sparse world irradiance cache for the rest. It needs hardware ray tracing, so none of it runs as-is in Godot's compute shaders. The draft that adds screen probes to Godot's HDDAGI names kajiya as one of its two models, and its irradiance cache answers a question world-space RC also faces: where to put sparse probes so that thin walls do not leak.
+A research renderer's real-time GI: half-resolution ReSTIR GI for the first bounce and a sparse world irradiance cache for the rest. It needs hardware ray tracing, so none of it runs as-is on a compute-only host such as Godot's `RenderingDevice`. The draft that adds screen probes to Godot's HDDAGI names kajiya as one of its two models, and its irradiance cache answers a question world-space RC also faces: where to put sparse probes so that thin walls do not leak.
 
 ## Cost
 

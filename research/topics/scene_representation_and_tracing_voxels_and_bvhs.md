@@ -130,7 +130,7 @@ From the sparse 3D builds ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#tr
 
 ### tinybvh
 
-https://github.com/jbikker/tinybvh (Jacco Bikker, MIT, read at c9be310) ships Vulkan GLSL compute kernels for each of its GPU layouts, the closest ready-made match for a `RenderingDevice` tracer; Coppen's surfel RC credits it for its traversal ([notes](../sources/2026_compute_bvh_libraries.md#tinybvh-layouts), [surface probes](3d_surface_probes.md)).
+https://github.com/jbikker/tinybvh (Jacco Bikker, MIT, read at c9be310) ships Vulkan GLSL compute kernels for each of its GPU layouts, the closest ready-made match for a GLSL compute tracer without hardware ray tracing, such as one under Godot's `RenderingDevice`; Coppen's surfel RC credits it for its traversal ([notes](../sources/2026_compute_bvh_libraries.md#tinybvh-layouts), [surface probes](3d_surface_probes.md)).
 
 | Layout | Node | Child bounds | Triangles | Built from |
 |---|---|---|---|---|
@@ -186,7 +186,7 @@ Wicked Engine (János Turánszki, MIT; `wiGPUBVH.cpp`, the `bvh_*CS.hlsl`, `rayt
 
 **DDGI with it:** each probe gets 4 to 512 rays per frame in steps of 4, scaled by its measured inconsistency and cut to a tenth outside the view frustum (512 for every probe on the first frame), on a spherical Fibonacci set rotated randomly each frame. A hit loads the full surface, samples one random light with a shadow ray, adds last frame's probe irradiance for more bounces, multiplies by albedo and adds emission. Radiance is clamped to the half-float range before storing, because a bright sky turned into NaN in firefly suppression. No timings are given anywhere in the code.
 
-Every pass is a plain compute dispatch with integer atomics, which `RenderingDevice` supports, so this is the template for dynamic triangle scenes without hardware ray tracing in Godot, and it removes the CPU rebuild that makes gomezzz reset its history when meshes move (inference).
+Every pass is a plain compute dispatch with integer atomics, which Godot's `RenderingDevice` supports, so it is a template for dynamic triangle scenes without hardware ray tracing, and it removes the CPU rebuild that makes gomezzz reset its history when meshes move (inference).
 
 ### BVH width and ray coherence
 
@@ -198,7 +198,7 @@ The claim that a binary BVH beat an 8-wide compressed BVH by 2× for SPWI becaus
 | RX 5700 XT (after a May 2026 NVIDIA driver update the GPU formats came out close) | 1093 MRays/s | 1072 | 858 |
 | RTX 5080 laptop | 2.8 G rays/s | 1.9 G | 1.4 G |
 
-The maintainer puts CWBVH's deficit down to its OpenCL traversal code, which lost the CUDA original's shared-memory stack, says OpenCL needs separate paths per vendor and that BVH2 is the clear winner on Apple, and keeps CWBVH mostly for history; incoherent rays were not tested. The issue therefore supports BVH2 for coherent rays in tinybvh's OpenCL code, with the cause given as traversal code, not ray coherence alone. Smaller BVH stacks saved a few ms on an M2. A binary BVH beat wide BVHs for coherent RC rays in the sparse builds too ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#tracing-without-hardware-rt)). For GLSL compute under Godot, tinybvh's 2-wide `tiny.comp` is the lowest-risk starting point (inference).
+The maintainer puts CWBVH's deficit down to its OpenCL traversal code, which lost the CUDA original's shared-memory stack, says OpenCL needs separate paths per vendor and that BVH2 is the clear winner on Apple, and keeps CWBVH mostly for history; incoherent rays were not tested. The issue therefore supports BVH2 for coherent rays in tinybvh's OpenCL code, with the cause given as traversal code, not ray coherence alone. Smaller BVH stacks saved a few ms on an M2. A binary BVH beat wide BVHs for coherent RC rays in the sparse builds too ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#tracing-without-hardware-rt)). For GLSL compute, as under Godot, tinybvh's 2-wide `tiny.comp` is the lowest-risk starting point (inference).
 
 ### Other software BVHs in RC projects
 

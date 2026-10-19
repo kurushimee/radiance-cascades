@@ -7,7 +7,7 @@
 | Venue | GDC 2023 |
 | Slides | https://media.gdcvault.com/gdc2023/Slides/HSGI+Cross-Platform_Jiaxuan_Zhang.pdf (90 pages) |
 
-Not RC. HSGI is a dynamic GI for huge open worlds with moving geometry, running on PC, consoles and phones. Its "surfels" are voxels with a normal, held in a sparse brick clipmap and traced with a hierarchical DDA, the same structure as Godot's HDDAGI. It matters here for three things an RC build in Godot also needs: a voxel radiance cache filled from the lit screen, a cheap per-object voxelization by rasterization, and a measured mobile budget.
+Not RC. HSGI is a dynamic GI for huge open worlds with moving geometry, running on PC, consoles and phones. Its "surfels" are voxels with a normal, held in a sparse brick clipmap and traced with a hierarchical DDA, the same structure as Godot's HDDAGI. It bears on three things a world-space RC build also needs: a voxel radiance cache filled from the lit screen, a cheap per-object voxelization by rasterization, and a measured mobile budget.
 
 ## Voxel radiance cache
 

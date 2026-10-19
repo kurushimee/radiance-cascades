@@ -1,6 +1,6 @@
 # Single-frame 3D radiance cascades
 
-What the whole body of research says about 3D global illumination from radiance cascades alone, computed from scratch every frame with no temporal accumulation and no denoiser, for a Godot `RenderingDevice` implementation. Each conclusion names the evidence it rests on and links the topic that holds it. Conclusions drawn here, not stated in any source, are marked "inference" or "derived" as in the other topics.
+What the whole body of research says about 3D global illumination from radiance cascades alone, computed from scratch every frame with no temporal accumulation and no denoiser, including what Godot's `RenderingDevice` allows as a host. Each conclusion names the evidence it rests on and links the topic that holds it. Conclusions drawn here, not stated in any source, are marked "inference" or "derived" as in the other topics.
 
 ## Contents
 
@@ -67,7 +67,7 @@ Sannikov's two sparse 3D videos (60 to 100 fps with a screen-space marcher, 60 f
 
 The systems that do not run in one frame are informative too: Love and Deepspace converges each bounce over 28 frames, Coppen's surfel probes fill over at least 32 frames, every open Split RC code keeps history although the paper's table is single-frame, RCPG and Reservoir Cascades accumulate by design, and every engine GI (Lumen, daGI2, Brixelizer GI, HSGI, SDFGI, HDDAGI) relies on time ([surface probes](3d_surface_probes.md#single-frame-assessment), [world-space codes](3d_world_space_implementations.md#single-frame-assessment), [sampling and guiding](rc_for_sampling_and_guiding.md#single-frame-assessment), [engine GI](related_engine_gi.md#single-frame-assessment)).
 
-**Where the evidence stands.** Single-frame RC is proven in screen space (shipped) and in world space with hardware ray tracing (one paper with a stage table). In world space with a compute tracer, the case Godot presents, the one instance is Blackline's surface-atlas build: its HUDs show 11 to 28 ms of GI on a 2019 laptop GPU without RT hardware, but there is no code or quality measurement, and nothing shown rules out history. No 3D single-frame result has been measured for quality against a reference at a known cost (inference).
+**Where the evidence stands.** Single-frame RC is proven in screen space (shipped) and in world space with hardware ray tracing (one paper with a stage table). In world space with a compute tracer, the case of hosts without ray queries such as Godot, the one instance is Blackline's surface-atlas build: its HUDs show 11 to 28 ms of GI on a 2019 laptop GPU without RT hardware, but there is no code or quality measurement, and nothing shown rules out history. No 3D single-frame result has been measured for quality against a reference at a known cost (inference).
 
 ## Where existing designs lean on time
 
@@ -91,7 +91,7 @@ Two conclusions follow (inference). First, most temporal elements are cost savin
 
 ## Design families
 
-The 3D designs fall into seven families. Each is judged here for single-frame use under `RenderingDevice`; the measurements behind the costs are in [performance](performance.md).
+The 3D designs fall into seven families. Each is judged here for single-frame use and for Godot's `RenderingDevice` as a host; the measurements behind the costs are in [performance](performance.md).
 
 ### Screen-space RC
 
@@ -99,7 +99,7 @@ Probes and intervals both live in the depth buffer, marched along screen lines w
 
 - **For:** it is the one shipped single-frame RC (PoE2), cheap at 1 to 3 ms, needs no world structure, and shares cost along screen lines like visibility-bitmask SSGI and horizon AO ([screen-space GI](related_screen_space_gi.md#connections)).
 - **Against:** off-screen and hidden light is missing, thickness behind one depth layer is a guess, and upper cascades need prefiltered depth moments to stay stable.
-- **Godot:** at PRE_OPAQUE this frame's depth and normals exist but its lit colour does not, and Forward+ has no albedo buffer ([Godot integration](godot_integration.md#buffers-in-a-callback)). In PoE2 only on-screen effects cast indirect light, point and spot lights are analytic with shadow maps, and RC adds the second bounce ([PoE2](3d_screen_space.md#path-of-exile-2)), which reads as RC gathering the directly lit screen (inference). In Godot that recipe either reads last frame's colour (a lag, with GI feeding back into the next solve) or runs after the opaque pass, where no albedo exists to multiply the result. A pure screen-space RC therefore cannot be both single-frame and correctly composited in Godot without an extra source of hit radiance (inference).
+- **In Godot:** at PRE_OPAQUE this frame's depth and normals exist but its lit colour does not, and Forward+ has no albedo buffer ([Godot integration](godot_integration.md#buffers-in-a-callback)). In PoE2 only on-screen effects cast indirect light, point and spot lights are analytic with shadow maps, and RC adds the second bounce ([PoE2](3d_screen_space.md#path-of-exile-2)), which reads as RC gathering the directly lit screen (inference). In Godot that recipe either reads last frame's colour (a lag, with GI feeding back into the next solve) or runs after the opaque pass, where no albedo exists to multiply the result. A pure screen-space RC therefore cannot be both single-frame and correctly composited in Godot without an extra source of hit radiance (inference).
 
 ### Screen probes with world intervals (SPWI)
 
@@ -107,7 +107,7 @@ Probes come from the depth buffer and rays run through a world structure ([3D sc
 
 - **For:** off-screen light is reached, three theses (Dell'Ova, Kaméus, Gavras) ran it in one frame, and with hardware RT at 1080p the cost is a few ms.
 - **Against:** tracing takes 87 to 96% of the time, so the tracer decides the cost; software traversal ran 4 to 80 times slower than DXR in the measured codes (Gavras's M1 at 0.08 to 0.38 G rays/s against 6 to 7 G on an RTX 3080, [throughput](3d_screen_space.md#ray-throughput-across-the-measured-spwi-codes-derived)). Probes re-placed each frame flicker under motion in every thesis.
-- **Godot:** needs a compute tracer and a world structure that carries albedo and emission and is lit this frame. The floor at 1080p for 4 px probes with 16 directions over 6 cascades is 12.4 M rays per frame ([budgets](performance.md#budgets-for-single-frame-3d-rc-derived)).
+- **In Godot:** it needs a compute tracer and a world structure that carries albedo and emission and is lit this frame. The floor at 1080p for 4 px probes with 16 directions over 6 cascades is 12.4 M rays per frame ([budgets](performance.md#budgets-for-single-frame-3d-rc-derived)).
 
 ### Sparse world probes near surfaces (Split RC)
 
@@ -115,7 +115,7 @@ Probes sit in world space at a level of detail chosen per pixel, stored in hash 
 
 - **For:** the only published single-frame world-space RC with a stage table, 8.6 to 11.5 ms with hardware RT; probes sit on world grid cells and move only when a cell changes level of detail, so most of the error pattern stays fixed under camera motion (inference); ray splitting removes probes inside walls for free; cost is steady across scenes because LODs fix the probe count.
 - **Against:** the deposit costs more than the trace with hardware RT (2.2 against 1.3 ms in Sponza), cascade 0 rests on `s = A/16` rays per direction per frame, and contact detail needs a separate cascade −1 (1.4 ms).
-- **Godot:** 32-bit integer atomics with fixed-point deposits, multi-word hash slots and indirect dispatch sized on the GPU all map onto `RenderingDevice` ([world space](3d_world_space.md#single-frame-assessment)). Without hardware ray queries the trace grows to an estimated 4.5 to 5.2 ms in Sponza and 15.8 to 18.0 ms in San Miguel (derived there).
+- **In Godot:** 32-bit integer atomics with fixed-point deposits, multi-word hash slots and indirect dispatch sized on the GPU all map onto `RenderingDevice` ([world space](3d_world_space.md#single-frame-assessment)). Without hardware ray queries the trace grows to an estimated 4.5 to 5.2 ms in Sponza and 15.8 to 18.0 ms in San Miguel (derived there).
 
 ### Dense and clipmap world grids
 
@@ -123,7 +123,7 @@ Probes on a regular grid or nested clipmap, every cascade stored ([3D world spac
 
 - **For:** simple indexing, hardware trilinear lookups, world-locked, and the natural form for volumetrics.
 - **Against:** memory scales with volume: 128³ with 32 directions is about 1 GiB in fp16 and 130 M rays per frame, while 32³ to 64³ fits in 16 to 124 MiB (derived, [budgets](performance.md#budgets-for-single-frame-3d-rc-derived)). Probes inside walls need validity rules, and 8-probe interpolation leaks through thin walls.
-- **Godot:** gomezzz's dense Godot solver stops near a 64³ grid at its layout; Vulkan guarantees only 128 MiB per storage buffer ([Godot projects](godot_projects.md#single-frame-assessment)). Fits a bounded volume (a room, a fog region), not a whole open scene.
+- **In Godot:** gomezzz's dense Godot solver stops near a 64³ grid at its layout; Vulkan guarantees only 128 MiB per storage buffer ([Godot projects](godot_projects.md#single-frame-assessment)). Fits a bounded volume (a room, a fog region), not a whole open scene.
 
 ### Hybrids: screen near field, world far field
 
@@ -131,7 +131,7 @@ A screen-space layer for contact detail over world probes for the far field: Egg
 
 - **For:** every hybrid puts the world representation where the screen fails; EggyStudio runs at 0.59 to 1.00 ms and under 10 MB at 800×450, creikey at 0.76 ms at 640×360.
 - **Against:** two representations must agree at the hand-off, which every engine system tunes by hand ([engine GI](related_engine_gi.md#connections)), and the measured hybrids settle over frames (EggyStudio in 5) or were not measured for quality.
-- **Godot:** the screen layer runs at PRE_OPAQUE on depth and normals; its hits read the world layer's same-frame radiance, which removes the lit-colour problem of pure screen-space RC (inference).
+- **In Godot:** the screen layer runs at PRE_OPAQUE on depth and normals; its hits read the world layer's same-frame radiance, which removes the lit-colour problem of pure screen-space RC (inference).
 
 ### Surface probes
 
@@ -148,13 +148,13 @@ Surfels or UV charts carry the probes ([3D surface probes](3d_surface_probes.md)
 
 ### The families compared
 
-| Family | Single-frame evidence | Hardware RT used | Memory at 1080p | Main single-frame risk | Godot fit (inference) |
+| Family | Single-frame evidence | Hardware RT used | Memory at 1080p | Main single-frame risk | Fit to Godot's `RenderingDevice` (inference) |
 |---|---|---|---|---|---|
 | Screen-space RC | shipped (PoE2) | no | tens of MB | off-screen light, hit radiance at PRE_OPAQUE | near-field layer only |
 | SPWI | three theses | yes, except Gavras (M1, software traversal) | 24 MB to 3.6 GB (Dell'Ova) | tracer throughput, probe flicker | needs a fast compute tracer |
-| Sparse world probes | Split RC | yes | not reported | deposit atomics, cascade 0 noise, compute trace cost | strongest world-space candidate |
+| Sparse world probes | Split RC | yes | not reported | deposit atomics, cascade 0 noise, compute trace cost | the strongest world-space fit |
 | Dense or clipmap grid | jumeder, creikey | mixed | 16 MiB (32³) to 1 GiB (128³) | memory, wall leaks | bounded regions, volumetrics |
-| Hybrid screen plus world | EggyStudio, creikey | no | under 10 MB to 12 MiB | hand-off tuning, unmeasured quality | matches the engine's own plan |
+| Hybrid screen plus world | EggyStudio, creikey | no | under 10 MB to 12 MiB | hand-off tuning, unmeasured quality | matches reduz's plan for Godot |
 | Surface probes | observed only (Blackline's HUDs, closed code) | no (Blackline's compute BVH) | 423 MiB (Coppen); 722 MB to 3.7 GB of VRAM in all (Blackline) | probe convergence (surfels); atlas generation, seams and contact shadows (atlas) | an atlas as the world part; tracing proxies |
 | 3D HRC | none | no | 1 to 1.8 GB at 64³ | memory | out |
 
@@ -162,16 +162,16 @@ The evidence favours a hybrid of a screen-space near field over world-locked wor
 
 ## Budgets
 
-The detailed tables are in [performance](performance.md#budgets-for-single-frame-3d-rc-derived). The figures that set the design:
+The detailed tables are in [performance](performance.md#budgets-for-single-frame-3d-rc-derived). The figures that bound a single-frame design:
 
-- **Ray throughput is the number to plan with.** Tracing is 87 to 96% of SPWI time, and a single-frame RC spends on rays what other systems spend on denoising and history ([3D screen space](3d_screen_space.md#connections), [engine GI](related_engine_gi.md#connections)). Measured rates range from 6 to 8 G rays/s for hardware RT on short coherent rays to 0.08 G rays/s for software traversal of Sponza on an M1, with compute BVH and voxel DDA figures at 2.8 to 3.9 G rays/s ([performance](performance.md#normalized-throughput-derived)).
+- **Ray throughput sets the cost.** Tracing is 87 to 96% of SPWI time, and a single-frame RC spends on rays what other systems spend on denoising and history ([3D screen space](3d_screen_space.md#connections), [engine GI](related_engine_gi.md#connections)). Measured rates range from 6 to 8 G rays/s for hardware RT on short coherent rays to 0.08 G rays/s for software traversal of Sponza on an M1, with compute BVH and voxel DDA figures at 2.8 to 3.9 G rays/s ([performance](performance.md#normalized-throughput-derived)).
 - **At 1080p in 4 ms,** a compute tracer at 1 to 3 G rays/s affords 4 to 12 M rays. That covers screen probes at 8 px spacing (3.1 M rays) or 4 px spacing (12.4 M) with 16 cascade 0 rays and 6 cascades, or 2 to 6 rays per pixel in a splitting design (2.07 M rays per ray per pixel), but not a dense 128³ grid (130 M) (derived).
 - **Memory is not the limit for screen-anchored and sparse designs:** 1080p screen probes at 4 px spacing with 16 directions need 95 MiB for six cascades in RGBA16F, 32 MiB with two live cascades, and 35.6 MiB for six cascades with pre-averaged storage above cascade 0, the order of Dell'Ova's 34 MB (derived). Dense grids are the exception.
 - **Reference budgets:** Lumen holds GI and reflections to 4 ms at 60 fps on PS5; HDDAGI's light update and probe trace take 0.93 ms on a GTX 1650; Godot's AO passes cost 0.7 to 1.45 ms on an RTX 2070, a budget a screen-space RC layer replaces ([engine GI](related_engine_gi.md), [Godot integration](godot_integration.md), [Godot projects](godot_projects.md#connections)).
 
 ## Tracing and scene representation under `RenderingDevice`
 
-- **The tracer is a compute shader.** Compute shaders cannot issue ray queries in Godot 4.7.2, and the ray tracing pipeline is experimental, Vulkan-only and fails on indexed geometry in release builds ([RenderingDevice notes](../../docs/rendering_device.md#ray-tracing)). Every hardware-RT figure above overstates the throughput a Godot compute build can reach (inference).
+- **The tracer is a compute shader.** Compute shaders cannot issue ray queries in Godot 4.7.2, and the ray tracing pipeline is experimental, Vulkan-only and fails on indexed geometry in release builds ([RenderingDevice notes](../../docs/rendering_device.md#ray-tracing)). Every hardware-RT figure above overstates the throughput a compute tracer under `RenderingDevice` reaches (inference).
 - **Exact near, coarse far.** Cascade 0 decides contact shadows and leaks and needs an exact structure (triangles, fine voxel bits, or the depth buffer for a screen near field); upper cascades can march coarse mips with directional opacity, which gave DexRT 3.5× from mips alone ([scene representation](scene_representation_and_tracing.md#single-frame-assessment), [volumetric](volumetric_and_radiative_transfer.md#marching-on-mips)).
 - **Segment length picks the structure.** Grids and fields with empty-space skipping win on short segments, BVHs and hardware RT on long divergent rays, and RC's segments grow 2 to 4 times per cascade ([scene representation](scene_representation_and_tracing.md#connections)).
 - **Compute routes exist for every family:** JFA or `InterlockedMin` distance fields, HDDA over 32-bit bitmask words, a GPU LBVH with integer atomics and indirect dispatch, and tinybvh's GLSL kernels ([scene representation](scene_representation_and_tracing.md#single-frame-assessment)). The only figure under `RenderingDevice` is a floor: gomezzz's BVH tracer fits 2.34 M segments into a 6.24 ms frame, at least 0.375 G segments per second on an RTX 4060 Ti ([Godot projects](godot_projects.md#derived-points)).
@@ -222,7 +222,7 @@ One bounce plus a sky and ambient term is the single-frame baseline every measur
 
 ## Open problems, ranked
 
-Ranked by how much each blocks the goal. Each problem states a hypothesis for the theoretical phase and the evidence that motivates it.
+Ranked by how much each limits single-frame 3D RC. Each problem states a hypothesis and the evidence that motivates it.
 
 1. **Compute tracer throughput under `RenderingDevice`.** Only a floor exists for GLSL tracing in Godot (gomezzz's 0.375 G segments per second from a whole-frame time), and every budget above depends on the real figure. *Hypothesis:* an HDDA over bitmask bricks for cascades 0 and 1 with mip marching above reaches 2 to 3 G short rays per second on mid-range desktop GPUs, enough for 8 to 12 M rays in 4 ms. *Evidence:* 15 M rays in 5 ms through 4×4×4 bit cubes, tinybvh's 2.8 G primary rays per second, DexRT's mip speedups ([scene representation](scene_representation_and_tracing.md#single-frame-assessment)).
 2. **Same-frame radiance at hits.** Godot's frame order gives neither this frame's lit colour nor its shadow maps to a solve that must feed the opaque pass. *Hypothesis:* per-frame light injection into the scene structure (one shadow ray per lit surface cell per light) costs less than shadow rays per hit, because surface cells are far fewer than RC's per-frame rays. *Evidence:* SDFGI's and HDDAGI's injection passes, the hit-shading options ([scene representation](scene_representation_and_tracing.md#shading-the-hit), [Godot integration](godot_integration.md#single-frame-assessment)).
@@ -236,4 +236,4 @@ Ranked by how much each blocks the goal. Each problem states a hypothesis for th
 10. **The hand-off in a hybrid.** *Hypothesis:* stating the screen-to-world hand-off as an RC interval boundary (length in probe sizes, pull-back on the far read) replaces the hand tuning of engine GI. *Evidence:* every engine system's hand-picked lengths ([engine GI](related_engine_gi.md#connections)).
 11. **A generated surface atlas as the world part.** *Hypothesis:* probes on the texels of an automatically generated chart atlas (one ray per texel per cascade, hemisphere directions, intervals in texels) give leak-free single-frame world-space GI at a cost set by atlas size, and a screen-space cascade −1 restores the contact shadows lost below the texel. *Evidence:* X3XfRM and yhyu13 on analytic rooms, Blackline's observed 11.4 to 18 ms of GI in Sponza on a 2019 laptop GPU, the seams of on-surface caches ([surface probes](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive)).
 
-Theory questions that do not block a first implementation but bear on a paper: whether a 3D lattice can make the extend identity exact without HRC's `O(N⁴)` memory, which interval scaling minimizes perceived error in 3D, how far irradiance gradients from each probe's own rays improve the merge's spatial interpolation, and whether a deterministic RIS merge keeps Reservoir Cascades' leak reduction without its noise ([core theory](core_theory.md#open-questions), [radiance caches](related_radiance_caches.md#open-questions), [sampling and guiding](rc_for_sampling_and_guiding.md#open-questions)).
+Theory questions that bear on the method rather than on a working system: whether a 3D lattice can make the extend identity exact without HRC's `O(N⁴)` memory, which interval scaling minimizes perceived error in 3D, how far irradiance gradients from each probe's own rays improve the merge's spatial interpolation, and whether a deterministic RIS merge keeps Reservoir Cascades' leak reduction without its noise ([core theory](core_theory.md#open-questions), [radiance caches](related_radiance_caches.md#open-questions), [sampling and guiding](rc_for_sampling_and_guiding.md#open-questions)).

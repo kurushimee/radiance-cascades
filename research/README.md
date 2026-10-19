@@ -1,12 +1,12 @@
 # Radiance cascades research
 
-Notes on radiance cascades (RC) and the techniques around them, gathered from papers, theses, talks, articles, repositories and engine source, for a Godot implementation of 3D global illumination from RC alone, computed in a single frame. `topics/` holds the synthesis by subject, with each fact stated in the topic that owns it and the conclusions drawn across sources marked as derived or inferred; `sources/` holds one note per source or group of related sources, with links; `index/` holds the lookup lists that point into both. Godot engine behavior confirmed against the engine source goes in [docs/](../docs/), not here.
+Notes on radiance cascades (RC) and the techniques around them, gathered from papers, theses, talks, articles, repositories and engine source. `topics/` holds the synthesis by subject, with each fact stated in the topic that owns it and the conclusions drawn across sources marked as derived or inferred; `sources/` holds one note per source or group of related sources, with links; `index/` holds the lookup lists that point into both. Godot engine behavior confirmed against the engine source goes in [docs/](../docs/), not here.
 
 ## Finding things
 
 | Looking for | Go to |
 |---|---|
-| What the research concludes for single-frame 3D RC | [single_frame_3d_rc.md](topics/single_frame_3d_rc.md) and the [main findings](#main-findings-for-a-godot-implementation) below |
+| What the research concludes about single-frame 3D RC | [single_frame_3d_rc.md](topics/single_frame_3d_rc.md) and the [main findings](#main-findings) below |
 | A way to fix a problem or reach a goal, when the technique's name is unknown | The goal files: [artifacts](index/goals_artifacts.md) (ringing, leaks, self-hits, depth edges, seams, aliasing, banding) · [one frame, stability, noise and detail](index/goals_single_frame.md) · [what the lighting reaches](index/goals_lighting.md) (bounces, off-screen light, specular, media, sky) · [shading, sampling and other uses](index/goals_shading_and_sampling.md) (many lights, guiding, diffuse shading, non-lighting uses) · [speed and tracing](index/goals_speed_and_tracing.md) · [memory, data structures and scale](index/goals_memory_and_scale.md) (memory, GPU structures, parameters, large worlds) · [building it](index/goals_engine.md) (Godot shading, hit lighting, moving geometry, passes, probes, porting, debugging) |
 | A named technique, algorithm, data structure, format, artifact or term | The techniques index: [0–9 to F](index/techniques_0_to_f.md) · [G to O](index/techniques_g_to_o.md) · [P to R](index/techniques_p_to_r.md) · [S to Y](index/techniques_s_to_y.md). The explanations of cross-cutting terms are in [supporting_techniques.md](topics/supporting_techniques.md) and its two parts. |
 | A project, repository, Shadertoy ID, paper, thesis, talk, video, game, engine or author | The projects index: [0–9 to E](index/projects_0_to_e.md) · [F to K](index/projects_f_to_k.md) · [L to Q](index/projects_l_to_q.md) · [R to U](index/projects_r_to_u.md) · [V to Z](index/projects_v_to_z.md) |
@@ -22,7 +22,7 @@ Start with the conclusions, then read the rest in this order.
 
 **Conclusions**
 
-1. [single_frame_3d_rc.md](topics/single_frame_3d_rc.md): what the research says about single-frame 3D RC in Godot: evidence, where designs lean on time and what replaces it, the design families judged, budgets, ranked open problems.
+1. [single_frame_3d_rc.md](topics/single_frame_3d_rc.md): what the research says about 3D RC computed in a single frame: evidence, where designs lean on time and what replaces it, the design families judged, with Godot as a host, budgets, ranked open problems.
 2. [performance.md](topics/performance.md): measured cost by domain with links to each owning topic, rays per second, time per megapixel and bytes per probe normalized across sources, and per-frame ray, time and memory budgets.
 
 **The method**
@@ -66,19 +66,19 @@ Start with the conclusions, then read the rest in this order.
 24. [history_and_landscape.md](topics/history_and_landscape.md): origins, timeline, community, adoption, positions on 3D RC, who built what.
 25. [supporting_techniques.md](topics/supporting_techniques.md): glossary of sampling and noise, direction parameterizations, resampling, and denoising and temporal reuse; parts [supporting_techniques_structures_and_tracing.md](topics/supporting_techniques_structures_and_tracing.md) (GPU data structures, ray traversal, distance fields, visibility and screen-space terms) and [supporting_techniques_transport_and_math.md](topics/supporting_techniques_transport_and_math.md) (transport and solver math, interpolation, statistics, image metrics, formats and colour, shading, GPU APIs).
 
-## Main findings for a Godot implementation
+## Main findings
 
 These summarize [single_frame_3d_rc.md](topics/single_frame_3d_rc.md), which gives the evidence for each.
 
 - **RC needs no history.** It is deterministic and its cost does not depend on light count. The temporal reuse in public code comes from host limits, cost spreading, bounce feedback and hiding aliasing, each with a same-frame replacement at a known price.
-- **Single-frame 3D RC is proven in two settings.** Path of Exile 2 ships screen-space RC at about 1 to 3 ms with no temporal reuse, and Split RC runs sparse world-space RC in 8.6 to 11.5 ms with hardware ray tracing. Neither setting is Godot's, where compute shaders cannot issue ray queries. A third, closed-source instance, Blackline Interactive's Spatium, shows 11 to 18 ms of GI in Sponza on a 2019 laptop GPU without RT hardware through what appears to be a generated surface atlas, observed on video HUDs only.
-- **The tracer decides the cost.** Tracing is 87 to 96% of RC time in Dell'Ova's screen-probe runs, and the main cost in Kung's. At 1080p a 4 ms budget buys 4 to 12 M rays at 1 to 3 G rays per second, which fits screen probes at 4 to 8 px spacing or a few rays per pixel, but not a dense 128³ grid. Under `RenderingDevice` only a floor exists: 0.375 G segments per second, from gomezzz's whole-frame time.
+- **Single-frame 3D RC is proven in two settings.** Path of Exile 2 ships screen-space RC at about 1 to 3 ms with no temporal reuse, and Split RC runs sparse world-space RC in 8.6 to 11.5 ms with hardware ray tracing. Neither runs on a host whose compute shaders cannot issue ray queries, such as Godot. A third, closed-source instance, Blackline Interactive's Spatium, shows 11 to 18 ms of GI in Sponza on a 2019 laptop GPU without RT hardware through what appears to be a generated surface atlas, observed on video HUDs only.
+- **The tracer decides the cost.** Tracing is 87 to 96% of RC time in Dell'Ova's screen-probe runs, and the main cost in Kung's. At 1080p a 4 ms budget buys 4 to 12 M rays at 1 to 3 G rays per second, which fits screen probes at 4 to 8 px spacing or a few rays per pixel, but not a dense 128³ grid. Under Godot's `RenderingDevice` only a floor exists: 0.375 G segments per second, from gomezzz's whole-frame time.
 - **The evidence favours a hybrid:** a screen-space near field over world-locked world-space cascades, sparse near surfaces, in a bounded clipmap or on a generated surface atlas. It reaches off-screen light, keeps the error pattern fixed under camera motion and gives screen hits a same-frame radiance source.
-- **Hit lighting is the Godot-specific obstacle.** At PRE_OPAQUE this frame's lit colour does not exist, Forward+ has no albedo buffer, and shadows are drawn after the PRE_OPAQUE callbacks. A single-frame solve lights its hits from emission and its own shadow rays or per-frame light injection.
+- **In Godot, hit lighting is the main obstacle.** At PRE_OPAQUE this frame's lit colour does not exist, Forward+ has no albedo buffer, and shadows are drawn after the PRE_OPAQUE callbacks. A single-frame solve lights its hits from emission and its own shadow rays or per-frame light injection.
 - **Lagged bounces have no cheap replacement.** One bounce plus a sky term is the single-frame baseline; each further bounce costs another solve.
 - **Parameters with evidence behind them:** ×4 directions and ×4 intervals per cascade, 32 cascade 0 directions, a cascade 0 interval of 1.6 to 1.7 spacings, a nested equal-area direction map, a trilinear merge with a binary visibility test, one dispatch per cascade from the top with two live buffers, 6×6 irradiance tiles, RGBA16F.
-- **The composite goes through `IRRADIANCE`,** with `E/π`, in every opaque `ShaderMaterial`; SSAO multiplies on top and should be off. Accumulation uses 32-bit integer atomics, and Vulkan guarantees only 128 MiB per storage buffer.
-- **Code to learn from:** gomezzz's Godot addon for the engine plumbing; wroughtinator's native Split RC build (one GLSL compute source, software BVH, integer atomics); HDDAGI's integer hierarchical DDA over voxel bits; Brixelizer's MIT GLSL brick tracer; tinybvh's GLSL kernels and Wicked Engine's per-frame GPU BVH.
+- **In Godot the composite goes through `IRRADIANCE`,** with `E/π`, in every opaque `ShaderMaterial`; SSAO multiplies on top and should be off. Accumulation uses 32-bit integer atomics, and Vulkan guarantees only 128 MiB per storage buffer.
+- **The most reusable code:** gomezzz's Godot addon for RC plumbing in Godot; wroughtinator's native Split RC build (one GLSL compute source, software BVH, integer atomics); HDDAGI's integer hierarchical DDA over voxel bits; Brixelizer's MIT GLSL brick tracer; tinybvh's GLSL kernels and Wicked Engine's per-frame GPU BVH.
 
 ## Sources
 

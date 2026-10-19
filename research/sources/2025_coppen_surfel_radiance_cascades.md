@@ -8,7 +8,7 @@
 | Link | https://github.com/mxcop/src-dgi and https://m4xc.dev/articles/surfel-maintenance/ |
 | License | MIT |
 
-The repository is a Vulkan implementation written in Slang (compiled to SPIR-V) inside a custom C++ engine named "wyre" in the source. It is not a Godot project. It keeps six cascades of surfel probes, where cascade 0 has 262,144 probes and each later cascade has a quarter as many. Each probe holds a 4x4 to 128x128 grid of directional intervals, which are ray traced against the scene BVH, merged from the coarsest cascade down, and finally gathered per pixel from cascade 0.
+The repository is a Vulkan implementation written in Slang (compiled to SPIR-V) inside a custom C++ engine named "wyre" in the source. It keeps six cascades of surfel probes, where cascade 0 has 262,144 probes and each later cascade has a quarter as many. Each probe holds a 4x4 to 128x128 grid of directional intervals, which are ray traced against the scene BVH, merged from the coarsest cascade down, and finally gathered per pixel from cascade 0.
 
 ## Contents
 

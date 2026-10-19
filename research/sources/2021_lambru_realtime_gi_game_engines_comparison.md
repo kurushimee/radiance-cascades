@@ -57,5 +57,5 @@ Screen-space methods give the sharpest glossy reflections and acceptable AO but 
 ## For RC
 
 - The frame rates are whole-frame figures with shadows and AO, so per-technique cost is not separable; at 1080p they span about 7 to 19 ms for voxel cone tracing with per-frame voxelization (64³ to 512³), 9.0 and 14.7 ms for LPVs, 8.2 to 17.2 ms for RSM sampling and 28 to 86 ms for SSDO on a 2016 GPU (derived as 1000/fps).
-- The LPV workaround is the constraint any `RenderingDevice` implementation meets: GLSL in Godot has no float atomics either, so any scatter or splat step in RC (injecting emitters into a grid, accumulating hits) needs integer-encoded values or a gather formulation (inference).
+- Godot's `RenderingDevice` meets the same constraint as the LPV workaround: its GLSL has no float atomics either, so any scatter or splat step in RC there (injecting emitters into a grid, accumulating hits) needs integer-encoded values or a gather formulation (inference).
 - The two failure modes it documents for grid methods, leaking through walls thinner than a cell and over-bright results at low resolution, are the same ones reported for world-space RC grids, and they have the same cause: one value per cell standing for both sides of a surface (inference).

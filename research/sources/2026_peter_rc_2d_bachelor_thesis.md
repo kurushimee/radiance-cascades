@@ -7,7 +7,7 @@
 | Institution | Hochschule Hannover, bachelor thesis, 14 May 2026 |
 | Code | https://github.com/RP-content/radiance-cascades-opengl (code MIT, thesis CC BY 4.0, PDF in `docs/`) |
 
-A native 2D RC in C++ and OpenGL 4.5 compute, built to check the theory's cost scaling with per-pass GPU timestamps. Its value here is a clean per-pass cost split on an AMD GPU and a measured penalty for widening the merge kernel.
+A native 2D RC in C++ and OpenGL 4.5 compute, built to check the theory's cost scaling with per-pass GPU timestamps. It gives a clean per-pass cost split on an AMD GPU and a measured penalty for widening the merge kernel.
 
 ## Setup
 

@@ -74,7 +74,7 @@ Start with [Memory and cost](../topics/core_theory.md#memory-and-cost) and [Memo
 
 ## Use GPU data structures and atomics
 
-Start with [GPU data structures](../topics/supporting_techniques_structures_and_tracing.md#gpu-data-structures) in the glossary and [GPU building blocks](../topics/3d_world_space.md#gpu-building-blocks) for what carries to RenderingDevice. Atomics without float support are in [Float atomics](../topics/supporting_techniques_transport_and_math.md#float-atomics).
+Start with [GPU data structures](../topics/supporting_techniques_structures_and_tracing.md#gpu-data-structures) in the glossary and [GPU building blocks](../topics/3d_world_space.md#gpu-building-blocks) for what carries to Godot's RenderingDevice. Atomics without float support are in [Float atomics](../topics/supporting_techniques_transport_and_math.md#float-atomics).
 
 - Remove atomic contention from world-space deposits: Sort-based binning; trade-off is a sort step, 1.5 ms for 10 M texels. ([Open problems, ranked](../topics/single_frame_3d_rc.md#open-problems-ranked), single_frame_3d_rc)
 - Build probe hash tables without slowdown at high load: Open addressing at twice probe count; trade-off: 7 to 9 times slower by 0.9 load. ([GPU building blocks](../topics/performance.md#gpu-building-blocks), performance)

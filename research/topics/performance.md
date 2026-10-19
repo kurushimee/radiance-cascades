@@ -250,7 +250,7 @@ Rays per second divide a ray or segment count by the time of the pass that trace
 The screen-space rows are derived in detail in [3D screen space](3d_screen_space.md#ray-throughput-across-the-measured-spwi-codes-derived).
 
 - **Three classes.** Hardware RT on short coherent RC rays runs at 6 to 8.2 G rays/s on an RTX 3080. Compute BVHs and voxel DDA run at 2.8 to 3.9 G rays/s on current GPUs. Software traversal of a complex scene on a weak GPU (Gavras on the M1, Blackline on a 2019 Radeon Pro 5500M) falls to 0.08 to 0.43 G rays/s. The 2D and synthetic rates above 9 G rays/s come from rays a few texels long and say nothing about 3D.
-- **The compute class is the one that applies to Godot.** `RenderingDevice` compute shaders cannot issue ray queries, so a Godot tracer is a compute BVH, voxel DDA or distance-field march. Its realistic target is the 1 to 3 G rays/s band; gomezzz's floor of 0.375 G segments/s is a frame-capped lower bound, not the tracer's speed.
+- **The compute class is the one that applies to hosts without ray queries.** Godot's `RenderingDevice` compute shaders cannot issue ray queries, so a tracer there is a compute BVH, voxel DDA or distance-field march, working in the 1 to 3 G rays/s band; gomezzz's floor of 0.375 G segments/s is a frame-capped lower bound, not the tracer's speed.
 - **Rates fall with ray length and scene complexity, not with the method.** Kung's same ray count ran 4.2× slower outdoors than indoors; Gavras's ran 4.4× slower in Sponza than with cubes; Dell'Ova's hardware rate held across spacing. Upper cascades, whose rays are longest, are where a compute tracer loses the most, which is what mip marching (3.5× in DexRT) and coarser scene levels per cascade address.
 - **Hardware RT is not uniformly faster at RC's ray lengths.** erhe's hardware path ran 1.43 G rays/s on unstated hardware, below the compute DDA rows, and Brixelizer beat DXR on short rays; hardware RT's advantage is largest on long incoherent rays through complex geometry ([tracing](scene_representation_and_tracing_voxels_and_bvhs.md#software-against-hardware)) (inference).
 
@@ -383,7 +383,7 @@ Vulkan guarantees only 128 MiB per storage buffer, so dense 64³ cascade stacks 
 What the tables imply at 1080p with a 4 ms budget:
 
 - A compute tracer at 1 to 3 G rays/s buys 4 to 12 M rays. That covers screen probes at 8 px (3.1 M rays) or 4 px (12.4 M, at the top of the band), or 2 to 6 rays per pixel of splitting, plus a 32³ to 64³ world grid only at the high rate. A dense 128³ grid at 130 M rays is out of reach at any rate.
-- Hardware RT at 7 G rays/s would buy 28 M rays, but Godot compute cannot reach it, so a Godot design must fit the 1 to 3 G rays/s band.
+- Hardware RT at 7 G rays/s would buy 28 M rays. A compute tracer, the only kind under Godot's `RenderingDevice`, stays in the 1 to 3 G rays/s band.
 - At 4K the same layouts cost 4× the rays; holding the budget there means 8 px probes or output upscaling, as PoE2's quarter-resolution and the community's quarter-resolution 2D builds do.
 
 ## Connections
@@ -399,9 +399,9 @@ What the tables imply at 1080p with a 4 ms budget:
 For single-frame 3D RC (inference, from the sections above):
 
 - Single-frame 3D RC has run within real-time budgets: Split RC at 8.6 and 11.5 ms on a laptop RTX 3080 with hardware RT, Sannikov's sparse RC at 60 to 100 fps, Dell'Ova at 1.94 to 2.36 ms for spacing 4, Abou Dan and Jensen at 2 to 6 ms on their lower settings, and voxel2026 at 1.98 ms in a voxel world. Each traces with hardware RT, a voxel world or the depth buffer; none uses a compute triangle tracer.
-- Under `RenderingDevice` the planning rate is 1 to 3 G rays/s. At 1080p in 4 ms that is 4 to 12 M rays: screen probes at 4 to 8 px with 16 cascade 0 rays, or a splitting design at 2 to 6 rays per pixel, with a small world grid only for far field.
+- A compute tracer, as under Godot's `RenderingDevice`, runs at 1 to 3 G rays/s. At 1080p in 4 ms that is 4 to 12 M rays: screen probes at 4 to 8 px with 16 cascade 0 rays, or a splitting design at 2 to 6 rays per pixel, with a small world grid only for far field.
 - Memory is not the constraint for screen-anchored or sparse designs (tens of MiB at 1080p), but dense grids above 64³ are, and Vulkan's 128 MiB storage-buffer guarantee bounds any single allocation.
-- The upper cascades' long rays are where a compute tracer loses most; coarser scene levels per cascade (mips, clipmap levels) are the measured fix and belong in the design from the start.
+- The upper cascades' long rays are where a compute tracer loses most; coarser scene levels per cascade (mips, clipmap levels) are the measured fix, and a design needs them from the start.
 - Sparse designs must budget their bookkeeping at random-access bandwidth: Split RC's non-trace stages took 7.0 to 7.3 ms of its frame, more than its trace on both scenes.
 
 ## Open questions

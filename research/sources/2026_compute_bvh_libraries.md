@@ -7,7 +7,7 @@
 | obvhs | https://github.com/DGriffin91/obvhs (Rust, MIT or Apache-2.0), read at commit 2cf08de |
 | Wicked Engine | https://github.com/turanszkij/WickedEngine (János Turánszki, MIT), `wiGPUBVH.cpp` and the `bvh_*CS.hlsl`, `raytracingHF.hlsli` and `ddgi_raytraceCS.hlsl` shaders, read at commit cb4a81c |
 
-These are BVH builders with GPU node layouts that a compute shader can traverse without hardware ray tracing. tinybvh ships Vulkan GLSL compute kernels for each layout, which is the closest ready-made match for a Godot `RenderingDevice` tracer. Coppen's surfel RC credits tinybvh for its traversal code ([surfel RC](2025_coppen_surfel_radiance_cascades.md)). Wicked Engine is the one that builds on the GPU: it rebuilds its whole BVH in compute shaders every frame, so moving meshes cost no CPU work.
+These are BVH builders with GPU node layouts that a compute shader can traverse without hardware ray tracing. tinybvh ships Vulkan GLSL compute kernels for each layout, which is the closest ready-made match for a GLSL compute tracer without hardware ray tracing, such as one under Godot's `RenderingDevice`. Coppen's surfel RC credits tinybvh for its traversal code ([surfel RC](2025_coppen_surfel_radiance_cascades.md)). Wicked Engine is the one that builds on the GPU: it rebuilds its whole BVH in compute shaders every frame, so moving meshes cost no CPU work.
 
 ## Contents
 
@@ -98,4 +98,4 @@ Wicked Engine traces its DDGI and surfel GI through hardware ray queries when th
 
 **DDGI with it:** each probe gets 4 to 512 rays per frame in steps of 4, scaled by its measured inconsistency and cut to a tenth outside the view frustum (512 for every probe on the first frame), on a spherical Fibonacci set rotated randomly each frame. A hit loads the full surface, samples one random light with a shadow ray, adds last frame's probe irradiance for more bounces, multiplies by albedo and adds emission. Radiance is clamped to the half-float range before storing, because a bright sky turned into NaN in firefly suppression.
 
-No timings are given anywhere in the code. For RC in Godot this is the template for dynamic triangle scenes without hardware ray tracing: every pass is a plain compute dispatch with integer atomics, which `RenderingDevice` supports.
+No timings are given anywhere in the code. It is a template for dynamic triangle scenes without hardware ray tracing: every pass is a plain compute dispatch with integer atomics, which Godot's `RenderingDevice` also supports.

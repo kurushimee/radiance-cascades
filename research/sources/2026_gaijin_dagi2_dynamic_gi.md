@@ -6,7 +6,7 @@
 | Code | `prog/gameLibs/daGI2/` (GI), `prog/gameLibs/daSDF/` (world SDF), `samples/testGI/` (sample app) |
 | Predecessor | daGI in Enlisted: "Scalable Real-Time Ray Traced Global Illumination for Large Scenes", Anton Yudintsev, GDC 2019, https://gdcvault.com/play/1026469/Scalable-Real-Time-Global-Illumination, written up at https://enlisted.net/en/news/show/25-gdc-talk-scalable-real-time-ray-traced-global-illumination-for-large-scenes-en/ (2 May 2019) |
 
-Not RC. daGI2 is the dynamic GI of Gaijin's engine, and all of its C++ and shader source is open. It needs no hardware ray tracing: rays march a signed distance field (SDF) clipmap, and hits read light from a voxel copy of the lit frame. It is the closest open match to a world-space RC in Godot, because it splits rays into intervals much like RC does. Screen probes trace a few world-probe sizes and then read a world probe clipmap, and world probes that scroll into a clip trace a few coarser-probe sizes and then read the next coarser clip.
+Not RC. daGI2 is the dynamic GI of Gaijin's engine, and all of its C++ and shader source is open. It needs no hardware ray tracing: rays march a signed distance field (SDF) clipmap, and hits read light from a voxel copy of the lit frame. Among open systems it is the closest match to a world-space RC on a compute-only host, because it splits rays into intervals much like RC does. Screen probes trace a few world-probe sizes and then read a world probe clipmap, and world probes that scroll into a clip trace a few coarser-probe sizes and then read the next coarser clip.
 
 ## Contents
 
@@ -20,7 +20,7 @@ Not RC. daGI2 is the dynamic GI of Gaijin's engine, and all of its C++ and shade
 - [Volumetric GI](#volumetric-gi)
 - [Problems recorded in todo.txt and comments](#problems-recorded-in-todotxt-and-comments)
 - [daGI v1 in Enlisted (2019)](#dagi-v1-in-enlisted-2019)
-- [Lessons for RC in Godot](#lessons-for-rc-in-godot)
+- [Lessons for world-space RC](#lessons-for-world-space-rc)
 
 ## Pieces and defaults
 
@@ -143,7 +143,7 @@ The talk page names the speaker Anton Yudintsev and has no public slides (member
 - "Convex offset filtering" moved samples off the border of the convex volume to stop leaks. Sparse foliage over-darkened the ground; the fixes were skipping its pixels or storing opacity.
 - Measured: 0.57 ms in all on a GTX 1070. On Xbox One, 0.7 ms with one bounce or async and about 1.6 ms with synchronous multi-bounce, with the irradiance update itself at 1.2 ms. Updating voxels from 100,000 pixels took under 0.2 ms. Memory was about 31 MB: 13.5 MB of irradiance and 16.5 MB of scene.
 
-## Lessons for RC in Godot
+## Lessons for world-space RC
 
 - **Interval hand-off.** Screen probes stop a ray after 3 to 6 grid probe sizes and take the rest from the grid, and grid probes that scroll in stop at 4 coarser-clip probe sizes and take the rest from the coarser clip. That is the RC merge with a single direction fetch. The far read is pulled back half a probe or √3 probes so filtering does not reach through walls. A world-space RC can reuse these lengths and the pull-back.
 - **Light from the lit frame.** The lit-scene voxels give every off-screen hit a radiance value, with extra bounces for free, without relighting any voxels.

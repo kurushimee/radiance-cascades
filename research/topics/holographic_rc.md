@@ -368,14 +368,14 @@ What the light-field papers mean for RC (inference):
 ## Single-frame assessment
 
 - **2D HRC is single-frame by construction.** It traces no stochastic rays, so one frame gives the full result with no noise, no temporal accumulation and no denoiser. Only bounce light is fed back over frames (the paper's 4-direction fluence output, folkjs's one-frame latency, pixi-GI's temporal accumulation). A single-frame second bounce means a second full HRC solve seeded from the first, doubling cost (inference).
-- **Dense 3D HRC does not fit a frame budget.** At 64³ it needs 1 to 1.8 GB and 77 ms, and 128³ needs 14 to 27 GB by the model above. For whole-scene 3D GI in Godot it is out; a 32³ local volume (0.07 to 0.12 GB) is within memory and could serve a bounded volumetric region, with timing unknown (inference).
+- **Dense 3D HRC does not fit a frame budget.** At 64³ it needs 1 to 1.8 GB and 77 ms, and 128³ needs 14 to 27 GB by the model above. For whole-scene 3D GI it is out; a 32³ local volume (0.07 to 0.12 GB) is within memory and could serve a bounded volumetric region, with timing unknown (inference).
 - **Screen-space HRC is out** for the reason given above: depth-buffer probes break end-to-end extensions.
 - **What carries to 3D RC:**
-  - Building long intervals from short traced ones without tracing (extensions, or cone-tracing mips for vanilla RC) cuts the cost of the far cascades, which matters where tracing is software marching in compute, as it is under `RenderingDevice` without ray queries ([Godot integration](godot_integration.md)). It costs stored transmittance and bent rays.
+  - Building long intervals from short traced ones without tracing (extensions, or cone-tracing mips for vanilla RC) cuts the cost of the far cascades, which matters where tracing is software marching in compute, as under Godot's `RenderingDevice`, which has no ray queries ([Godot integration](godot_integration.md)). It costs stored transmittance and bent rays.
   - The cone-weight, normalization, half-integer-direction and quadrant-offset rules apply to any frustum or cube-face direction layout ([cascade layout](cascade_layout_and_merging.md)).
   - The bandwidth lessons apply unchanged: one transmittance channel, radiance and transmittance in one texture, no pre-clear passes, no threads for off-screen probes.
   - Region integrals (polygonal cascades) and gradient storage are the two ideas aimed at small lights and sparse 3D.
-- **Mapping to `RenderingDevice`.** 2D HRC needs only compute dispatches, storage textures and barriers: no atomics, no float atomics and no ray queries. The pass count is high, 76 to 82 dispatches at 512² to 1024² in the codes that count them ([implementations](holographic_rc_implementations.md)), so dispatch and barrier overhead per pass is part of the budget; a Godot luminance-only build ran 1080p in 7.57 ms on an RTX 3090 (5.10 ms with caching).
+- **Mapping to Godot's `RenderingDevice`.** 2D HRC needs only compute dispatches, storage textures and barriers: no atomics, no float atomics and no ray queries. The pass count is high, 76 to 82 dispatches at 512² to 1024² in the codes that count them ([implementations](holographic_rc_implementations.md)), so dispatch and barrier overhead per pass is part of the budget; a Godot luminance-only build ran 1080p in 7.57 ms on an RTX 3090 (5.10 ms with caching).
 
 ## Open questions
 

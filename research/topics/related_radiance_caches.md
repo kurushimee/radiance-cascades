@@ -142,7 +142,7 @@ Boissé, Meunier, de Dinechin, Oliver, Bartels, Veselov, Eto and Harada (AMD), "
 
 ## kajiya
 
-Tomasz Stachowiak's (h3r2tic, later a developer of Tiny Glade) research renderer, with its 2022 GI design document ([gi-overview.md](https://github.com/h3r2tic/kajiya/blob/main/docs/gi-overview.md); code Apache-2.0, Rust and HLSL; [notes](../sources/2022_stachowiak_kajiya_gi.md)): half-resolution ReSTIR GI for the first bounce and a sparse world irradiance cache for the rest. It needs hardware ray tracing, so none of it runs as-is in Godot's compute shaders. HDDAGI's screen-probe draft names it as one of its two models ([Godot integration](godot_integration.md#screen-probes-in-122999)).
+Tomasz Stachowiak's (h3r2tic, later a developer of Tiny Glade) research renderer, with its 2022 GI design document ([gi-overview.md](https://github.com/h3r2tic/kajiya/blob/main/docs/gi-overview.md); code Apache-2.0, Rust and HLSL; [notes](../sources/2022_stachowiak_kajiya_gi.md)): half-resolution ReSTIR GI for the first bounce and a sparse world irradiance cache for the rest. It needs hardware ray tracing, so none of it runs as-is on a compute-only host such as Godot's `RenderingDevice`. HDDAGI's screen-probe draft names it as one of its two models ([Godot integration](godot_integration.md#screen-probes-in-122999)).
 
 **Cost.** 1920×1080 on an RX 6800 XT, 8.4 ms in all: G-buffer 1.15 ms, indirect diffuse about 2.3 ms, irradiance cache about 0.55 ms, reflections about 2.2 ms, sun shadows 0.52 ms, SSAO 0.17 ms, sky 0.1 ms. The cache usually holds fewer than 16k entries, which trace 128k G-buffer rays and 384k shadow rays per frame, exactly 8 and 24 rays per entry, the documented per-entry budget below (derived).
 

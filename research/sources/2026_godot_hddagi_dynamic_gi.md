@@ -7,7 +7,7 @@
 | Screen probes | https://github.com/godotengine/godot/pull/122999 (maidopi-usagi), draft since 2026-08 |
 | Code read | `gi.cpp`, `gi.h` and the `hddagi_*.glsl` shaders at the #86267 head; the screen-probe, SVGF, irradiance-cache and Hi-Z shaders at the #122999 head |
 
-HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades traced with an integer hierarchical DDA instead of a distance field, feeding DDGI-like world probes. None of the three pull requests is merged, and Godot 4.7.2 still ships SDFGI. They matter here as working `RenderingDevice` code for a voxel tracer, probe upkeep and screen probes inside Godot's own renderer, and as a record of the artifacts a world-probe design hits there.
+HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades traced with an integer hierarchical DDA instead of a distance field, feeding DDGI-like world probes. None of the three pull requests is merged, and Godot 4.7.2 still ships SDFGI. They matter as working `RenderingDevice` code for a voxel tracer, probe upkeep and screen probes inside Godot's own renderer, and as a record of the artifacts a world-probe design hits there.
 
 ## Contents
 

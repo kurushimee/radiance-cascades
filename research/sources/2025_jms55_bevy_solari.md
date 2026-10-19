@@ -7,7 +7,7 @@
 | Kind | Blog post for Bevy 0.17 |
 | Link | https://jms55.github.io/posts/2025-09-20-solari-bevy-0-17/ |
 
-Solari is Bevy's hardware ray-traced lighting. It started in 2023 with Lumen-style screen probes, moved to radiance cascades, and was then shelved and rebuilt on ReSTIR with DLSS Ray Reconstruction. The post says screen probes were hard to make look good because one probe is reused and reprojected across many pixels, and that RC "brought their own artifacts and performance costs", with no details. It matters here for its world cache, a hashed irradiance cache much like the one Split RC uses.
+Solari is Bevy's hardware ray-traced lighting. It started in 2023 with Lumen-style screen probes, moved to radiance cascades, and was then shelved and rebuilt on ReSTIR with DLSS Ray Reconstruction. The post says screen probes were hard to make look good because one probe is reused and reprojected across many pixels, and that RC "brought their own artifacts and performance costs", with no details. Its world cache is a hashed irradiance cache much like the one Split RC uses.
 
 ## World cache
 

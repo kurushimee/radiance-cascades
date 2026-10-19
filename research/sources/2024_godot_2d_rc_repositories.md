@@ -1,6 +1,6 @@
 # Godot 2D radiance cascades repositories
 
-Seven public Godot projects implement or attempt 2D RC. They matter here for how they connect compute shaders to Godot and for a few techniques: Suslik's merge variants and interval fades, and a scene mip pyramid that makes long intervals cheap.
+Seven public Godot projects implement or attempt 2D RC. They matter for how they connect compute shaders to Godot and for a few techniques: Suslik's merge variants and interval fades, and a scene mip pyramid that makes long intervals cheap.
 
 | Repository | Godot | Last commit | State |
 |---|---|---|---|

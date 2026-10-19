@@ -8,7 +8,7 @@
 | GPUSorting | b0nes164 (Thomas Smith) | repository read at `09a6081` | https://github.com/b0nes164/GPUSorting |
 | Decoding Morton Codes | Fabian Giesen | 2009-12-13 | https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/ |
 
-These are the building blocks that sparse and surfel RC designs link for storing probes only where surfaces are: a hash table keyed by cell coordinates, a sort to group work, and Morton codes to order cells ([sparse 3D RC](2026_sparse_and_3d_rc.md), [surfel RC](2025_coppen_surfel_radiance_cascades.md)). All five use only integer atomics, which `RenderingDevice` compute shaders have.
+These are the building blocks that sparse and surfel RC designs link for storing probes only where surfaces are: a hash table keyed by cell coordinates, a sort to group work, and Morton codes to order cells ([sparse 3D RC](2026_sparse_and_3d_rc.md), [surfel RC](2025_coppen_surfel_radiance_cascades.md)). All five use only integer atomics, which Godot's `RenderingDevice` compute shaders also have.
 
 ## Spatial hashing for ray-traced AO (Interplay of Light)
 

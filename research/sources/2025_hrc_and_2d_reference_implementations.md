@@ -1,6 +1,6 @@
 # Holographic RC and other 2D reference implementations
 
-HRC (see [2025_freeman_holographic_radiance_cascades.md](2025_freeman_holographic_radiance_cascades.md)) is 2D only; in 3D it needs `O(N⁴)` memory. These implementations matter for this project mainly for their merge variants, their cost figures and a few lessons that carry over to 3D.
+HRC (see [2025_freeman_holographic_radiance_cascades.md](2025_freeman_holographic_radiance_cascades.md)) is 2D only; in 3D it needs `O(N⁴)` memory. These implementations matter mainly for their merge variants, their cost figures and a few lessons that carry over to 3D.
 
 | Repository | Variant | Language | Last commit |
 |---|---|---|---|
