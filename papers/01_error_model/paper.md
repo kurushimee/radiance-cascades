@@ -310,6 +310,8 @@ The derivations, experiments and drafting of this paper were carried out with Cl
 
 # Further results {#sec:further .appendix}
 
+@tbl:budget lists the error terms of @fig:budget, and @fig:display repeats @fig:t0 with the display metric.
+
 | Setting | Scene | angular radiance | angular transmittance | correlation | spatial | gather | total |
 |---|----|----|-----|----|---|---|---|
 | A | lamp | 0.608 | 0.091 | 0.057 | 0.273 | 0.000 | 0.591 |

@@ -2,13 +2,11 @@
 % An independent author has no institution address; acmart would otherwise require a country.
 \makeatletter\renewcommand\@ACM@checkaffil{}\makeatother
 
-\usepackage{longtable,array,calc}
-\usepackage{etoolbox}
+\usepackage{array,calc}
+\usepackage{float,placeins}
 \usepackage{newunicodechar}
 
 \makeatletter
-% Correct order of tables after \paragraph or \subparagraph.
-\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
 \newsavebox\pandoc@box
 \newcommand*\pandocbounded[1]{%
   \sbox\pandoc@box{#1}%
@@ -80,6 +78,9 @@ $endif$
 \maketitle
 
 $body$
+
+% Every table and figure is set before the references start.
+\FloatBarrier
 
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}

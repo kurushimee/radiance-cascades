@@ -31,18 +31,18 @@ Done when `selftest.py`, every check and every experiment pass, and the PDF is b
 - [x] Experiments and figures
 - [x] Prose, bibliography, PDF
 - [x] Review, rerun, commit
-- [ ] Source note, topics, indexes and README in `research/`
+- [x] Source note, topics, indexes and README in `research/`
 
 ### 3. Paper 2: merging in 3D probe grids
 
-Done as for paper 1.
+Done as for paper 1. Proposals: a depth-reprojected merge, which reads each parent toward the hit point estimated from the parents' stored merged depth, and a self test, which drops a parent when the lower probe's own ray toward the start of that parent's ray stops short of it (the gate form of DexRT's inner parallax fix, which substitutes the lower sample instead). The parent-side hit-distance test is kept as a measured row; it cannot fire where the parent's interval starts beyond the lower probe. Merges are also chosen per hand-over, selected on training offsets and reported on held-out offsets and scenes. References are exact where the scene allows: solid angles for a lamp in empty space, zero inside a sealed box and the sky less the box's solid angle outside it, and `4πc` in a uniform furnace.
 
-- [ ] Novelty check
-- [ ] Voxel scenes, DDA tracer, dense-grid RC and reference
-- [ ] Derivations and checks
-- [ ] Experiments and figures
-- [ ] Prose, bibliography, PDF
-- [ ] Review, rerun, commit
+- [x] Novelty check
+- [x] Voxel scenes, DDA tracer, dense-grid RC and reference
+- [x] Derivations and checks
+- [x] Experiments and figures
+- [x] Prose, bibliography, PDF
+- [x] Review, rerun, commit
 - [ ] Source note, topics, indexes and README in `research/`
 
 ### 4. Paper 3: several bounces in one frame

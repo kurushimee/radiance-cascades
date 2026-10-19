@@ -1,17 +1,9 @@
 """Shared setup of the paper's experiments: scenes, exact fluence, grid offsets, metrics, cost and cached results."""
-import json
 import math
 import sys
 from pathlib import Path
 
-import matplotlib
 import numpy as np
-
-matplotlib.use("Agg")
-matplotlib.rcParams.update({"font.size": 7, "axes.titlesize": 7, "axes.labelsize": 7, "legend.fontsize": 6,
-                            "xtick.labelsize": 6, "ytick.labelsize": 6, "lines.linewidth": 1.0,
-                            "lines.markersize": 3, "savefig.pad_inches": 0.02})
-WIDTH = 5.4  # inches, the text width of the paper
 
 HERE = Path(__file__).resolve().parent
 PAPER = HERE.parent
@@ -19,8 +11,9 @@ sys.path.insert(0, str(PAPER.parent / "lab"))
 
 import flatland as fl  # noqa: E402
 import scenes2d as sc  # noqa: E402
+from report import WIDTH, Outputs, legend_below  # noqa: E402,F401
 
-FIGURES = PAPER / "figures"
+cached, save = Outputs(PAPER).cached, Outputs(PAPER).save
 CACHE = PAPER / "build" / "cache"
 LO, HI = (np.array(corner) for corner in sc.WINDOW)
 DIAGONAL = math.hypot(*(HI - LO))
@@ -136,27 +129,3 @@ def jittered(fn, tasks, offsets=OFFSETS):
         out.append({key: (float(np.mean([r[key] for r in chunk])), float(np.std([r[key] for r in chunk])))
                     for key in chunk[0]})
     return out
-
-
-def cached(stem, compute):
-    """Results of `compute()`, kept in build/results/<stem>.json; delete the file to recompute."""
-    path = PAPER / "build" / "results" / f"{stem}.json"
-    if path.exists():
-        return json.loads(path.read_text())
-    results = compute()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(results))
-    return results
-
-
-def legend_below(fig, ax, ncol, margin):
-    """Shows ax's legend under every panel, where it covers no data; margin is the figure fraction it takes."""
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=ncol, frameon=False)
-    fig.tight_layout(rect=(0, margin, 1, 1))
-
-
-def save(fig, stem):
-    FIGURES.mkdir(exist_ok=True)
-    for ext in ("png", "pdf"):
-        fig.savefig(FIGURES / f"{stem}.{ext}", dpi=200, bbox_inches="tight")

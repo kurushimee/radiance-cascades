@@ -1,4 +1,5 @@
 """Assert-based checks of the lab. Run from papers/: uv run python lab/selftest.py"""
+import itertools
 import math
 import sys
 from pathlib import Path
@@ -7,6 +8,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import flatland as fl  # noqa: E402
+import scenes3d as sc3  # noqa: E402
+import volume as vo  # noqa: E402
 
 
 def lattice_scene(seed):
@@ -139,8 +142,76 @@ def check_bilinear_fix_runs():
     assert np.all(np.isfinite(fixed)) and np.all(fixed >= 0)
 
 
+def random_volume(seed, n=16, radiance=None, sky=0.0):
+    rng = np.random.default_rng(seed)
+    volume = vo.Volume.empty(n, sky=sky)
+    for _ in range(10):
+        lo = rng.integers(0, n - 3, 3)
+        volume.box(lo, lo + rng.integers(1, 4, 3), rng.uniform(0, 3) if radiance is None else radiance)
+    return volume
+
+
+def check_dda_against_slabs():
+    """The DDA's first hit matches an exact slab test over every solid voxel, on rays clear of voxel edges."""
+    volume = random_volume(10)
+    rng = np.random.default_rng(11)
+    origins = rng.uniform(-4, 20, (3000, 3))
+    dirs = rng.normal(size=(3000, 3))
+    dirs /= np.linalg.norm(dirs, axis=1, keepdims=True)
+    tmin, tmax = rng.uniform(0, 2, 3000), rng.uniform(4, 30, 3000)
+    _, hit, t, _, _ = (a.get() for a in vo.trace(volume, origins, dirs, tmin, tmax))
+    cells = np.argwhere(volume.solid)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        near = (cells[None] - origins[:, None]) / dirs[:, None]
+        far = (cells[None] + 1 - origins[:, None]) / dirs[:, None]
+    enter = np.maximum(np.minimum(near, far).max(-1), tmin[:, None])
+    chord = np.minimum(np.maximum(near, far).min(-1), tmax[:, None]) - enter
+    first = np.where(chord > 0, enter, np.inf).min(1)
+    clear = ~np.any((np.abs(chord) < 1e-3) & (enter <= first[:, None] + 1e-3), axis=1)
+    assert clear.mean() > 0.9
+    assert np.array_equal(hit[clear], np.isfinite(first[clear]))
+    assert np.allclose(t[clear & hit], first[clear & hit], atol=1e-4)
+
+
+def check_box_solid_angle():
+    lo, hi = np.array([20, 22, 21]), np.array([26, 27, 29])
+    volume = vo.Volume.empty(48).box(lo, hi, 1.0)
+    points = np.array([[10.5, 24.5, 25.5], [23.5, 30.5, 24.5], [40.5, 6.5, 40.5], [26.5, 27.5, 29.5]])
+    exact = vo.box_solid_angle(points, lo, hi)
+    assert np.allclose(vo.reference_fluence(volume, points, r=256), exact, rtol=5e-3)
+
+
+ROTATIONS = (vo.Params().rotation, vo.generic_rotation())
+
+
+def check_furnace_3d():
+    """Where every surface and the sky have radiance 1, every merge returns 4*pi at every empty voxel, except that
+    visibility rays, which return nothing where every parent is hidden, can only fall short."""
+    volume = random_volume(12, n=24, radiance=1.0, sky=1.0)
+    for rotation, merge in itertools.product(ROTATIONS, vo.MERGES):
+        params = vo.Params(levels=vo.levels_for(24, 1.6), rotation=rotation)
+        fluence = vo.solve(volume, params, merge)[0][~volume.solid]
+        if merge == "visibility_rays":
+            assert fluence.max() <= 4 * math.pi * (1 + 1e-5) and fluence.min() < 4 * math.pi * (1 - 1e-4)
+        else:
+            assert np.allclose(fluence, 4 * math.pi, rtol=1e-5), merge
+
+
+def check_bent_rays_seal():
+    """Merges whose rays join each lower interval to its parents' let almost no sky into a closed box. The joining
+    ray follows the lower bin's centre while each parent is read in its four child directions, whose rays start up to
+    t_end times half a lower bin away, so a little leaks."""
+    for rotation, offset in itertools.product(ROTATIONS, ((0, 0, 0), (3, 5, 6))):
+        params = vo.Params(levels=vo.levels_for(sc3.N, 1.6), rotation=rotation)
+        volume, data = sc3.sealed(1, offset)
+        for merge in ("visibility_rays", "trilinear_fix", "kuhn_fix"):
+            inside = sc3.values_at(vo.solve(volume, params, merge)[0], data["inside"]) / (4 * math.pi)
+            assert inside.mean() < 1e-4 and inside.max() < 1e-3, merge
+
+
 for check in (check_lone_segment, check_hollow_emitter, check_oracle_against_tracer, check_cone_means_against_dense_rays,
               check_window_means,
-              check_merge_monoid, check_decomposition, check_spatial_split, check_bilinear_fix_runs):
+              check_merge_monoid, check_decomposition, check_spatial_split, check_bilinear_fix_runs,
+              check_dda_against_slabs, check_box_solid_angle, check_furnace_3d, check_bent_rays_seal):
     check()
     print(f"{check.__name__}: ok")
