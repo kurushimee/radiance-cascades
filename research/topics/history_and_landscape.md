@@ -304,7 +304,7 @@ The discussions below span 2023 to 2026: Hacker News threads, GitHub issues, God
 | Volumes and medicine | Rulkens's CT thesis (TU/e, 2025) | [volumetric and radiative transfer](volumetric_and_radiative_transfer.md) |
 | 2D teaching | Peter's bachelor thesis (2026) | [2D implementations](2d_implementations.md) |
 
-Sannikov co-authors every paper line except the theses and the sampling work. The academic work so far is either 2D (HRC, Split RC's 2D results, Reservoir Cascades) or 3D under conditions far from a game frame: astrophysics with minutes per solve, offline path guiding with temporal reuse, CT volumes recomputed on change, or student theses on screen probes with world intervals. No peer-reviewed paper describes a single-frame 3D world-space RC for games (inference from the works listed).
+Sannikov co-authors every paper line except the theses and the sampling work. The academic work so far is 2D (HRC, Split RC's 2D results, Reservoir Cascades), Split RC's 3D world-space method, which gives one diffuse bounce in a single frame with no temporal reuse and is timed per stage on Sponza and San Miguel ([Split RC](../sources/2026_freeman_split_radiance_cascades.md)), or 3D under conditions far from a game frame: astrophysics with minutes per solve, offline path guiding with temporal reuse, CT volumes recomputed on change, or student theses on screen probes with world intervals. Split RC is an arXiv preprint (v2, 2026-07), so no peer-reviewed paper yet describes a single-frame 3D world-space RC for games (inference from the works listed).
 
 ## Adoption: shipped, tried and turned down
 
@@ -407,7 +407,4 @@ These look relevant by name but hold no working GI RC code (each checked through
 ## Open questions
 
 - What does PoE2 ship: the cascade count, probe spacing, interval lengths, the 128-bit occlusion layout and the resolution? The paper gives the outline and three cost figures; no parameter list is public.
-- How does Sannikov's sparse 3D RC handle tile interpolation, the cascade seam, memory and per-stage cost? Neither video gives a resolution, cascade count or timing, and the code is unpublished.
 - Does Blackline Interactive's Spatium run in a single frame, bounces included, and is it the surface-atlas design its HUDs and settings point to?
-- Which parts of Love and Deepspace's temporal machinery (frame-spread tracing, cached hit distances, 28-frame convergence) does its surfel RC need, and which could a desktop single-frame version drop?
-- The academic record has no 3D single-frame world-space RC for games. Is that because it is too costly, or because no one has written it up? The cost models in [performance](performance.md) and [single-frame 3D RC](single_frame_3d_rc.md) address the first half.

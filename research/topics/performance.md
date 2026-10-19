@@ -408,6 +408,3 @@ For single-frame 3D RC (inference, from the sections above):
 
 - What rate does a `RenderingDevice` compute tracer reach on RC rays? The only figure is gomezzz's frame-capped floor of 0.375 G segments/s; a pass-timed benchmark of a compute BVH and a voxel DDA on cascade 0 and top-cascade rays would settle the 1 to 3 G rays/s assumption.
 - How does the per-ray rate fall from cascade 0 to the top cascade for each tracer class? DexRT's 63.6% top-cascade share and Dell'Ova's cascades 6 to 8 at about 60% of an average lower cascade are the only per-cascade data.
-- How much of Split RC's 7 ms of non-trace work survives without atomics, with sort-based binning or per-probe tracing at cascade 0?
-- Are the hardware-RT single-frame results reproducible at the same ray counts with a compute tracer at 3.5 to 4× the trace time? The projection puts Split RC's trace at 4.5 to 5.2 ms on Sponza and 15.8 to 18.0 ms on San Miguel ([3D world space](3d_world_space.md#measurements)), which fits only the simpler scene.
-- Most reported timings give no ray count, resolution or hardware. Which of the unnormalizable rows (Sannikov's sparse videos, the forum stacks, the README claims) can be rerun under known settings?

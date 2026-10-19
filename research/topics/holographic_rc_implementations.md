@@ -349,6 +349,3 @@ Eleven 2048² RGBA16F cascades are 352 MiB for one frustum's set and four times 
 
 ## Open questions
 
-- How large is the accuracy gap between extending from cascade 0 and tracing the lowest three levels, measured on the same code against a reference?
-- Does TypeGPU's 0.1 opacity gate in the integrate pass blur across thin occluders whose opacity differs by less than that?
-- What are TypeGPU's, folkjs's and cute_framework's timings on one GPU at one size, so the codes can be compared without the cross-hardware normalization used in [holographic RC](holographic_rc.md#measured-results-and-the-cost-model)?

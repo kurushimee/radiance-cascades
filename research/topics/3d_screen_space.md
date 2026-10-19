@@ -328,10 +328,4 @@ The M1 has no ray-tracing hardware (Apple added it with the M3 and A17 Pro), so 
 
 ## Open questions
 
-- Can a min/max or two-surface probe construction be made stable enough under camera motion without accumulation, and at what cost in mobile-class hardware?
 - Do pixel-unit or depth-scaled intervals (Unreal plugin) remove the depth-dependent penumbra violation of world-unit intervals without new artifacts at large depth?
-- Does the 2× interval rule for SPWI hold up against ×4 intervals in a measured comparison, and how many cascades does it cost to reach scene scale?
-- Can sector casting or another amortized march give SPWI rays the shared-cost advantage SSRC has, for example by marching a world structure along screen lines?
-- Which compute tracer gives the highest throughput for short coherent SPWI rays under `RenderingDevice`: BVH2, wide BVH, voxels or an SDF?
-- What replaces history for off-screen second bounces: a world cache rebuilt each frame, or world cascades under the screen ones?
-- How far do adaptive screen probes (Lumen, Godot's draft, daGI2) reduce depth-edge error compared with min/max pairs at equal ray count?

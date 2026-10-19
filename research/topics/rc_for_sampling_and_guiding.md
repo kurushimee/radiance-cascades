@@ -93,11 +93,4 @@ Hedstrom's and Junkins's papers attack the same problem as Reservoir Cascades, c
 
 ## Open questions
 
-- Does a deterministic form of the RIS merge (all four or eight parents kept, weighted by validated `β·J`) keep Reservoir Cascades' leak reduction without its selection noise, and does Proposition 3's `O(ε_n)` bias bound still hold for it?
-- What is merge-as-RIS's per-frame error with no temporal reuse, against vanilla RC at equal rays?
-- How many of the 8 parent validation segments does a 3D merge need, and can stored hit distances replace them as the free test does in world-space builds?
 - Is Split RC's 3D scaling (`K = 4, l = 4`) enough to drop reprojected parent lookups altogether, as the bin-shift scaling predicts, and does the leftover constant shift still need correcting?
-- Can interval-boundary bias be removed in one frame by overlapping or blended intervals at a cost below block jitter's history?
-- Can RCPG's cell-and-texel average come from one cone or beam trace through a prefiltered voxel or distance-field scene within a few milliseconds?
-- How does a culled dense volume like RCPG's build on a compute tracer under `RenderingDevice`, and does its cost still follow surface area?
-- Can a merged cascade's descent sampler importance-sample cascade 0 or near-field rays inside the same frame, and does that reduce single-frame noise at equal rays?

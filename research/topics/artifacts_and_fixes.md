@@ -299,7 +299,6 @@ For single-frame 3D RC (inference, from the sections above):
 
 ## Open questions
 
-- How large is vanilla merging's error in 3D, measured against a reference? The 10% worst case is a 2D figure.
 - Does the length-weighted cost model hold for the tracers available in compute shaders (sphere tracing a distance field, voxel DDA), or does the fix cost track ray count?
 - Is the circle-fix checkerboard on cascades 0 and 1 caused by rays starting outside the circle? A guarded intersection would test it directly.
 - Can a nearest fix with forking in 3D avoid visibly blocky penumbras if cascade 0 is dense or replaced by cascade −1?

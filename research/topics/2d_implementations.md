@@ -243,8 +243,5 @@ For single-frame 3D RC (inference, from the sections above):
 
 ## Open questions
 
-- How much quality does the one-fetch merge lose against the bilinear fix in 2D at equal cost, measured against a path tracer such as CoreCascade's?
 - Does the Switch game's `pow(2, i²)` weighting of single fetches on a downsampled scene generalize, and what does it approximate?
-- Which empty-space skipping scheme (occupancy pyramid, block masks, distance field) is fastest for long upper intervals at equal correctness?
-- Can IceKontroI's sparse task lists keep their speed with interpolation, which the author says would add parent tasks?
 - What is the right per-length opacity convention when cascades march different mip levels of one scene?

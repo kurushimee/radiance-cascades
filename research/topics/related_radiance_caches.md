@@ -288,9 +288,4 @@ The table was rebuilt from the PDF's text order, and its speedups match the prin
 
 ## Open questions
 
-- Irradiance gradients come almost free from a record's hemisphere samples. Could each RC probe compute translational gradients from its own rays and use them in the merge's spatial interpolation, the way first-order interpolation removed Radiance's seams?
-- Can neighbour clamping or a Weber-law test, as in adaptive radiance caching, set a single-frame RC's probe density per region without history?
-- Can kajiya's output-sensitive origins, with one query point per cell picked from this frame's queries, place RC probes in a single frame without the history its votes rely on?
-- Does GI-1.0's ray-length bit, or an equivalent, have a cascade form, such as keying merged values by whether the child interval was blocked?
 - How much of the energy loss Solari saw in its voxelized cache comes from fixed cell positions and normals, and does a world-space RC grid lose energy the same way?
-- What is the cheapest single-frame source of second-bounce light once last frame's lit result is ruled out?

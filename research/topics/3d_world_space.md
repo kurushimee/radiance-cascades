@@ -517,11 +517,4 @@ Sources: [GPU hash tables](../sources/2026_gpu_hash_tables_and_sorting.md).
 
 ## Open questions
 
-- What probe footprint and rays per pixel give acceptable single-frame noise in cascade 0, and how much of the near field can a screen-space or world-space cascade −1 take over?
-- Can deposits avoid atomic contention without 64-bit or float atomics: subgroup deduplication, sort-based binning (1.5 ms for 10M texels in one build), or per-probe tracing for cascade 0 with splitting only above it?
-- Does ray splitting pay with a compute tracer, and at what scene complexity does a per-probe tracer over filtered proxies win?
-- Can LOD transitions be hidden without the 25% interval cost of an overlap zone, for example with axis-aligned cubic boundaries and 4× interval scaling, which one build found needed no blending?
-- Which leak defence gives the best quality per millisecond in one frame: hit bits, parent hit distances, surface-class keys, or a few visibility rays?
-- Would storing sparse intervals instead of probes (about 10× less waste in enclosed scenes) keep the merge cheap enough, given the extra indirection?
-- How should moving and skinned geometry enter the tracer and the probe set when the hash map is rebuilt every frame?
 - What does a single-frame second bounce cost in a sparse hierarchy, and does a coarse secondary solve at `lod + 2` within the same frame suffice?

@@ -262,8 +262,3 @@ One sample per pixel was too slow on phones, so mobile uses probes:
 
 ## Open questions
 
-- Lumen spends a quarter ray per pixel on its base screen probes and ships at 1/16 on High. What does a single-frame RC need at cascade 0 to match Lumen High's quality without the temporal filter, and does that fit the 4 ms budget Lumen holds at 60 fps?
-- daGI2 lengthens screen-probe rays from 3 to 6 grid probe sizes as probes settle. In a single frame there is no settling: which fixed interval-to-spacing ratio best trades the far level's coarseness against tracing cost?
-- Can direct light at a hit come from Godot's shadow maps in the same frame, through the PRE_OPAQUE hook, so that a single-frame RC has first-bounce light at off-screen hits without last frame's lit image?
-- Does the pull-back distance (half a probe for screen rays, √3 coarser probes for grid rays) generalize into an RC merge rule tied to the parent probe's spacing?
-- How much of HSGI's 2.65 ms denoiser and Lumen's fixed gather costs would a single-frame RC spend instead on rays, at the same quality?

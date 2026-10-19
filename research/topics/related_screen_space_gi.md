@@ -153,7 +153,4 @@ The Shadertoy sXcGRB stores, per heightmap pixel, the steepest slope toward +x a
 
 ## Open questions
 
-- Can LSAO's sweep stack carry a sector bitmask instead of one largest occluder, giving bitmask GI at O(K) per pixel for any radius, the caching Therrien names as future work?
-- Can a screen-space RC interval use the bitmask's slab model with thickness from a min/max depth pyramid instead of a constant `t`?
-- How many slices per pixel does the bitmask's GI need to be acceptable in one frame at 1080p without temporal jitter, and how does that cost compare with a screen-space cascade 0 of the same angular resolution?
 - PoE1's GI used mips of depth and colour for distant samples. What is the exact relation between that prefiltering and RC's pre-averaged upper cascades?

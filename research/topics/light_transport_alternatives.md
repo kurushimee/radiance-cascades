@@ -202,7 +202,4 @@ Wang, Meng and Boubekeur, "Wavelet Point-Based Global Illumination", EGSR 2015 (
 
 ## Open questions
 
-- Can a 3D sweep over a voxel clipmap replace tracing for the upper cascades in a single frame, and where does the crossover sit in 3D, given that it fell at cascade 3 in 2D?
-- Does a short-characteristics step with a linear source in each interval improve RC's merge of volumetric intervals over the constant-source form?
 - How many lag-free bounces, by stored hit distances or by repeated RC iterations, fit in a frame budget, and how close do they get to the infinite-bounce fixed point at typical albedos?
-- Can an adaptive per-region angular density, driven by measured anisotropy as in the JQSRT method, keep RC's single-frame cost bounded?

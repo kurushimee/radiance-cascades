@@ -411,8 +411,6 @@ For a single-frame 3D implementation (inference, from the sections above):
 
 ## Open questions
 
-- Is the 3D direction-first layout with hardware trilinear merging faster than a shader trilinear blend on current GPUs, given that GM Shaders' 2D speedup did not survive measurement?
 - Which nested equal-area map gives the best quality at 16 to 32 cascade 0 directions? Split RC found cylindrical better than Clarberg and octahedral, while screen-space builds preferred Clarberg; neither comparison was published with metrics.
 - Does pre-averaging cost quality in 3D, where a parent's 4 children are farther apart in angle at low direction counts?
 - What is the best irradiance tile size per probe for single-frame shading, and should tiles be built per probe or per pixel group?
-- Can cascade −1 in 3D be traced against the same scene representation as the cascades, or does it need screen-space marching as in Split RC, and how does that choice affect leaks at contact?

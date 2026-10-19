@@ -379,11 +379,5 @@ What the light-field papers mean for RC (inference):
 
 ## Open questions
 
-- Can extensions be made to work in 3D, and is their bend tolerable when the extended rays feed a 3D merge?
 - Is there a 3D layout that keeps HRC's transverse resolution below `N⁴` memory: frusta only where occluders are, HRC for the near field and vanilla RC for the far field, or the polygonal block layout with sparse extensions?
-- How much memory would an extension structure cost as a tracing accelerator for vanilla 3D RC, and does it beat marching a distance field per interval?
-- How should b-type rays be weighted in scenes with transparency?
-- Which direction spacing (equal tangent, equal angle, equal area) minimizes cone-weight error and crosses in 3D cube-face layouts, and at what cost in lookups?
-- Can polygonal cascades carry shadows, by splitting polygons at occluders or estimating partial coverage as EnergyConservingHRC does for lights?
 - Does vanilla 3D RC have an equivalent of HRC's 8-probe minimum light size, and would region integrals remove it?
-- What does a single-frame multi-bounce cost when each bounce is a full solve, and is one bounce plus an ambient term enough?

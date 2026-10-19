@@ -77,7 +77,7 @@ These summarize [single_frame_3d_rc.md](topics/single_frame_3d_rc.md), which giv
 - **In Godot, hit lighting is the main obstacle.** At PRE_OPAQUE this frame's lit colour does not exist, Forward+ has no albedo buffer, and shadows are drawn after the PRE_OPAQUE callbacks. A single-frame solve lights its hits from emission and its own shadow rays or per-frame light injection.
 - **Lagged bounces have no cheap replacement.** One bounce plus a sky term is the single-frame baseline; each further bounce costs another solve.
 - **Parameters with evidence behind them:** ×4 directions and ×4 intervals per cascade, 32 cascade 0 directions, a cascade 0 interval of 1.6 to 1.7 spacings, a nested equal-area direction map, a trilinear merge with a binary visibility test, one dispatch per cascade from the top with two live buffers, 6×6 irradiance tiles, RGBA16F.
-- **In Godot the composite goes through `IRRADIANCE`,** with `E/π`, in every opaque `ShaderMaterial`; SSAO multiplies on top and should be off. Accumulation uses 32-bit integer atomics, and Vulkan guarantees only 128 MiB per storage buffer.
+- **In Godot the composite goes through `IRRADIANCE`,** with `E/π`, in every opaque `ShaderMaterial`; SSAO multiplies on top, darkening contact regions that RC already occludes. Accumulation uses 32-bit integer atomics, and Vulkan guarantees only 128 MiB per storage buffer.
 - **The most reusable code:** gomezzz's Godot addon for RC plumbing in Godot; wroughtinator's native Split RC build (one GLSL compute source, software BVH, integer atomics); HDDAGI's integer hierarchical DDA over voxel bits; Brixelizer's MIT GLSL brick tracer; tinybvh's GLSL kernels and Wicked Engine's per-frame GPU BVH.
 
 ## Sources

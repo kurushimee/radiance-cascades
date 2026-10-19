@@ -193,6 +193,5 @@ For single-frame 3D RC (inference, from the shaders above): the testbed line's b
 
 ## Open questions
 
-- Does the Dolkar mask (clVcD3, 4ctXD8, MfXyRj) remove the ringing that the bilinear fix removes, at one trace per ray, when its bracket and the merge use the same probes and weights?
 - Is gathering every cascade per pixel (tf2XRc) ever cheaper than a top-down merge when only a few cascades exist?
 - What does extended gathering (NfVXRc, sfVSzd) cost against a merged cascade stack at equal penumbra quality?

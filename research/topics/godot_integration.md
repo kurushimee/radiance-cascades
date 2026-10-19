@@ -501,7 +501,4 @@ Line numbers are at tag 4.7.2-stable and, apart from the checked call order, com
 
 - Does a `call_on_render_thread` callable queued from `_process` run before that frame's scene render, so a world-space solve lands in the same frame?
 - Does a `Texture3DRD` work as a `sampler3D` global shader parameter? It would give hardware trilinear probe lookups in place of a flattened 2D atlas with manual slice blending, as gomezzz uses.
-- What is the cheapest same-frame radiance source for screen-space hits at PRE_OPAQUE: a direct-light-only pass, voxel light injection, or direct light evaluated at each hit?
-- How should an RC integration handle users who enable SSAO, given that the opaque shader applies it to `IRRADIANCE` unconditionally?
-- How much of SDFGI's or HDDAGI's per-frame time is tracing, and how much is upkeep (voxelization, light injection, scrolling)? That split would show how much of a Godot GI budget a single-frame RC can spend on rays.
 - Can a FogVolume shader sample an RC probe texture through a global uniform and write it as emission, so the engine's fog carries RC light without engine changes? Its temporal blend would still apply unless reprojection is turned off.

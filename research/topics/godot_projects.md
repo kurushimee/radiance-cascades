@@ -330,8 +330,3 @@ Each item is a failure seen above, stated as the rule that avoids it.
 
 ## Open questions
 
-- How large is gomezzz's error per level against a path-traced reference, and how much does it drop with a parallax-correct parent lookup or with `l = 4` intervals?
-- How much of gomezzz's frame is tracing? It records no GPU timestamps, and its TODO lists timestamp profiling.
-- Does Phreakyx's design compile and run, and how full do its probe pools get in a real scene?
-- At what scene size does a dense grid like gomezzz's lose to sparse probes near surfaces, in memory and in rays per frame?
-- Can the analytic-primitive path (64 per frame, 112 bytes each) grow into a per-frame proxy scene for moving objects, as a cheap same-frame alternative to rebuilding a BVH?

@@ -408,6 +408,3 @@ Gavras's merge and gather keep the gist's 10% relative-spread test and `1/(|Δd|
 
 ## Open questions
 
-- Does bilinear 3D with the bilinear fix (scy3Dd) remove depth-edge leaks as well as min/max probes, at lower cost?
-- Can the Unreal plugin's per-sector β be carried into SPWI, where rays are world segments rather than screen slices?
-- How large is the error of NfBSz1's perspective-correct min/max interpolation on real G-buffers, against bilinear 3D and selective subsets?

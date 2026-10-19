@@ -390,9 +390,6 @@ What the theory implies for single-frame 3D RC (inference):
 
 - Which interval scaling minimizes perceived error in 3D? Only Split RC tested `l = 4` against `l = 2` with a published method, and its 2D appendix is the only controlled comparison. Is there a scaling between them, or a per-cascade `l`, that keeps the angular ratio bounded without the drift of `l = 2`?
 - Can a 3D lattice make the extend identity exact, as HRC does in 2D, without HRC's `O(N⁴)` memory for an `N³` volume?
-- How large is vanilla merging's error in 3D? Osborne's worst case (just over 10% for a tiny opaque source in vacuum) is a 2D figure, and the 3D bilinear fix costs 8× on a rectilinear grid.
-- Can interpolation order be raised cheaply (GradientRC's slopes, cubic kernels) to remove blocky patches, and does that interact with the band-limit argument?
 - What is the right 3D sky integral for non-equal-area direction maps, and can a prefiltered environment lookup per direction cell replace it exactly?
 - How should direct light be split from RC without double counting light that RC also reaches through its intervals? Must emitters that are shadowed separately be removed from the RC scene, or only their direct contribution?
-- Can several bounces be computed within one frame from stored hit distances or repeated RC passes at acceptable cost?
 - Does supersampling each stored direction (many rays per cone) change the equal-error `t0`, since it removes the aliasing that made shorter intervals preferable?

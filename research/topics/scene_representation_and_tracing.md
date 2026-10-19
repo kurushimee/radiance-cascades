@@ -292,10 +292,5 @@ RC's coherent low cascades and incoherent high cascades map onto the paper's pri
 
 ## Open questions
 
-- Which pairing gives the best single-frame quality per millisecond: a triangle BVH for cascades 0 and 1 with voxel mips above, an HDDA over bitmasks for all cascades, or a narrow-band SDF with a skip structure?
-- Can a per-frame GPU LBVH (Wicked Engine's four passes) build and trace a typical Godot scene within 1 to 2 ms on mid-range hardware, and how does BVH2 traversal in GLSL compare with an HDDA at RC's segment lengths?
-- How thin can walls be before each structure leaks at cascade 0, and do six-direction opacity mips keep upper cascades leak-free in one frame?
-- What is the cheapest same-frame hit shading that does not carry history: shadow maps sampled at hits, one shadow ray per hit, or a light injected into voxels each frame from the current shadow maps?
-- Can screen-space marking and removal of the visible depth (daGI2's scheme) run every frame over the whole screen, so that visible moving objects enter the world structure without lag?
 - Does a narrow band of ±4 voxels in 8 bits keep enough precision for RC's short cascade 0 segments, or does cascade 0 need a finer field near the camera?
 - How much of a dense 128³ to 256³ occupancy or distance volume fits Godot's storage-buffer and texture limits once cascades, probes and the scene share the GPU?

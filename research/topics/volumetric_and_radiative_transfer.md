@@ -435,10 +435,4 @@ The SIGGRAPH 2021 course "Spectral Imaging in Production" (chapters by Weidlich;
 
 ## Open questions
 
-- Which mip rule loses least for thin walls in a single-frame 3D budget: six directional opacities, a variance limit like DexRT's, or max-filtering for binary occluders with averaging only in media?
-- Can the Jensen-gap bound be used directly to pick per block between density averaging and coverage averaging, by the orientation of the structure?
-- Does sparse RC work for volumetrics if probes are activated along camera rays through fog, and how many probes does that add per frame?
-- What does single-frame multiple scattering cost, and is one scattering event from the same solve plus an ambient term enough for fog?
-- Can a spectral cascade keep transmittance in a few bins and radiance in moments, and does the merge stay accurate?
 - What is DexRT's actual 3D block-map size, given that the stated 669 words fit neither 8³ nor 16³ blocks at 512³?
-- How much do the darker surfaces in Rulkens's comparison shrink once cones are weighted by projected solid angle?

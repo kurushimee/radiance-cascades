@@ -429,7 +429,3 @@ The engine has a lighting-mode switch (shadow maps, hybrid, RC) that the L key c
 
 ## Open questions
 
-- How does wroughtinator's native build perform with history off, and how much of its look comes from the running average?
-- Would erhe's gate failures (quarter-spacing leak, floor-embedded probes, 0.25 m emitter, corridor far field) pass with `l = 4`, equal-error `t0`, probe relocation and an analytic small-emitter term?
-- Does the hit-distance hand-over of M3ycWt (rays to the first hit, blended between two levels) beat interval splitting for seams, and at what cost?
-- Is a clipmap of world probes over a distance field (EggyStudio) a usable far field under a single-frame screen-probe near field, with directions growing 4× per level?

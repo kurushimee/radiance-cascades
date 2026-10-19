@@ -329,8 +329,4 @@ Higher RSM resolution costs more than its rendering time because texture-cache m
 
 ## Open questions
 
-- Can DDGI-style relocation move RC's cascade-0 probes without breaking the regular parent interpolation of the merge, or must relocation be limited to the final gather?
 - Does a single-frame RC need Chebyshev visibility at its final gather when cascade-0 intervals are short, or do short intervals already confine the leak to within one probe spacing?
-- At an equal per-frame ray budget, how does single-frame RC's noise compare with DDGI at its default hysteresis in the same scene?
-- Can an LPV-like propagation or VCT mips provide RC's far cascades cheaply in a single frame, and how much leak would the prefiltering add there ([light transport alternatives](light_transport_alternatives.md))?
-- Which of Enshrouded's tricks (fixed ray budget, ray sorting, stochastic cascade selection) survive without its temporal importance sampling?

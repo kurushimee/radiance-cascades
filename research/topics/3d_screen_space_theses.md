@@ -435,13 +435,9 @@ NoGI, a baseline without GI, appears only in the charts and CSVs. The CSVs (`gi_
 
 ## Single-frame assessment
 
-- All five RC theses run without temporal reuse; Gerassimov's RC is unknown. Single-frame screen-probe RC is the tested default, not an exception.
+- All five RC theses run without temporal reuse; Gerassimov's paper and data repository do not identify the RC tested. Single-frame screen-probe RC is the tested default, not an exception.
 - Measured single-frame costs at 1080p-class resolution: 1.9 ms (spacing 4, 16 rays, 5 cascades) to 8.7 ms (spacing 2, 16 rays, 8 cascades) on an RTX 3080 with DXR (Dell'Ova), about 10 ms on an RTX 2070 at one probe per 4×4 px (Kaméus), 2 to 26 ms for SSRC in a game (Abou Dan and Jensen), and 33 to 156 ms with software traversal on an M1 (Gavras).
 - What a single frame lacks is stability, not convergence: every thesis reports flicker and none reports noise.
 
 ## Open questions
 
-- What is the quality-per-millisecond curve of SPWI across spacing and ray count, measured against a path-traced reference?
-- How much of the per-ray fixed cost Dell'Ova's data imply survives in a compute tracer, where there is no ray launch but also no hardware traversal?
-- Does Kaméus's Min+Max advantage grow with a cascade −1 gather and finer final interpolation, which remove the halos from 2×2 averaging?
-- Which RC did Gerassimov test, and what causes its over-brightening in daylight?

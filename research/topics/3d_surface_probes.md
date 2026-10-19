@@ -507,10 +507,7 @@ The video stores a 3D scene's light on a 2D surface, the plane, which is the sur
 
 ## Open questions
 
-- Can surfel probes be spawned fast enough for a single frame, for example one per pixel block every frame as Split RC inserts probes, without the coverage test's dependence on last frame's grid?
 - Does an interval length that scales with surfel size (Split RC's `t0` per LOD) fix Coppen's depth-dependent error balance?
-- Would a surfel tracing proxy built per mesh (Love and Deepspace) make long software rays cheap enough for ray splitting under `RenderingDevice`?
 - How do on-surface charts handle dynamic and skinned meshes, given that their islands and triangle ID maps are built per mesh?
 - Is the hit-distance parent test enough to stop leaks in a 3D sparse grid, where parents are not on the same surface as the child?
-- How would a generated atlas handle moving and skinned meshes, and can it be rebuilt per change at Godot's mesh counts?
 - Can a screen-space cascade −1 restore the contact shadows that a 10 to 25 cm atlas texel loses, without the screen-space family's disocclusion problems?
