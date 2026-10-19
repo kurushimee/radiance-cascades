@@ -8,6 +8,20 @@
 
 Sparse RC is vanilla 3D RC that stores only the probes near visible surfaces, with probe size growing with camera distance so the on-screen probe count stays nearly constant. Split RC is the published form; this note covers the engineering around it: probe placement and levels of detail, GPU hash maps, ray splitting, interpolation leaks, direction counts, tracing without hardware RT, and timings. The parts that matter most for a compute-only tracer are in "Tracing without hardware RT".
 
+## Contents
+
+- [Why sparse](#why-sparse)
+- [Probe placement and levels of detail](#probe-placement-and-levels-of-detail)
+- [GPU hash maps](#gpu-hash-maps)
+- [Ray splitting](#ray-splitting)
+- [Interpolation and leaks](#interpolation-and-leaks)
+- [Parameters and directions](#parameters-and-directions)
+- [Tracing without hardware RT](#tracing-without-hardware-rt)
+- [Other designs](#other-designs)
+- [Multi-bounce, specular and comparisons](#multi-bounce-specular-and-comparisons)
+- [Measurements](#measurements)
+- [Links](#links)
+
 ## Why sparse
 
 - In Sponza, sparse RC used 100 to 1000× less memory and compute than dense 3D RC at the same resolution. Cost scales with cascade 0 resolution squared, the surface area, not its cube, and stays nearly constant while moving through a world.

@@ -8,6 +8,19 @@
 
 This note covers screen-space RC (SSRC, rays marched in the depth buffer) and screen probes with world intervals (SPWI, rays traced in a world structure). It adds the optimization stack that makes depth-buffer RC real time, how min/max probes are built and debugged, direction mappings and counts for 3D, how SSRC and SPWI compare, temporal stability fixes, and a few measurements.
 
+## Contents
+
+- [SSRC or SPWI](#ssrc-or-spwi)
+- [The optimization stack](#the-optimization-stack)
+- [Path of Exile 2 details](#path-of-exile-2-details)
+- [Min/max probes](#minmax-probes)
+- [Depth-aware upscaling](#depth-aware-upscaling)
+- [Directions in 3D](#directions-in-3d)
+- [Temporal stability](#temporal-stability)
+- [Other findings](#other-findings)
+- [Measurements](#measurements)
+- [Links](#links)
+
 ## SSRC or SPWI
 
 - The two differ only in the ray march function; storage, merging and upscaling are the same.
@@ -28,8 +41,8 @@ A forwarded claim, with no hardware given, lists the steps that made depth-buffe
 | Occlusion bitmasks | 10 ms |
 
 - **Sector casting** is called the most important screen-space optimization. All cones from one pixel that project onto the same screen line form a depth sector, and each depth sample along that line updates every cone in the sector at once. It is dozens of times faster than marching cones one by one. Visibility-bitmask AO is the same idea with one bit per cone.
-- **Prefiltering** depth and color mips gives about another 4×, and only screen space allows it. Min and max depths lose meaning under blur, so store depth moments `(z, z²)` and treat occlusion as a probability from mean and variance, as in summed-area variance shadow maps. A uniform distribution worked as well as a normal one and is simpler. Moments cost about the same as bitmasks and win because they can be prefiltered; horizon-based methods cannot. Upper cascades need heavy prefiltering to stay stable under camera motion. [l3scz8](https://www.shadertoy.com/view/l3scz8) gives the closed-form occlusion of a depth interval by a sample offset with a uniform distribution of known variance ([code notes](2023_rc_shadertoys.md#l3scz8-suslik-occlusion-from-depth-variance)).
-- **Horizon starts:** each cascade can start at the horizon of the first sample of its interval. Taking the max of horizons gives HBAO far faster than regular HBAO, and GTAO can be computed with RC. [33ycDm](https://www.shadertoy.com/view/33ycDm) does so in one frame from three levels of cascaded horizons, as an approximation with two slices, two to four samples per direction and averaged horizons ([code notes](2023_rc_shadertoys.md#33ycdm-youssef_afella-gtao-from-cascaded-horizons)).
+- **Prefiltering** depth and color mips gives about another 4×, and only screen space allows it. Min and max depths lose meaning under blur, so store depth moments `(z, z²)` and treat occlusion as a probability from mean and variance, as in summed-area variance shadow maps. A uniform distribution worked as well as a normal one and is simpler. Moments cost about the same as bitmasks and win because they can be prefiltered; horizon-based methods cannot. Upper cascades need heavy prefiltering to stay stable under camera motion. [l3scz8](https://www.shadertoy.com/view/l3scz8) gives the closed-form occlusion of a depth interval by a sample offset with a uniform distribution of known variance ([code notes](2023_rc_shadertoys_hrc_3d_and_other.md#l3scz8-suslik-occlusion-from-depth-variance)).
+- **Horizon starts:** each cascade can start at the horizon of the first sample of its interval. Taking the max of horizons gives HBAO far faster than regular HBAO, and GTAO can be computed with RC. [33ycDm](https://www.shadertoy.com/view/33ycDm) does so in one frame from three levels of cascaded horizons, as an approximation with two slices, two to four samples per direction and averaged horizons ([code notes](2023_rc_shadertoys_hrc_3d_and_other.md#33ycdm-youssef_afella-gtao-from-cascaded-horizons)).
 - One design stored 4 color cones with 16 opacity sub-cones (4 per color cone). Bitmasks cannot be interpolated when merging, so they were converted to opacity. Bitmasks can also be mixed bit by bit, choosing each bit with probability equal to the weight from a precomputed pattern.
 
 ## Path of Exile 2 details
@@ -47,7 +60,7 @@ A forwarded claim, with no hardware given, lists the steps that made depth-buffe
 - **Building the pyramid:** a 2×2 box chain lets max creep into min under bilinear filtering, so widen by half a texel with an overlapping 4×4 box on top. Nearest min/max selection is easier to make exact. A 2×2 upscaling window was poor; 3×3 was stable and mostly artifact free. Reverse depth swaps min and max. One WebGPU build packed both into one R32_UINT.
 - **Interval start** must lie outside the tile, at least its diagonal (`√32` px for 4×4), or a black band appears. Cascade 0 starting at 0 needs full resolution or cascade −1.
 - **Failure cases:** two overlapping fences; tiles where per-texel min/max cannot represent a sloped plane, which looks blocky and moves in motion; and GI computed inside objects when the max plane falls under the surface. Haloing comes from max-probe rays interpolated into min probes. Choosing min/max over a square 50% larger than the tile removed artifacts in one build.
-- **Continuous min/max** ([s3B3WR](https://www.shadertoy.com/view/s3B3WR)) classifies each sample as foreground or background against the average depth and blurs each class separately. It is stable under camera motion and works at any downscale factor. Defining the ratio first and deriving depths from it was smoother than the reverse. Reference upscaler: [NfBSz1](https://www.shadertoy.com/view/NfBSz1), nearly exact for world positions; it interpolates `1/d` of each 8×8 cell's min and max perspective-correctly ([code notes](2023_rc_shadertoys.md#nfbsz1-suslik-perspective-correct-minmax-interpolation)).
+- **Continuous min/max** ([s3B3WR](https://www.shadertoy.com/view/s3B3WR)) classifies each sample as foreground or background against the average depth and blurs each class separately. It is stable under camera motion and works at any downscale factor. Defining the ratio first and deriving depths from it was smoother than the reverse. Reference upscaler: [NfBSz1](https://www.shadertoy.com/view/NfBSz1), nearly exact for world positions; it interpolates `1/d` of each 8×8 cell's min and max perspective-correctly ([code notes](2023_rc_shadertoys_hrc_3d_and_other.md#nfbsz1-suslik-perspective-correct-minmax-interpolation)).
 - **Two-surface construction** (current state): a full-resolution nonlinear bilateral filter with radius equal to the downscale factor finds discontinuities and computes min/max only there, then decimates. Flat planes get equal min and max; elsewhere probes sit on exact full-resolution depth pixels stored as two int16 indices, with discontinuities pushed slightly outward. A threshold of about 1% depth change per pixel caught thin banners in Sponza. It is costly on mobile, and a mip-like construction is still open.
 - **Smooth envelopes** around depth are an open problem; tried: Beurling–Selberg majorants, FFT band limits, an `[1, 2, 1]` blur, and a slope-corrected envelope fitted with IRLS.
 - Min and max are equal for about 99% of pixels, so a classification plus a neighbor reference could replace the second value.
@@ -58,7 +71,7 @@ A forwarded claim, with no hardware given, lists the steps that made depth-buffe
 - The upscaler must use the same depth the probe was placed at, or light bleeds.
 - Bilateral upsampling was called one of the worst methods. Its dark edges come from unnormalized weights, and all-zero weights treated as ones leak upper probes. Storing one depth plus a ratio halos because a ratio cannot be lerped; do not pack min and max into one channel if hardware interpolation is needed.
 - Mip aliasing: use a negative mip bias equal to the upscaling ratio, as temporal upscalers do, and blur the depth and color buffers rather than the probes.
-- Depth-aware merging test scenes: [4cffDX](https://www.shadertoy.com/view/4cffDX), [4XXSWS](https://www.shadertoy.com/view/4XXSWS), and [MXjcWK](https://www.shadertoy.com/view/MXjcWK), which compares bilateral and selective upscaling ([code notes](2023_rc_shadertoys.md#depth-aware-upscaling-and-occlusion)).
+- Depth-aware merging test scenes: [4cffDX](https://www.shadertoy.com/view/4cffDX), [4XXSWS](https://www.shadertoy.com/view/4XXSWS), and [MXjcWK](https://www.shadertoy.com/view/MXjcWK), which compares bilateral and selective upscaling ([code notes](2023_rc_shadertoys_hrc_3d_and_other.md#depth-aware-upscaling-and-occlusion)).
 
 ## Directions in 3D
 
@@ -106,8 +119,8 @@ A forwarded claim, with no hardware given, lists the steps that made depth-buffe
 - SSRC for Unity URP: https://github.com/alexmalyutindev/unity-urp-radiance-cascades
 - SPWI with hardware RT: https://github.com/Qirias/RC-SPWI
 - SPWI in WebGL: https://github.com/CodyJasonBennett/three-rc
-- Screen-space probes on Shadertoy that merge by reprojecting each coarser ray's hit point into the finer probe, with a visibility window and 16-frame temporal accumulation: https://www.shadertoy.com/view/lXByRh (Mathis; [code notes](2023_rc_shadertoys.md#lxbyrh-mathis-screen-space-probes-merged-by-hit-point-reprojection))
-- SPWI on Shadertoy, amortized over 2 frames: https://shadertoy.com/view/scy3Dd (six cascades from 4 px probes; [code notes](2023_rc_shadertoys.md#scy3dd-codyjbennett-spwi-in-one-shader))
+- Screen-space probes on Shadertoy that merge by reprojecting each coarser ray's hit point into the finer probe, with a visibility window and 16-frame temporal accumulation: https://www.shadertoy.com/view/lXByRh (Mathis; [code notes](2023_rc_shadertoys_hrc_3d_and_other.md#lxbyrh-mathis-screen-space-probes-merged-by-hit-point-reprojection))
+- SPWI on Shadertoy, amortized over 2 frames: https://shadertoy.com/view/scy3Dd (six cascades from 4 px probes; [code notes](2023_rc_shadertoys_hrc_3d_and_other.md#scy3dd-codyjbennett-spwi-in-one-shader))
 - Surfel RC: https://github.com/mxcop/src-dgi
 - Depth-buffer ray march for contact shadows, SSGI and SSR: https://gist.github.com/h3r2tic/9c8356bdaefbe80b1a22ae0aaee192db. Stachowiak's 2023 HLSL (Apache-2.0 or MIT) marches in UV with `max(2, min(linear_steps, ⌊len_px⌋))` steps, at most one per pixel, at `t_i = lerp(t_min, t_max, ((i + jitter)/N)^exponent)`, and refines the first crossing with optional bisection and a secant step accepted only if it shrinks the distance below 0.9 of the bracket's. Depth is reverse Z with an infinite far plane, so surface depth is `1/sample`. Each point is tested against both the bilinear and the nearest-texel surface: `distance = max(lin, near)·(1 + 2·10^−6) − ray_depth` and `penetration = ray_depth − min(lin, near)`, because point samples form steps near the ray origin that cause false occlusion while the smooth surface causes false shadows at object edges, so occlusion is claimed only below both. A hit needs penetration and distance below a constant thickness (default 1 in linear z, scaled by the reciprocal near-plane distance), since the depth buffer has no thickness. Defaults: 4 linear steps, exponent 1, no bisection or secant (useful for colour, as in SSR or SSGI, pointless for contact shadows), no jitter, no marching behind surfaces (contact shadows only, since it leaks colour bounces; then the thickness should be at least the world ray length over the step count), no nearest-only sloppy mode. A miss returns the farthest point reached. The included `frame_constants`, `uv` and `samplers` headers are not in the gist.
 - Visibility bitmask paper and code: https://arxiv.org/pdf/2301.11376 and https://cdrinmatane.github.io/posts/ssaovb-code ([paper notes](2022_therrien_visibility_bitmask_ssgi.md), [code post notes](2022_therrien_visibility_bitmask_ssgi.md#code-post-2023))

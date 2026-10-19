@@ -9,6 +9,18 @@
 
 HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades traced with an integer hierarchical DDA instead of a distance field, feeding DDGI-like world probes. None of the three pull requests is merged, and Godot 4.7.2 still ships SDFGI. They matter here as working `RenderingDevice` code for a voxel tracer, probe upkeep and screen probes inside Godot's own renderer, and as a record of the artifacts a world-probe design hits there.
 
+## Contents
+
+- [Status](#status)
+- [Voxel cascades](#voxel-cascades)
+- [Hierarchical DDA](#hierarchical-dda)
+- [Lighting the voxels](#lighting-the-voxels)
+- [Probes](#probes)
+- [Occlusion and leaks](#occlusion-and-leaks)
+- [Reaching the pixels](#reaching-the-pixels)
+- [Cost](#cost)
+- [Screen probes in #122999](#screen-probes-in-122999)
+
 ## Status
 
 - #86267 was reviewed in 2024. clayjohn measured a small overall gain and a large drop in probe cost, and the rendering meeting agreed to rename it `dynamic_gi`. The thread was locked in 2024-12 with the timeline depending on reduz's time. A null dereference in `process_gi` (reading `hddagi` members when only VoxelGI exists) and leaked RIDs were still in the head.

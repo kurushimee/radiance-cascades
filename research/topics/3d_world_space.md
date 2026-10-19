@@ -2,6 +2,42 @@
 
 World-space RC stores its probes in the scene instead of on the screen. It sees light from off screen and from hidden surfaces, can light volumes, and keeps probes still while the camera moves. Its obstacle is memory: a dense 3D grid at useful resolution needs gigabytes, so every design that reaches a frame budget stores only the probes near visible surfaces. This topic covers dense grids and their cost model, sparse probes in hash maps, Split RC's ray splitting, leaks and temporal reuse in world space, and the GPU building blocks sparse designs use. The theory behind the parameters is in [core theory](core_theory.md#cascade-scaling), the direction maps and the gather tiles in [cascade layout](cascade_layout_and_merging.md#direction-maps-in-3d), and each world-space code base in [world-space implementations](3d_world_space_implementations.md). Surfels and UV charts are in [3D surface probes](3d_surface_probes.md), and screen probes with world intervals in [3D screen space](3d_screen_space.md).
 
+## Contents
+
+- [Why world space](#why-world-space)
+  - [Sannikov's sparse 3D RC (2025)](#sannikovs-sparse-3d-rc-2025)
+- [Dense grids](#dense-grids)
+  - [Memory and rays](#memory-and-rays)
+  - [Reach and cascade count](#reach-and-cascade-count)
+  - [Marching cost](#marching-cost)
+  - [Dense projects](#dense-projects)
+- [Sparse probes near surfaces](#sparse-probes-near-surfaces)
+  - [Why sparse](#why-sparse)
+  - [Placement and levels of detail](#placement-and-levels-of-detail)
+  - [Hash maps for probes](#hash-maps-for-probes)
+- [Ray splitting](#ray-splitting)
+  - [Samples per direction per frame (derived)](#samples-per-direction-per-frame-derived)
+- [Merge and interpolation](#merge-and-interpolation)
+  - [Leak defences in world space](#leak-defences-in-world-space)
+- [Shading](#shading)
+- [Tracing for world-space cascades](#tracing-for-world-space-cascades)
+- [Other sparse designs](#other-sparse-designs)
+- [Multi-bounce, specular and comparisons](#multi-bounce-specular-and-comparisons)
+  - [Split RC against DDGI and a reference](#split-rc-against-ddgi-and-a-reference)
+- [Measurements](#measurements)
+- [Temporal reuse in world space](#temporal-reuse-in-world-space)
+- [Adoption and plans](#adoption-and-plans)
+- [GPU building blocks](#gpu-building-blocks)
+  - [Spatial hashing for ray-traced AO](#spatial-hashing-for-ray-traced-ao)
+  - [Parallel hash maps (cuCollections)](#parallel-hash-maps-cucollections)
+  - [A simple lock-free GPU hash table](#a-simple-lock-free-gpu-hash-table)
+  - [GPUSorting](#gpusorting)
+  - [Morton codes](#morton-codes)
+  - [What carries to `RenderingDevice`](#what-carries-to-renderingdevice)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Why world space
 
 - **Off-screen and hidden light.** A world-space probe traces the scene, not the depth buffer, so a light behind a column or in another room still reaches it. Sannikov's sparse RC gained off-screen lights by moving from a screen-space marcher to hardware ray tracing ([videos](../sources/2022_sannikov_youtube_rc_videos.md#sparse-radiance-cascades-goodbye-screenspace-2025)).
@@ -62,8 +98,8 @@ Six cascades, computed; the sum is within 2% of `2·N³·D0` (derived).
 
 The model reproduces the measured projects:
 
-- jumeder's 32³ grid with 2048 lat-long directions and 4 cascades: 960 MiB and 125.8 M rays, exactly the repository's 960 MiB and 126 M rays ([implementations](3d_world_space_implementations.md#jumederdx12-radiance-cascades)).
-- tmpvar's 64³ grid with 36 directions and levels 0 to 5: 18,579,456 texels, 283.5 MiB of payload at 16 bytes, while the code allocates 1,792 MiB per atlas because every level gets a full 4096² layer. Only 15.8% of the allocation holds probes (derived; [implementations](3d_world_space_implementations.md#tmpvars-radiance-cascades-3d-grid)).
+- jumeder's 32³ grid with 2048 lat-long directions and 4 cascades: 960 MiB and 125.8 M rays, exactly the repository's 960 MiB and 126 M rays ([implementations](3d_world_space_implementations_grids.md#jumederdx12-radiance-cascades)).
+- tmpvar's 64³ grid with 36 directions and levels 0 to 5: 18,579,456 texels, 283.5 MiB of payload at 16 bytes, while the code allocates 1,792 MiB per atlas because every level gets a full 4096² layer. Only 15.8% of the allocation holds probes (derived; [implementations](3d_world_space_implementations_grids.md#tmpvars-radiance-cascades-3d-grid)).
 - tmpvar's playground computes one cascade's storage as `diameter³·rayCount·bytesPerRay·2`, with 6 directions (cube faces), 16 bytes per ray and a factor of 2 for ping-pong buffers, so 192 bytes per probe: 0.75 MB at 16³, 6 at 32³, 48 at 64³, 384 at 128³, 3,072 at 256³, 24,576 at 512³ and 196,608 at 1024³ ("MB" being MiB), and 0.046875, 0.1875, 0.75, 3, 12, 48 and 192 MiB for one `diameter²` slice ([playground](../sources/2024_tmpvar_rc_playground.md#demo-6-world-space-probe-storage-table-3d)). The table covers cascade 0 only; the full stack doubles it (derived).
 
 At 128³ with 32 directions a dense grid already needs 1 GiB in fp16 and 132 M rays per full update. One ray per pixel at 1080p is 2.07 M rays. A grid fine enough near the camera is therefore out of a frame budget unless it is small, coarse, or updated over many frames, which is what every dense project does (derived).
@@ -81,7 +117,7 @@ Time follows how far rays march, not only how many there are.
 
 So `l = 4`, which [core theory](core_theory.md#two-criteria-for-interval-scaling-derived) favours for error, is affordable with a marching tracer only if the step length grows with the interval. Each cascade needs a scene proxy filtered to its own resolution, the 3D form of the mip marching in [volumetric RC](volumetric_and_radiative_transfer.md#marching-on-mips), or a tracer whose cost does not grow with distance (hardware RT, a BVH, or a hierarchical DDA), or Split RC's single long ray per pixel (inference).
 
-**Which mip.** At the equal-error setting (`|Ω0| = 32`, `t0 = 1.6·Δs0`, `K = l = 4`), the gap between neighbouring ray ends inside cascade `n` grows from `Δs_n/4` at the interval start to `Δs_n` at its end: 0 to 1.0, 0.5 to 2.0, 1.0 to 4.0, 2.0 to 8.0 and 4.0 to 16.0 cascade 0 spacings for cascades 0 to 4 (derived). A proxy whose cell matches the gap therefore spans two mip levels within one interval. A single mip per cascade is either too coarse at the start or too fine at the end, which fits the report that tracing mip `N` with cascade `N` gave blocky upscaling ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#tracing-without-hardware-rt)). Choosing the level per sample from the distance along the ray, as creikey's clipmap trace does with `LOD = 0.5·log2(t/2)`, follows the gap ([implementations](3d_world_space_implementations.md#creikeyvoxel-radiance-cascades)) (inference).
+**Which mip.** At the equal-error setting (`|Ω0| = 32`, `t0 = 1.6·Δs0`, `K = l = 4`), the gap between neighbouring ray ends inside cascade `n` grows from `Δs_n/4` at the interval start to `Δs_n` at its end: 0 to 1.0, 0.5 to 2.0, 1.0 to 4.0, 2.0 to 8.0 and 4.0 to 16.0 cascade 0 spacings for cascades 0 to 4 (derived). A proxy whose cell matches the gap therefore spans two mip levels within one interval. A single mip per cascade is either too coarse at the start or too fine at the end, which fits the report that tracing mip `N` with cascade `N` gave blocky upscaling ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#tracing-without-hardware-rt)). Choosing the level per sample from the distance along the ray, as creikey's clipmap trace does with `LOD = 0.5·log2(t/2)`, follows the gap ([implementations](3d_world_space_implementations_grids.md#creikeyvoxel-radiance-cascades)) (inference).
 
 ### Dense projects
 
@@ -227,8 +263,8 @@ Probe grids leak through walls thinner than the probe spacing. Every world-space
 | Rays from the receiving surface, flipped into its hemisphere | no probe fires from inside a wall; wall-facing directions stay empty | none beyond splitting | Split RC (above) |
 | One hit bit per ray gates each parent | the child's own rays in that direction | about +50% merge time | a sparse build (above) |
 | One visibility ray to each of the 8 parents | short rays from `p + t_{i+1}·d` to `u_n + t_{i+1}·d` | up to 8 short rays per texel | erhe's default merge ([implementations](3d_world_space_implementations.md#erhe)) |
-| Sample each parent along the direction from it to the child interval's end | geometry of the 8 parents | 8 direction computations | SultanAladin ([implementations](3d_world_space_implementations.md#other-world-probe-grids)) |
-| A parent counts only if its stored hit distance does not fall short of the child | the parent's own hit distance | free | M3ycWt, yhyu13's surface charts, X3XfRM ([implementations](3d_world_space_implementations.md#m3ycwt-mathis-voxel-cascades-with-hemisphere-probes), [surface probes](3d_surface_probes.md)) |
+| Sample each parent along the direction from it to the child interval's end | geometry of the 8 parents | 8 direction computations | SultanAladin ([implementations](3d_world_space_implementations_grids.md#other-world-probe-grids)) |
+| A parent counts only if its stored hit distance does not fall short of the child | the parent's own hit distance | free | M3ycWt, yhyu13's surface charts, X3XfRM ([implementations](3d_world_space_implementations_grids.md#m3ycwt-mathis-voxel-cascades-with-hemisphere-probes), [surface probes](3d_surface_probes.md)) |
 | Surface class (dominant normal axis) in the probe key | 3 key bits | more probes at thin walls | wroughtinator's browser build |
 | Exclude probes deep inside walls | probe validity | none | EggyStudio, genos ([implementations](3d_world_space_implementations.md#rc-design-documents)) |
 | Indoor and outdoor tags | authored tags | authoring | Love and Deepspace ([surface probes](3d_surface_probes.md)) |

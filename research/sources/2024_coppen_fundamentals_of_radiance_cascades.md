@@ -9,6 +9,35 @@
 
 A 2D ("flatland") explainer of RC. It covers the angular and spatial observations behind the penumbra condition, how they become cascades of probes and intervals, how a cascade is stored in a texture, and how cascades merge into diffuse lighting. Code fragments show interval directions, interval ranges, interval merging, and bilinear merging. It is a good first read; the merge loop below is the most reusable part.
 
+## Contents
+
+- [Introduction](#introduction)
+  - [Terms](#terms)
+- [Observations](#observations)
+  - [Angular observation](#angular-observation)
+  - [Spatial observation](#spatial-observation)
+  - [Penumbra condition](#penumbra-condition)
+  - [Recap](#recap)
+- [Exploiting the observations](#exploiting-the-observations)
+  - [Angular](#angular)
+  - [Spatial](#spatial)
+- [Cascades](#cascades)
+  - [Cascade hierarchy](#cascade-hierarchy)
+  - [Cascade memory](#cascade-memory)
+  - [Cascade gathering](#cascade-gathering)
+- [Merging](#merging)
+  - [Merging intervals](#merging-intervals)
+  - [Merging cones](#merging-cones)
+  - [Merging spatially](#merging-spatially)
+  - [Merging algorithm](#merging-algorithm)
+  - [Final pass](#final-pass)
+- [Artifacts and fixes](#artifacts-and-fixes)
+- [Parameters and values](#parameters-and-values)
+- [Limitations and author statements](#limitations-and-author-statements)
+- [Unclear in source](#unclear-in-source)
+- [Figures and animations](#figures-and-animations)
+- [Links found](#links-found)
+
 ## Introduction
 
 - RC efficiently represents a radiance field: at any point in an area (usually the screen in 2D), it gives the incoming light.

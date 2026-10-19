@@ -8,6 +8,16 @@
 
 Brixelizer builds a sparse distance field of the scene on the GPU and traces rays through it in compute shaders, with no hardware ray tracing. Brixelizer GI is a simplified GI-1.0 on top of it. For RC the value is the tracer: an open, compute-only structure with GLSL source that turns triangles into a traceable field every frame, plus a radiance cache that solves the missing-material problem every SDF tracer has.
 
+## Contents
+
+- [Structure](#structure)
+- [Building](#building)
+- [Tracing](#tracing)
+- [Brixelizer GI](#brixelizer-gi)
+- [Cost](#cost)
+- [Overflow](#overflow)
+- [Problems](#problems)
+
 ## Structure
 
 - Cascades are clipmaps of 64³ voxels around a point, usually the camera, up to 24 of them. Extent per axis is `64 · voxel_size`.

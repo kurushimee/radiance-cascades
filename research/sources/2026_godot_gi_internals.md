@@ -10,6 +10,44 @@ SDFGI keeps eight or fewer cascades of 128-cube voxel volumes (SDF, light, aniso
 
 Source paths below are relative to the repository root at tag 4.7.2-stable. Line numbers refer to that tag. Docs citations give the section heading on the page.
 
+## Contents
+
+- [A. SDFGI design](#a-sdfgi-design)
+  - [A.1 What the blog and docs say](#a1-what-the-blog-and-docs-say)
+  - [A.2 Environment settings and defaults](#a2-environment-settings-and-defaults)
+  - [A.3 Constants and cascade geometry](#a3-constants-and-cascade-geometry)
+  - [A.4 Textures](#a4-textures)
+  - [A.5 Voxelization](#a5-voxelization)
+  - [A.6 Camera follow and scrolling](#a6-camera-follow-and-scrolling)
+  - [A.7 Per-frame pass order](#a7-per-frame-pass-order)
+  - [A.8 Shader files](#a8-shader-files)
+  - [A.9 Places where source comments disagree with the code](#a9-places-where-source-comments-disagree-with-the-code)
+- [B. Access to GI data from CompositorEffect](#b-access-to-gi-data-from-compositoreffect)
+  - [B.1 Script-visible API](#b1-script-visible-api)
+  - [B.2 Context and texture names found in source](#b2-context-and-texture-names-found-in-source)
+  - [B.3 Can a CompositorEffect read SDFGI data](#b3-can-a-compositoreffect-read-sdfgi-data)
+  - [B.4 Timing of the rbgi textures](#b4-timing-of-the-rbgi-textures)
+- [C. Compositor hooks and buffers](#c-compositor-hooks-and-buffers)
+  - [C.1 Callback types and order](#c1-callback-types-and-order)
+  - [C.2 Flags](#c2-flags)
+  - [C.3 Getting the buffers in a callback](#c3-getting-the-buffers-in-a-callback)
+  - [C.4 View and projection matrices](#c4-view-and-projection-matrices)
+- [D. Injecting custom GI into opaque lighting](#d-injecting-custom-gi-into-opaque-lighting)
+  - [D.1 The inputs the opaque shader reads](#d1-the-inputs-the-opaque-shader-reads)
+  - [D.2 When the buffer path is used](#d2-when-the-buffer-path-is-used)
+  - [D.3 Timing constraints](#d3-timing-constraints)
+  - [D.4 Per-material hook: IRRADIANCE and RADIANCE outputs](#d4-per-material-hook-irradiance-and-radiance-outputs)
+  - [D.5 VoxelGI data input from script](#d5-voxelgi-data-input-from-script)
+  - [D.6 Built-in ambient sources](#d6-built-in-ambient-sources)
+  - [D.7 What the source shows, in short](#d7-what-the-source-shows-in-short)
+- [E. Volumetric fog](#e-volumetric-fog)
+  - [E.1 Grid and formats](#e1-grid-and-formats)
+  - [E.2 Passes](#e2-passes)
+  - [E.3 Temporal reprojection](#e3-temporal-reprojection)
+  - [E.4 How GI and ambient enter fog](#e4-how-gi-and-ambient-enter-fog)
+  - [E.5 Frame order and access](#e5-frame-order-and-access)
+- [Sources](#sources)
+
 ## A. SDFGI design
 
 ### A.1 What the blog and docs say

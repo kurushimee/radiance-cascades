@@ -11,6 +11,19 @@
 
 Not RC, but the most complete shipped account of a layered GI cache: screen probes for the near field, world probes for distant light, and a skylight beyond, each picked for the precision its range needs. That is the problem RC solves with one rule, and Lumen's specific fixes for leaks, thin walls, foliage, noise and update budgets apply to any RC tracer. Page numbers below are slide numbers.
 
+## Contents
+
+- [Cache levels](#cache-levels)
+- [Screen probes](#screen-probes)
+- [Tracing](#tracing)
+- [Distance fields](#distance-fields)
+- [Surface cache](#surface-cache)
+- [Rejected designs](#rejected-designs)
+- [Radiance caching (SIGGRAPH 2021)](#radiance-caching-siggraph-2021)
+- [Timings](#timings)
+- [Limits from the docs](#limits-from-the-docs)
+- [Tech blog overview (May 2022)](#tech-blog-overview-may-2022)
+
 ## Cache levels
 
 The opaque final gather has these levels, from near to far (p. 168):

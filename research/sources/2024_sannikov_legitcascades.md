@@ -10,6 +10,26 @@
 
 The repository holds Sannikov's 2D experiments. `Scaling.ls` is a compact reference for plain RC with the bilinear fix. `ChroniclFix.ls` adds a cheaper fix for the upper cascades. Everything after 2025 explores holographic and polygonal variants in 2D and is listed briefly at the end.
 
+## Contents
+
+- [Scaling.ls: reference pipeline](#scalingls-reference-pipeline)
+  - [Frame structure](#frame-structure)
+  - [Defaults](#defaults)
+  - [Layout](#layout)
+  - [Intervals](#intervals)
+  - [Ray march](#ray-march)
+  - [Bilinear-fixed merge](#bilinear-fixed-merge)
+  - [Final gather](#final-gather)
+- [ChroniclFix.ls: the chronicl fix](#chroniclfixls-the-chronicl-fix)
+- [Later experiments (2025–2026)](#later-experiments-20252026)
+  - [Plane cascades](#plane-cascades)
+  - [Block cascades](#block-cascades)
+  - [Polygonal cascades](#polygonal-cascades)
+  - [GradientRC.ls](#gradientrcls)
+  - [Wave-optics tests](#wave-optics-tests)
+  - [BundleBasisExploration.ls](#bundlebasisexplorationls)
+  - [Sweeping.ls](#sweepingls)
+
 ## Scaling.ls: reference pipeline
 
 ### Frame structure

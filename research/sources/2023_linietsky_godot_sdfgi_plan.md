@@ -9,6 +9,15 @@
 
 The design plan behind SDFGI and the redesign that became HDDAGI. Shipped code differs in places (see [Godot GI internals](2026_godot_gi_internals.md) and [HDDAGI](2026_godot_hddagi_dynamic_gi.md)), but the deck states the requirements Godot sets for its own GI and several optimizations that apply to any probe system traced in compute, RC included.
 
+## Contents
+
+- [Requirements](#requirements)
+- [Structure](#structure)
+- [Probe tracing](#probe-tracing)
+- [Making it fast](#making-it-fast)
+- [Reflections](#reflections)
+- [Plan for dynamic objects](#plan-for-dynamic-objects)
+
 ## Requirements
 
 - No per-scene or per-object setup: no SDFs, cards or lightmaps to author; ideally one switch.

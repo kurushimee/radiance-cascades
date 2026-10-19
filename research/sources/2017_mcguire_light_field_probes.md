@@ -9,6 +9,15 @@
 
 A regular grid of probes stores, per octahedral texel, radiance, the normal of the nearest surface and its radial distance, so the probe set is a ray-traceable approximation of the scene. Rays are traced through the probes' depth maps, and diffuse light is gathered from prefiltered irradiance weighted by a Chebyshev visibility test on distance moments. The prefiltered visibility test is the one DDGI later made dynamic ([2019_majercik_ddgi.md](2019_majercik_ddgi.md)), and the probes use Cigolle's octahedral map ([2014_cigolle_octahedral_unit_vectors.md](2014_cigolle_octahedral_unit_vectors.md)). Section numbers are the paper's.
 
+## Contents
+
+- [Probes and storage (sec. 3)](#probes-and-storage-sec-3)
+- [Tracing (sec. 4)](#tracing-sec-4)
+- [Shading (sec. 5)](#shading-sec-5)
+- [Results (sec. 6)](#results-sec-6)
+- [Limitations](#limitations)
+- [For RC](#for-rc)
+
 ## Probes and storage (sec. 3)
 
 - Probes sit on a regular grid inside the scene bounds, not jittered in the results. Each probe stores a spherical slice of the light field `L(x, ω)`, the normal of the nearest surface in each direction and its radial distance `r`.

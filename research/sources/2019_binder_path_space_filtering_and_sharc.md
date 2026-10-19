@@ -7,6 +7,16 @@
 
 Split RC stores probes in per-cascade hash maps, as do Solari's [world cache](2025_jms55_bevy_solari.md) and the [GI-1.0](2023_boisse_gi10_two_level_radiance_cache.md) world cache. These two sources describe the hashing scheme they all descend from, with tested parameters for slot layout, LOD, fixed-point atomics and eviction.
 
+## Contents
+
+- [Path space filtering](#path-space-filtering)
+- [SHaRC](#sharc)
+  - [Passes](#passes)
+  - [Hash grid](#hash-grid)
+  - [Fixed-point accumulation](#fixed-point-accumulation)
+  - [Resolve](#resolve)
+  - [Query rules](#query-rules)
+
 ## Path space filtering
 
 - Each path vertex gets a key from a quantized descriptor, and vertices with the same key share one average. One hash lookup replaces a neighbor search, and no motion vectors are needed.

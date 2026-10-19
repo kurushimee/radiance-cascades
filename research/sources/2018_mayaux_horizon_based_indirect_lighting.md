@@ -9,6 +9,15 @@
 
 HBIL extends HBAO into screen-space near-field indirect light: the horizon found in each azimuthal slice gives AO, a bent normal and cone for far-field probe lighting, and the radiance of the surfaces below the horizon for near-field bounce light. Sannikov's paper calls PoE1's GI similar to it ([2023_sannikov_radiance_cascades_paper.md](2023_sannikov_radiance_cascades_paper.md)); the write-up itself does not mention Path of Exile. Visibility-bitmask SSGI replaces its horizon angles with sector bits ([2022_therrien_visibility_bitmask_ssgi.md](2022_therrien_visibility_bitmask_ssgi.md)). Several formulas are garbled in text extraction; those are marked.
 
+## Contents
+
+- [Horizons, AO and bent cones (sec. 1-2)](#horizons-ao-and-bent-cones-sec-1-2)
+- [Indirect light (sec. 2.3)](#indirect-light-sec-23)
+- [Pipeline (sec. 3)](#pipeline-sec-3)
+- [Performance (sec. 3.5)](#performance-sec-35)
+- [Limitations (sec. 4)](#limitations-sec-4)
+- [For RC](#for-rc)
+
 ## Horizons, AO and bent cones (sec. 1-2)
 
 - AO becomes an integral over azimuthal slices with horizon angle `θ(φ)`; per slice the inner integral is `1 − cos θ(φ)`, and AO is one minus a normalized average of `cos θ(φ)` (normalization garbled, p. 4).

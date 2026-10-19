@@ -4,6 +4,30 @@ RC artifacts, their causes and the fixes in use, with costs: ringing and the mer
 
 Statements marked "derived" were computed from the sources' formulas; "inference" marks conclusions drawn here.
 
+## Contents
+
+- [Ringing](#ringing)
+- [The bilinear fix](#the-bilinear-fix)
+  - [Cost](#cost)
+- [Straight-ray fixes](#straight-ray-fixes)
+- [Cheaper fixes](#cheaper-fixes)
+  - [Fixes compared](#fixes-compared)
+- [Gaps and seams between cascades](#gaps-and-seams-between-cascades)
+- [Grid and blocky penumbras](#grid-and-blocky-penumbras)
+- [Light leaks](#light-leaks)
+- [Domain edges](#domain-edges)
+- [Sky aliasing](#sky-aliasing)
+- [Banding and precision](#banding-and-precision)
+- [Sharp shadows and small lights](#sharp-shadows-and-small-lights)
+- [Rays starting inside geometry](#rays-starting-inside-geometry)
+- [Base ray counts other than 4](#base-ray-counts-other-than-4)
+- [Latency and flicker over frames](#latency-and-flicker-over-frames)
+- [Recurring implementation bugs](#recurring-implementation-bugs)
+- [Debugging routine](#debugging-routine)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Ringing
 
 Bright rings around small, bright sources in open space, at the distances where one cascade hands off to the next. They show most clearly once colours are handled in linear space ([jason.today](../sources/2024_mcghee_building_realtime_gi_part2_rc.md#35-ringing-article)). fad's original header notes that small point lights ring and that the author found no fix, and most forks keep the comment ([Shadertoys](../sources/2023_rc_shadertoys.md#mtlbzx-fad-the-original-2d-implementation)); SimonDev's video shows a small light ringing and a large light leaking behind a thin wall ([SimonDev](../sources/2024_simondev_exploring_radiance_cascades_video.md#demo-limits-and-artifacts-1300-to-1456)).

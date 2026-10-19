@@ -2,6 +2,21 @@
 
 About 55 public repositories found by searching GitHub for radiance cascades, read at their October 2026 heads without building or running them. Most are 2D implementations of the standard scheme, so this note lists only what departs from it or carries a measurement. The standard scheme here means probe spacing ×2 and directions ×4 per cascade, geometric intervals, a top-down merge, and a jump-flood distance field.
 
+## Contents
+
+- [3D](#3d)
+  - [Surface-chart RC (yhyu13)](#surface-chart-rc-yhyu13)
+  - [Screen probes with voxel intervals (KingTheFifth)](#screen-probes-with-voxel-intervals-kingthefifth)
+- [2D variants worth knowing](#2d-variants-worth-knowing)
+  - [YMM4-Radiance (video-editor effect)](#ymm4-radiance-video-editor-effect)
+  - [pixi-GI (HRC for PixiJS)](#pixi-gi-hrc-for-pixijs)
+  - [lancimir/holographic-cascades (CPU and GPU HRC)](#lancimirholographic-cascades-cpu-and-gpu-hrc)
+  - [hbattal/2D-Lights (HRC and RC playground)](#hbattal2d-lights-hrc-and-rc-playground)
+- [Bugs that recur](#bugs-that-recur)
+- [AliMoghimii/Vulkan-Ray-Tracing-with-Radiance-Cascades: 3D world-space RC on branches](#alimoghimiivulkan-ray-tracing-with-radiance-cascades-3d-world-space-rc-on-branches)
+- [joelmartin-dev/BeansEngine: RC removed from history](#joelmartin-devbeansengine-rc-removed-from-history)
+- [Checked with nothing usable](#checked-with-nothing-usable)
+
 ## 3D
 
 | Repository | Design | Notes |

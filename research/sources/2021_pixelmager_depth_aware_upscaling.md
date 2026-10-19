@@ -11,6 +11,15 @@ The gist upscales half-resolution fog to full resolution without bleeding fog ov
 
 The gist links the INSIDE rendering talk (loopit.dk/rendering_inside.pdf, page 39), listed on GDC Vault as "Low Complexity, High Fidelity - INSIDE Rendering" (GDC 2016, Mikkel Gjøl and Mikkel Svendsen of Playdead). Whether that talk covers depth-aware upsampling is not confirmed. The gist also links ProxyPG (ppsloan.org, page 5), Frostbite's stochastic SSR, the RDR2 slides, Playdead's TAA neighbourhood clipping and MBOIT.
 
+## Contents
+
+- [Versions](#versions)
+- [Input](#input)
+- [Sample pattern](#sample-pattern)
+- [Edge test and weights](#edge-test-and-weights)
+- [Errors in the listing](#errors-in-the-listing)
+- [Author's notes on limits](#authors-notes-on-limits)
+
 ## Versions
 
 The gist's own comments describe three versions:

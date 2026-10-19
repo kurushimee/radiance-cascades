@@ -7,6 +7,15 @@ The Shadertoy "Radiance Cascades 3D" (X3XfRM, by Mathis, 2024-11-02; the communi
 | Original | https://www.shadertoy.com/view/X3XfRM |
 | Port | https://github.com/uziiDevelopment/providentia-cascades (Rust, wgpu 26, 2026-07) |
 
+## Contents
+
+- [Scene and atlas](#scene-and-atlas)
+- [Hemisphere directions](#hemisphere-directions)
+- [Trace](#trace)
+- [Merge](#merge)
+- [Final gather](#final-gather)
+- [CorylusDonuts: 2.5D screen-space RC pseudocode](#corylusdonuts-25d-screen-space-rc-pseudocode)
+
 ## Scene and atlas
 
 - The scene is an analytic box room (1 × 0.5 × 1) with an interior wall with two round holes, a mirror sphere and a mirror box, a moving sun and a sky. Rays are intersected analytically.

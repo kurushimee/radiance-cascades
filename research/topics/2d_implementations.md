@@ -4,6 +4,21 @@ The public 2D RC libraries, engine ports and reference codes: how each represent
 
 Statements marked "derived" were computed from the sources' formulas; "inference" marks conclusions drawn here; "read from the code" marks behaviour found by reading, not by running.
 
+## Contents
+
+- [Where each 2D code is covered](#where-each-2d-code-is-covered)
+- [Scene representations](#scene-representations)
+- [Libraries and engine projects](#libraries-and-engine-projects)
+  - [TypeGPU (Software Mansion)](#typegpu-software-mansion)
+  - [Bevy](#bevy)
+  - [Godot](#godot)
+  - [Unity and other ports](#unity-and-other-ports)
+- [CPU references and research harnesses](#cpu-references-and-research-harnesses)
+- [Setups that worked in 2D](#setups-that-worked-in-2d)
+- [Connections across implementations](#connections-across-implementations)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Where each 2D code is covered
 
 | Group | Codes | Where |
@@ -32,7 +47,7 @@ Flatland RC needs a scene that rays can march through quickly. The codes use six
 | Mip pyramid of the scene | box or binomial downsampling of emission and opacity | cascade `c` marches mip `c` with steps growing with the mip | tmpvar's playground (2×2 box, mip `N` on cascade `N`), knowdawg (10 levels, 4×4 binomial), the shipped Switch game (progressively downsampled scene, one fetch per direction) |
 | Fixed-step volume | the scene texture with emission and opacity | fixed steps accumulating `L += T·rgb·a`, `T *= 1 − a` or `T *= exp(−σ·s)` | LegitCascades (steps of `2·spacing_scaling^k` px, doubling per cascade, sampling at each step's start), kornelski's Bevy port, ZY4N, Qonfused, Sky-Meteor, CoreCascade's media, wfyyDz and its forks, tmpvar's playground |
 
-The jump flood itself is in [scene representation and tracing](scene_representation_and_tracing.md) and in the [glossary](supporting_techniques.md#distance-fields-and-voxelization); the 2D variants differ in details that cause bugs:
+The jump flood itself is in [scene representation and tracing](scene_representation_and_tracing.md) and in the [glossary](supporting_techniques_structures_and_tracing.md#distance-fields-and-voxelization); the 2D variants differ in details that cause bugs:
 
 - **Pass count.** `ceil(log2(max(W, H)))` is standard (jason.today, GM Shaders, qJay44). The community demo runs one more pass, 10 at 512² ([demo](../sources/2026_rc_community_site_and_wiki.md#distance-field-seed-jfa-df)). Youssef-Afella's HRC port uses a natural logarithm, 8 passes at 1920 px ending at a step of about 7.5 px instead of 1 ([Unity 2D](../sources/2024_unity_2d_rc_repositories.md#youssef-afella-hrc-port)); Hybrid46's 11 steps start at half the screen height, so the reach falls short of a 1200 px width ([assorted 2D](../sources/2026_assorted_2d_rc_experiments.md#hybrid46-raylib-port)); IceKontroI's 8-neighbour flood runs jumps from 2048 down to 1, 12 passes at 1080p rounded up to even, in about 0.75 ms on an RTX 2080 Ti ([Bevy](../sources/2024_bevy_2d_rc_repositories.md#icekontroisparse_rc_2d)).
 - **Ping-pong parity.** nixonyh's last step-1 pass never reaches the distance field, and Sohojoe's distance pass reads the second-to-last pass's output ([Bevy](../sources/2024_bevy_2d_rc_repositories.md#nixonyhbevy_radiance_cascades), [Godot 2D](../sources/2024_godot_2d_rc_repositories.md#godot-integration-patterns)).
@@ -41,7 +56,7 @@ The jump flood itself is in [scene representation and tracing](scene_representat
 - **Units.** Fields in UV units are anisotropic on non-square screens (jason.today's GI demo, qJay44); GM Shaders' optimized build divides the pixel distance by the render diagonal so the value fits its 2-byte encoding and stays isotropic ([GM Shaders](../sources/2024_yaazarai_gmshaders_radiance_cascades.md#raymarching-post-version)).
 - **Unsigned fields.** A jump flood gives distance to the nearest occupied pixel, not a signed distance; kiss3d biases the field outward by two pixels so grazing rays do not tunnel through thin occluders ([assorted 2D](../sources/2026_assorted_2d_rc_experiments.md#kiss3d-decoupled-cascades)), and TypeGPU's default tracer shrinks obstacles by `erodeBiasProbes` probe spacings instead (below).
 
-**Opacity per sample against opacity per length.** Several fixed-step marchers apply a constant opacity per sample: wfyyDz and its forks (1% per sample whatever the step, an optical depth of about 0.20 per pixel at level 0 and 0.008 at level 5, a factor of about 24), knowdawg (`T *= exp(−a)` per sample), tmpvar's playground (the step size is passed in and unused) ([Shadertoys](../sources/2023_rc_shadertoys.md#ffl3rf-codyjbennett-hardware-bilinear-without-the-fix), [Godot 2D](../sources/2024_godot_2d_rc_repositories.md#knowdawg-scene-mip-pyramid-per-cascade), [playground](../sources/2024_tmpvar_rc_playground.md#raymarch)). Since cascades march with different steps, and the bilinear fix's four rays with different lengths, the same absorber then attenuates differently per cascade and per ray (derived). The codes that scale by length use `exp(−σ·s)` (kornelski, CoreCascade, TypeGPU's holographic runner, amitabha) or the opacity correction `A = 1 − (1 − A0)^(s/s0)` for a step `s` against the reference step `s0` (GPU Gems, chapter 39, which writes the exponent with sampling rates as `s0/s`), named by tmpvar for cascades marching coarser volumes ([blog posts](../sources/2024_rc_blog_posts_and_slides.md#tmpvar-implementation-notes), [volumetric RC](volumetric_and_radiative_transfer.md)).
+**Opacity per sample against opacity per length.** Several fixed-step marchers apply a constant opacity per sample: wfyyDz and its forks (1% per sample whatever the step, an optical depth of about 0.20 per pixel at level 0 and 0.008 at level 5, a factor of about 24), knowdawg (`T *= exp(−a)` per sample), tmpvar's playground (the step size is passed in and unused) ([Shadertoys](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#ffl3rf-codyjbennett-hardware-bilinear-without-the-fix), [Godot 2D](../sources/2024_godot_2d_rc_repositories.md#knowdawg-scene-mip-pyramid-per-cascade), [playground](../sources/2024_tmpvar_rc_playground.md#raymarch)). Since cascades march with different steps, and the bilinear fix's four rays with different lengths, the same absorber then attenuates differently per cascade and per ray (derived). The codes that scale by length use `exp(−σ·s)` (kornelski, CoreCascade, TypeGPU's holographic runner, amitabha) or the opacity correction `A = 1 − (1 − A0)^(s/s0)` for a step `s` against the reference step `s0` (GPU Gems, chapter 39, which writes the exponent with sampling rates as `s0/s`), named by tmpvar for cascades marching coarser volumes ([blog posts](../sources/2024_rc_blog_posts_and_slides.md#tmpvar-implementation-notes), [volumetric RC](volumetric_and_radiative_transfer.md)).
 
 ## Libraries and engine projects
 
@@ -214,7 +229,7 @@ From implementers' reports ([merging notes](../sources/2026_merging_and_ringing.
 - **Normalization is not shared.** Outputs are fluence (`×2π`), mean radiance, means of the nearest probe, or exposure-scaled values, so brightness differs by about 2π between otherwise similar codes ([layout](cascade_layout_and_merging.md#final-gather)).
 - **Opacity per sample** makes several media codes depend on step count (above).
 - **Single-frame is the default off Shadertoy.** Every non-Shadertoy 2D code computes its cascades top-down in one frame except where it reads back the previous frame on purpose: GM Shaders' original bounce, thmasn's SubViewport chain, LegitScript's one-pass atlas, kiss3d's default brute-force path, lixu0073's accumulation and CptNemo0's per-cascade rates. Feedback for bounces is the one temporal element that remains, and amida and CoreCascade show it can be a second cascade set or a second pass instead (inference).
-- **Measured cost is scarce.** Of all the 2D codes, only Peter's thesis, IceKontroI's slides, [GM Shaders' stress test](2d_articles_and_demos.md#gm-shaders-yaazarai-and-xor) and a few README claims give timings; the rest are in [performance](performance.md).
+- **Measured cost is scarce.** Of all the 2D codes, only Peter's thesis, IceKontroI's slides, [GM Shaders' stress test](2d_articles_and_demos_gm_shaders.md#gm-shaders-yaazarai-and-xor) and a few README claims give timings; the rest are in [performance](performance.md).
 
 ## Single-frame assessment
 

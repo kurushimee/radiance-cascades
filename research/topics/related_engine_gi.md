@@ -9,6 +9,29 @@ Four shipped or open engine GI systems solve the problem RC solves, light from e
 | [daGI2](#dagi2) | screen probes, 8×8 radiance, 16 px tiles | radiance clipmap of 8×8 probes | screen ray of 3 to 6 grid probe sizes | screen march, then SDF clipmap | no timings; counts only |
 | [HSGI](#hsgi) | ReSTIR GI (PC) or screen probes (phones) | DDGI-style probe volume and voxel cache | trace-probe mode: one probe size, then the probe | Hi-Z, HDDA voxels or hardware RT | 8.53 ms on an RTX 3080; 3.18 ms on an iPhone 13 Pro |
 
+## Contents
+
+- [Lumen](#lumen)
+  - [Cache levels](#cache-levels)
+  - [Screen probes](#screen-probes)
+  - [The 2021 final gather](#the-2021-final-gather)
+  - [Timings](#timings)
+  - [Limits and the 2022 overview](#limits-and-the-2022-overview)
+- [Brixelizer GI](#brixelizer-gi)
+- [daGI2](#dagi2)
+  - [Pieces and frame flow](#pieces-and-frame-flow)
+  - [Screen probes](#screen-probes-1)
+  - [Radiance grid](#radiance-grid)
+  - [Volumetric GI](#volumetric-gi)
+  - [Problems on record](#problems-on-record)
+  - [daGI v1 in Enlisted (2019)](#dagi-v1-in-enlisted-2019)
+- [HSGI](#hsgi)
+  - [Mobile path](#mobile-path)
+  - [PC and console path](#pc-and-console-path)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Lumen
 
 Wright, Narkowicz and Kelly, "Lumen: Real-time Global Illumination in Unreal Engine 5", SIGGRAPH 2022 Advances in Real-Time Rendering ([slides](https://advances.realtimerendering.com/s2022/SIGGRAPH2022-Advances-Lumen-Wright%20et%20al.pdf), 200 pages with speaker notes; [notes](../sources/2022_wright_lumen_siggraph_advances.md)), with Wright's 2021 course talk on its final gather, the Lumen technical-details docs and performance guide, and a May 2022 tech blog. It is the most complete shipped account of a layered GI cache. Page numbers are slide numbers.
@@ -198,7 +221,7 @@ Anton Yudintsev, "Scalable Real-Time Ray Traced Global Illumination for Large Sc
 
 ## HSGI
 
-LIGHTSPEED STUDIOS (Tencent), "HSGI: Cross-Platform Hierarchical Surfel Global Illumination", GDC 2023 ([slides](https://media.gdcvault.com/gdc2023/Slides/HSGI+Cross-Platform_Jiaxuan_Zhang.pdf), 90 pages, filed under Jiaxuan Zhang; the Vault page names Jiancong Huang and Jiaxuan Zhang; [notes](../sources/2023_lightspeed_hsgi_hierarchical_surfel_gi.md)). It is dynamic GI for huge open worlds with moving geometry on PC, consoles and phones. Its "surfels" are voxels with a normal in a sparse brick clipmap traced by a hierarchical DDA, the same structure as HDDAGI; the cache and how it is filled from the lit screen are in [scene representation](scene_representation_and_tracing.md#hsgis-sparse-voxel-cache). Hardware RT is optional on every path.
+LIGHTSPEED STUDIOS (Tencent), "HSGI: Cross-Platform Hierarchical Surfel Global Illumination", GDC 2023 ([slides](https://media.gdcvault.com/gdc2023/Slides/HSGI+Cross-Platform_Jiaxuan_Zhang.pdf), 90 pages, filed under Jiaxuan Zhang; the Vault page names Jiancong Huang and Jiaxuan Zhang; [notes](../sources/2023_lightspeed_hsgi_hierarchical_surfel_gi.md)). It is dynamic GI for huge open worlds with moving geometry on PC, consoles and phones. Its "surfels" are voxels with a normal in a sparse brick clipmap traced by a hierarchical DDA, the same structure as HDDAGI; the cache and how it is filled from the lit screen are in [scene representation](scene_representation_and_tracing_voxels_and_bvhs.md#hsgis-sparse-voxel-cache). Hardware RT is optional on every path.
 
 ### Mobile path
 
@@ -214,7 +237,7 @@ One sample per pixel was too slow on phones, so mobile uses probes:
 ### PC and console path
 
 - Rays use screen traces (Hi-Z), then HDDA voxels or hardware RT, and read radiance from the scene colour, the voxels or a probe.
-- Diffuse GI runs ReSTIR GI at half resolution ([ReSTIR](supporting_techniques.md#resampling-and-sampling-theory)). One visibility ray after spatial reuse restores indirect shadows that visibility-free reuse washes out, and neighbours are reused only when their shadow state matches. Shading samples 3×3 to 7×7 neighbour reservoirs to cut colour noise.
+- Diffuse GI runs ReSTIR GI at half resolution ([ReSTIR](supporting_techniques.md#restir)). One visibility ray after spatial reuse restores indirect shadows that visibility-free reuse washes out, and neighbours are reused only when their shadow state matches. Shading samples 3×3 to 7×7 neighbour reservoirs to cut colour noise.
 - **Trace-probe mode:** for scenes with 4 or more important bounces or small bright lights, rays go only one probe size and then read a 6×6 octahedral probe, trading detail for stability, switchable per area.
 - Reflections below roughness 0.4 trace; rougher ones reuse the diffuse result, and above 0.8 they blend to diffuse GI.
 - **Against Lumen:** RTX 3080, 4K output via TSR from 1932×1084, GI traced at 966×542 (a quarter of the internal pixels, 6.3% of the output's). HSGI's GI passes took 8.53 ms (73.48 fps) against 9.63 ms for UE5 Lumen (59.62 fps), 11% less, with RMSE against a path tracer of 29.36 against 32.12. Of HSGI's 8.53 ms, diffuse denoising was the largest pass at 2.65 ms, 4.1 times diffuse tracing's 0.64 ms; a pass labelled "Ray Tracing Scene" took 2.14 ms (4.90 in UE5), light propagation 0.33 and screen injection 0.15 (ratios derived). No source states the RMSE's units, value range or tone mapping: the Vault page has only an abstract, no paper or preprint exists, and the Chalmers thesis sometimes linked with it is Ekberg's 2022 reimplementation of GIBS ([GIBS](related_radiance_caches.md#gibs-and-pica-pica-surfels)).

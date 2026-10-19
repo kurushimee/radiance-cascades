@@ -12,6 +12,25 @@ Radiance caches store light at points on or near surfaces, found by hashing or b
 | [Bevy Solari](#bevy-solari) | hashed world cache | position, normal, LOD | `1/n` blend, one bounce per frame | under 0.2 ms for the cache |
 | [GIBS](#gibs-and-pica-pica-surfels) (EA SEED) | surfels spawned from the G-buffer | 16×16 tile coverage | adaptive moving average | 3.4 to 11.3 ms on PS5 |
 
+## Contents
+
+- [Irradiance caching](#irradiance-caching)
+  - [Ward's rule](#wards-rule)
+  - [Radiance's practice](#radiances-practice)
+  - [Fixes from production](#fixes-from-production)
+  - [Radiance caching](#radiance-caching)
+  - [Splatting and time](#splatting-and-time)
+- [Path space filtering](#path-space-filtering)
+- [SHaRC](#sharc)
+- [GI-1.0](#gi-10)
+- [kajiya](#kajiya)
+- [Bevy Solari](#bevy-solari)
+- [GIBS and PICA PICA surfels](#gibs-and-pica-pica-surfels)
+  - [PICA PICA (Ray Tracing Gems chapter 25)](#pica-pica-ray-tracing-gems-chapter-25)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Irradiance caching
 
 Ward, Rubinstein and Clear's "A Ray Tracing Solution for Diffuse Interreflection" (SIGGRAPH 1988) computes indirect diffuse light at sparse records and interpolates between them, and every cache in this topic descends from it. Ward and Heckbert added gradients in 1992, Tabellion and Lamorlette took it into film production at PDI/DreamWorks in 2004, Křivánek et al. extended it to glossy surfaces as radiance caching (2005, 2006), and Gautron et al. moved it to the GPU (2005) and through time (2007). The formulas come from the SIGGRAPH 2008 class "Practical Global Illumination with Irradiance Caching" ([course page](https://cgg.mff.cuni.cz/~jaroslav/papers/2008-irradiance_caching_class/)), and the current rules from Radiance's source ([notes](../sources/2008_ward_krivanek_irradiance_caching.md)). Jarosz et al.'s volumetric member of the family is in [volumetric](volumetric_and_radiative_transfer.md#radiance-caching-in-media-jarosz-et-al-2008).
@@ -77,7 +96,7 @@ NVIDIA's Spatially Hashed Radiance Cache, versions 2023 to 2026 (v1.8.3), [githu
 **Hash grid.**
 - The default 64-bit key has 17 bits per axis of quantized position, 9 bits of level, 3 normal sign bits and one spare bit; a compact 32-bit key uses 8 bits per axis.
 - Level from distance: `level = clamp(0.5·log_b(dist²) + bias, 1, 511)` with base 2, voxel size `b^(level − bias)/sceneScale`, position `floor((p + 1e−4)/voxelSize)`.
-- The slot is `Jenkins32(lo) ^ Jenkins32(hi)` modulo `capacity − 15`, then a 16-slot bucket probed linearly without wrapping ([hashing](supporting_techniques.md#gpu-data-structures)). Key 0 marks an empty slot. Insertion uses a 64-bit atomic compare-exchange, or a lock buffer where 64-bit atomics are missing, as in Godot ([atomics](../../docs/rendering_device.md#atomics)).
+- The slot is `Jenkins32(lo) ^ Jenkins32(hi)` modulo `capacity − 15`, then a 16-slot bucket probed linearly without wrapping ([hashing](supporting_techniques_structures_and_tracing.md#gpu-hash-tables)). Key 0 marks an empty slot. Insertion uses a 64-bit atomic compare-exchange, or a lock buffer where 64-bit atomics are missing, as in Godot ([atomics](../../docs/rendering_device.md#atomics)).
 - An entry is 8 bytes of key, 16 bytes of accumulation (`uint` RGB sums and a count) and 16 bytes of resolved data (half RGB, count, age), 40 bytes. The baseline of 2²² entries is 160 MiB, and a static camera uses about 10 to 20% of them, 16 to 32 MiB (derived).
 
 **Accumulation and resolve.**

@@ -11,6 +11,41 @@ The page builds 2D radiance cascades (RC) step by step on top of a jump-flood di
 
 Conventions: "Article" means the prose and snippets. "Code" means the embedded scripts. "Code note" marks observations from reading the code, not statements by the author. "Derived" marks numbers computed from the code's formulas with default settings.
 
+## Contents
+
+- [0. Page layout and demos](#0-page-layout-and-demos)
+- [1. Why the naive method is slow (article)](#1-why-the-naive-method-is-slow-article)
+- [2. Penumbra hypothesis (article)](#2-penumbra-hypothesis-article)
+- [3. Build-up steps (article)](#3-build-up-steps-article)
+  - [3.1 Two levels, ping-pong, interval split](#31-two-levels-ping-pong-interval-split)
+  - [3.2 Generalizing to N cascades (article)](#32-generalizing-to-n-cascades-article)
+  - [3.3 sRGB correction (article)](#33-srgb-correction-article)
+  - [3.4 Light-leak clamp (article)](#34-light-leak-clamp-article)
+  - [3.5 Ringing (article)](#35-ringing-article)
+- [4. Final demo: full algorithm (`rc-fragment`, class `RC`)](#4-final-demo-full-algorithm-rc-fragment-class-rc)
+  - [4.1 Sizes and query parameters](#41-sizes-and-query-parameters)
+  - [4.2 Host parameters and derived cascade count](#42-host-parameters-and-derived-cascade-count)
+  - [4.3 Per-frame pipeline (`doRenderPass`)](#43-per-frame-pipeline-dorenderpass)
+  - [4.4 `rc-fragment` uniforms (values set by the host)](#44-rc-fragment-uniforms-values-set-by-the-host)
+  - [4.5 `rc-fragment` algorithm](#45-rc-fragment-algorithm)
+  - [4.6 Cascade loop, frame modes, and overlay](#46-cascade-loop-frame-modes-and-overlay)
+  - [4.7 Paint semantics (code)](#47-paint-semantics-code)
+- [5. Interactive controls (final demo)](#5-interactive-controls-final-demo)
+- [6. Earlier demo shaders (what each step adds)](#6-earlier-demo-shaders-what-each-step-adds)
+  - [6.1 One-pass naive (`one-pass-raymarch-fragment`)](#61-one-pass-naive-one-pass-raymarch-fragment)
+  - [6.2 Penumbra, naive](#62-penumbra-naive)
+  - [6.3 Two-pass (`two-pass-raymarch-fragment`)](#63-two-pass-two-pass-raymarch-fragment)
+  - [6.4 Two-pass V2, packed (`two-pass-raymarch-fragment-v2`)](#64-two-pass-v2-packed-two-pass-raymarch-fragment-v2)
+  - [6.5 Multi-pass N-cascade (`multipass-raymarch-fragment`)](#65-multi-pass-n-cascade-multipass-raymarch-fragment)
+  - [6.6 Penumbra with RC (`PenumbraHypothesisRC`)](#66-penumbra-with-rc-penumbrahypothesisrc)
+- [7. Artifacts and fixes (as stated or shown)](#7-artifacts-and-fixes-as-stated-or-shown)
+- [8. Performance notes](#8-performance-notes)
+- [9. Limitations, open problems, and code/article differences](#9-limitations-open-problems-and-codearticle-differences)
+  - [9.1 Limitations stated by the author](#91-limitations-stated-by-the-author)
+  - [9.2 Differences between article text and final code](#92-differences-between-article-text-and-final-code)
+- [11. Derived values (default settings)](#11-derived-values-default-settings)
+- [Links found](#links-found)
+
 ## 0. Page layout and demos
 
 The demos appear in this order on the page.

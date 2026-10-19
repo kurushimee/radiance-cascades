@@ -4,6 +4,34 @@ Holographic radiance cascades (HRC) is a 2D variant of RC by Rouli Freeman (Oxfo
 
 Statements marked "derived" were computed with a script from the sources' formulas; "inference" marks conclusions drawn here; "read from the code" marks behaviour found by reading, not by running. Community findings come from the [HRC notes](../sources/2026_holographic_rc.md) and are unverified unless a public link backs them.
 
+## Contents
+
+- [What it fixes](#what-it-fixes)
+- [Geometry](#geometry)
+- [Merging down](#merging-down)
+- [Building rays: the acceleration structure](#building-rays-the-acceleration-structure)
+- [Final gather and cleanup](#final-gather-and-cleanup)
+- [Measured results and the cost model](#measured-results-and-the-cost-model)
+- [Where it works](#where-it-works)
+- [Artifacts and fixes](#artifacts-and-fixes)
+- [Performance](#performance)
+- [3D](#3d)
+- [Off-screen light](#off-screen-light)
+- [Variants](#variants)
+  - [Half HRC](#half-hrc)
+  - [Equal-angle, ring, radial and axis-aligned HRC](#equal-angle-ring-radial-and-axis-aligned-hrc)
+  - [Plane cascades](#plane-cascades)
+  - [Block cascades](#block-cascades)
+  - [Polygonal cascades](#polygonal-cascades)
+  - [Gradient RC](#gradient-rc)
+  - [Line space](#line-space)
+  - [Background: light fields and line space](#background-light-fields-and-line-space)
+  - [Other uses](#other-uses)
+- [Debugging](#debugging)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## What it fixes
 
 Plain RC blurs the penumbra of a small, distant light behind an occluder halfway to it, because the cascade that sees the occluder has coarse probe spacing; in the paper's test, plain RC tuned to equal time had twice HRC's RMSE, all of it in penumbras ([core theory](core_theory.md#which-distance-occluder-and-light-separated)). HRC keeps transverse resolution at every level, so interpolation is always 1D between adjacent probe lines and never spans a long distance, and its results come within reach of a converged path tracer. Implementers add that it has no ringing and no leaks and needs no bilinear fix, because its rays continue each other without overlapping, and that its penumbras are sharper than with the bilinear or parallax fix ([HRC notes](../sources/2026_holographic_rc.md#how-it-behaves-next-to-vanilla-rc)). Vanilla RC's minimum penumbra angle, which makes shadows behind small sharp sources look soft or splotchy, is by design, and HRC is what removes it in 2D ([merging notes](../sources/2026_merging_and_ringing.md)).

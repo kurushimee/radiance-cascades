@@ -9,6 +9,23 @@
 
 The paper compares three real-time global illumination (GI) methods in Unity's Universal Render Pipeline (URP): Screen Space Global Illumination (SSGI), built-in Realtime Lightmaps (RTLM), and Radiance Cascades (RC). It runs each method in three scenes with fixed camera paths and synchronized dynamic lights, then records FPS and frame time and annotates visual artifacts. RC and RTLM run at similar, higher frame rates than SSGI, and the paper rates RTLM as the most temporally stable and RC as the best at dynamic lights seen from a distance.
 
+## Contents
+
+- [Scope and limits (as stated)](#scope-and-limits-as-stated)
+- [Test setup](#test-setup)
+  - [Hardware and software](#hardware-and-software)
+  - [Scenes](#scenes)
+  - [Protocol](#protocol)
+- [Methods compared](#methods-compared)
+- [Results: performance](#results-performance)
+  - [Reproduction from the source's linked measured data](#reproduction-from-the-sources-linked-measured-data)
+- [Visual artifacts (paper text)](#visual-artifacts-paper-text)
+  - [Isometric scene (dynamic emissive surfaces)](#isometric-scene-dynamic-emissive-surfaces)
+  - [Realistic scene (daylight exterior)](#realistic-scene-daylight-exterior)
+  - [Stylized scene (interior)](#stylized-scene-interior)
+- [Discussion and recommendations](#discussion-and-recommendations)
+- [Conclusions, limitations, future work](#conclusions-limitations-future-work)
+
 ## Scope and limits (as stated)
 
 - Only free and openly available methods inside URP were tested.

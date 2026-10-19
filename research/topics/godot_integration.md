@@ -2,6 +2,23 @@
 
 What Godot 4.7.2 (Forward+, Vulkan) gives an RC implementation, what it keeps private, how a GI result reaches shaded surfaces, and what the engine's own GI does with the same API: SDFGI, which ships, and HDDAGI, which is still a pull request. `RenderingDevice` rules checked against the engine are in [docs/rendering_device.md](../../docs/rendering_device.md) and are linked here, not repeated. Engine facts come from source reads at the 4.7.2-stable tag ([GI internals](../sources/2026_godot_gi_internals.md), [indirect diffuse paths](../sources/2026_godot_indirect_diffuse_paths.md), [compositor examples](../sources/2026_godot_compositor_effect_examples.md)). Line numbers in those notes come from one read except where a note marks them as checked. The RC projects built on Godot, and the compositor-effect projects these patterns come from, are in [Godot projects](godot_projects.md).
 
+## Contents
+
+- [Running the compute work](#running-the-compute-work)
+- [Frame order and compositor hooks](#frame-order-and-compositor-hooks)
+- [Buffers in a callback](#buffers-in-a-callback)
+- [World-space inputs](#world-space-inputs)
+- [Getting GI into shading](#getting-gi-into-shading)
+- [SDFGI, the shipped GI](#sdfgi-the-shipped-gi)
+- [Volumetric fog](#volumetric-fog)
+- [The SDFGI plan](#the-sdfgi-plan)
+- [HDDAGI](#hddagi)
+  - [Screen probes in #122999](#screen-probes-in-122999)
+- [Engine source locations](#engine-source-locations)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Running the compute work
 
 - **Device and thread.** Use the main device, `RenderingServer.get_rendering_device()`, on the render thread: inside `CompositorEffect._render_callback()` or through `RenderingServer.call_on_render_thread()` ([render thread](../../docs/rendering_device.md#render-thread)). A local device from `create_local_rendering_device()` has its own resources, so its results reach the renderer only through a CPU readback, and a readback every frame stalls ([2D projects](godot_projects.md#2d-projects)).
@@ -101,7 +118,7 @@ The renderer checks each flag across all effects in the compositor. PRE_OPAQUE i
 
 ## World-space inputs
 
-- **Geometry.** The engine exposes no mesh buffer RIDs. Triangles come from `mesh_surface_get_arrays()` on the CPU ([ray tracing notes](../../docs/rendering_device.md#ray-tracing)), or the scene is rasterized into an own structure without a geometry shader ([voxelization in Godot](scene_representation_and_tracing.md#voxelization-in-godot)).
+- **Geometry.** The engine exposes no mesh buffer RIDs. Triangles come from `mesh_surface_get_arrays()` on the CPU ([ray tracing notes](../../docs/rendering_device.md#ray-tracing)), or the scene is rasterized into an own structure without a geometry shader ([voxelization in Godot](scene_representation_and_tracing_voxels_and_bvhs.md#voxelization-in-godot)).
 - **Lights and materials** are collected from the scene tree by script. gomezzz reads `albedo_color`, `emission` and `emission_energy_multiplier` from each `BaseMaterial3D` and converts them to linear; Phreakyx averages textures through `Texture2D.get_image()`.
 - **Sky.** `RenderingServer.environment_bake_panorama(environment, false, size)` returns an equirectangular image of the environment for rays that leave the scene; in a callback the environment is `render_data.get_environment()`.
 - **VoxelGI data from script.** `RenderingServer.voxel_gi_allocate_data` takes a to-cell transform, an AABB, the octree size, octree cells, data cells, an optional distance field and level counts. The octree buffer must be a multiple of 32 bytes and the data buffer `(octree cells / 32) × 16` bytes; the byte layouts beyond those checks were not read. The data reaches shading through `rbgi`, so the gating below applies. It feeds the engine's VoxelGI, not a custom solver.
@@ -229,7 +246,7 @@ Godot's volumetric fog is a froxel grid computed in `_pre_opaque_render` after `
 
 - **Grid.** `volume_size` and `volume_depth` default to 64 and `use_filter` to 1 (filtering on), corrected for aspect as width `size·w/((w + h)/2)` and height `size·(w + h)/2/w`: 81 × 50 × 64 at 1920×1080 (derived). Slice `z` sits at `length·((z + 0.5)/depth)^detail_spread`, with length 64 m and spread 2.0 by default, so the middle slice is about 16.5 m away (derived).
 - **Volumes.** In-scattered light and density, its previous-frame copy and the integrated result are RGBA16F 3D textures, about 2 MiB each at 1080p; FogVolume density, light and emission accumulate in R32_UINT 3D images with atomics, or 4-byte storage buffers without image atomics (sizes derived).
-- **Passes.** FogVolume materials write the accumulators; a density pass in 4×4×4 groups computes direct light, ambient, GI and the temporal blend per froxel; an optional copy and a separable 7-tap Gaussian follow; an integrate pass in 8×8×1 groups accumulates front to back with Beer-Lambert ([media](supporting_techniques.md#light-transport-and-solver-math)).
+- **Passes.** FogVolume materials write the accumulators; a density pass in 4×4×4 groups computes direct light, ambient, GI and the temporal blend per froxel; an optional copy and a separable 7-tap Gaussian follow; an integrate pass in 8×8×1 groups accumulates front to back with Beer-Lambert ([media](supporting_techniques_transport_and_math.md#light-transport-and-solver-math)).
 - **Temporal reprojection** is on by default at 0.9 (range 0.5 to 0.99). It blends each froxel's in-scattered light and density with last frame's, not the integrated fog, and jitters froxel centers by a 16-entry Halton sequence when reprojection succeeds.
 - **GI in fog.** `gi_inject` defaults to 1.0 and, by the docs, scales GI in the fog albedo. With SDFGI on, each froxel trilinearly weights 8 probes of the first cascade that contains it, reading SDFGI's `ambient_texture` (one RGBA16F texel per probe) and, with occlusion on, its occlusion texture. Up to 8 VoxelGI instances are composited front to back through all mips, scaled by `dynamic_range·gi_inject·exposure_normalization`, and the instance count is zero unless `gi_inject > 0.001`. `ambient_inject` defaults to 0, so sky and ambient light reach fog only when it is raised; the CPU multiplies that term by the ambient light energy.
 - **Access.** The fog volumes are custom data under the `Fog` scope, registered under no texture name, and `VolumetricFog` binds no methods. Scripts reach fog only through FogVolume shaders, which write density, albedo and emission, not light.
@@ -272,7 +289,7 @@ Accepted losses: no high-frequency GI (screen-space effects fill it in), dynamic
 
 ## HDDAGI
 
-HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades traced with an integer hierarchical DDA instead of a distance field, feeding DDGI-like world probes ([notes](../sources/2026_godot_hddagi_dynamic_gi.md)). Its voxel cascades and DDA are described in [scene representation](scene_representation_and_tracing.md#hddagis-voxel-cascades). Three pull requests carry it, and none is merged:
+HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades traced with an integer hierarchical DDA instead of a distance field, feeding DDGI-like world probes ([notes](../sources/2026_godot_hddagi_dynamic_gi.md)). Its voxel cascades and DDA are described in [scene representation](scene_representation_and_tracing_voxels_and_bvhs.md#hddagis-voxel-cascades). Three pull requests carry it, and none is merged:
 
 | Pull request | Author | State |
 |---|---|---|
@@ -322,7 +339,7 @@ The draft adds Lumen-style screen probes that trace through Hi-Z first and then 
 - **Directional Gather mode:** 64 rays per probe per frame into an 8×8 octahedral tile, one per texel with R2 jitter, radiance clamped to 10. With guiding on, a valid history and a static receiver, directions are sorted by a pdf built from the BRDF and last frame's radiance, and grouped as one high-pdf direction with three low-pdf ones. Where the low ones fall under 0.1 and the high one does not, the high direction splits into four 16×16 children traced in the low ones' ray slots, and the low ones reuse last frame's radiance; one frame in four skips the split so the low directions refresh. Pixels gather 2×2 probes bilinearly with a plane-distance test and read a per-normal irradiance table (the 64 directions summed with `max(n·ω, 0)` and scaled by `4/64`). It runs 20 to 40% faster than the stochastic mode and handles a bright small sun better.
 - **Adaptive probes:** each tile has 8 jittered candidate positions. A candidate becomes a probe when the base probes cover it with weight under 0.01 and is retired once coverage rises above 0.06, up to 8 per tile, from a pool of half the base probe count that the author says fills easily.
 - **History:** per direction `mix(previous, current, w)` with `w = 1/(age + 1)` and age capped at 7 (a steady 1/8), or 0.5 for dynamic receivers. Reprojection uses unjittered projections, plus velocity for dynamic receivers. A spatial pass blends each probe with its 4 neighbours by distance, plane and endpoint angle.
-- **SVGF:** temporal accumulation with depth, normal and plane tests, then an [à-trous](supporting_techniques.md#denoising-upscaling-and-temporal-reuse) filter driven by luminance variance. NVIDIA NRD was removed.
+- **SVGF:** temporal accumulation with depth, normal and plane tests, then an [à-trous](supporting_techniques.md#edge-avoiding-à-trous-wavelet-filter) filter driven by luminance variance. NVIDIA NRD was removed.
 - **Detail trace:** before the voxel DDA, a Hi-Z march (2×2 max-depth pyramid, 48, 32 or 16 iterations) out to 2 units for diffuse and 50 for specular. A hit reads the lit screen color, so visible dynamic objects occlude and bounce light. It costs extra on low-end GPUs, and probe jitter alone handles corners without it.
 - **Irradiance cache:** first-order `[1, n]` moments per entry with a 16-sample history. It flickers and is left off.
 - **Problems:** noisy and laggy screen-probe reflections, unstable light in hard-to-sample spots, and pixelated dark areas near corners and thin plates from over-occluding coarse voxels.
@@ -469,7 +486,7 @@ Line numbers are at tag 4.7.2-stable and, apart from the checked call order, com
 - **HDDAGI's leaks are the probe-interpolation leaks RC's world-space merge has.** Its corner leaks come from 8-probe interpolation reaching through walls that the voxels seal, the failure world-space RC fights with visibility-tested merges ([leak defences](3d_world_space.md#leak-defences-in-world-space)) (inference).
 - **Directional Gather is ray splitting by importance.** Splitting a high-pdf direction into four children is RC's ×4 angular branching, driven by last frame's pdf instead of by distance ([ray splitting](3d_world_space.md#ray-splitting)) (inference).
 - **reduz's plan is the hybrid the screen-space work arrived at.** World-space GI for low-frequency light plus a screen-space layer for detail and occlusion ([history](history_and_landscape.md), [screen space](3d_screen_space.md)) is what #122999 builds: a Hi-Z trace up to 2 units, then the voxel cascades.
-- **SDFGI voxelizes without a geometry shader** by three orthographic raster passes, the route the engine itself takes under the same `RenderingDevice` limits ([voxelization in Godot](scene_representation_and_tracing.md#voxelization-in-godot)).
+- **SDFGI voxelizes without a geometry shader** by three orthographic raster passes, the route the engine itself takes under the same `RenderingDevice` limits ([voxelization in Godot](scene_representation_and_tracing_voxels_and_bvhs.md#voxelization-in-godot)).
 
 ## Single-frame assessment
 

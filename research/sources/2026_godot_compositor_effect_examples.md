@@ -12,6 +12,21 @@
 
 These are the public CompositorEffect projects that read depth or normals and write light or occlusion back. None feeds GI into the engine's lighting: every one edits the finished color layer. They show the working skeleton for a screen-space RC pass in Godot and several mistakes to avoid. Engine facts below were checked against the 4.7.2-stable source. See [2026_godot_gi_internals.md](2026_godot_gi_internals.md) for the callback order, flags, and texture names.
 
+## Contents
+
+- [Common skeleton](#common-skeleton)
+- [Normal and depth decoding](#normal-and-depth-decoding)
+- [Own textures](#own-textures)
+- [Writing light back](#writing-light-back)
+- [Mistakes in these projects](#mistakes-in-these-projects)
+- [The projects in detail](#the-projects-in-detail)
+  - [post_shader (official demo)](#post_shader-official-demo)
+  - [Ambient occlusion (LoganKeenan55)](#ambient-occlusion-logankeenan55)
+  - [Sun shafts (godot-forest-demo)](#sun-shafts-godot-forest-demo)
+  - [Aerial perspective (Godot-RealisticEnvironments)](#aerial-perspective-godot-realisticenvironments)
+  - [Path tracer (compositor-effect-library)](#path-tracer-compositor-effect-library)
+- [Multiple views in other effects](#multiple-views-in-other-effects)
+
 ## Common skeleton
 
 - **Setup:** compile the shader and create the pipeline on the render thread (`RenderingServer.call_on_render_thread` from `_init`), and free the shader in `NOTIFICATION_PREDELETE`. Freeing a shader frees its pipelines. The sun-shaft project compiles on the main thread inside `_init`, which works but is not where the device is meant to be used.

@@ -10,6 +10,16 @@
 
 DexRT is the astrophysics RC solver. This paper speeds up its interval tracing about 8× by letting each cascade march a coarser mip of the scene and by skipping empty blocks with a hierarchical DDA. The domain is solar plasma, but the tracing scheme carries over to a voxel scene for graphics, and the code shows the merge variants and memory tricks in a mature, tested form.
 
+## Contents
+
+- [Scene representation](#scene-representation)
+- [Tracing](#tracing)
+- [Cascades (2D defaults)](#cascades-2d-defaults)
+- [Merge variants in the code](#merge-variants-in-the-code)
+- [3D settings](#3d-settings)
+- [Results](#results)
+- [Paper details](#paper-details)
+
 ## Scene representation
 
 - The volume is split into blocks (16² in 2D, 8³ in 3D). Each block has one 3-bit state: empty, or the highest mip level it may be sampled at. 21 states pack into one 64-bit word, so a 512² model needs 392 bytes of block map.

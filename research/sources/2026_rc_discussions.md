@@ -2,6 +2,18 @@
 
 Technical claims and measurements from Hacker News threads, GitHub issues, Godot pull requests and the Unreal Engine forum, 2023 to 2026. Comments are opinions unless they quote a measurement. Lobsters threads are summarized at the end; Reddit could not be read.
 
+## Contents
+
+- [Sannikov on world-space RC (Godot PR #86267)](#sannikov-on-world-space-rc-godot-pr-86267)
+- [Unreal Engine forum](#unreal-engine-forum)
+- [Path of Exile 2 claims](#path-of-exile-2-claims)
+- [Implementer notes](#implementer-notes)
+- [Why some projects chose other methods](#why-some-projects-chose-other-methods)
+- [Coppen's first 3D RC on X (2024-08)](#coppens-first-3d-rc-on-x-2024-08)
+- [Other implementations found in threads](#other-implementations-found-in-threads)
+- [Hacker News on the fundamentals article (2024-10)](#hacker-news-on-the-fundamentals-article-2024-10)
+- [Lobsters](#lobsters)
+
 ## Sannikov on world-space RC (Godot PR #86267)
 
 The GitHub account Raikiri belongs to Sannikov (its paper repository names Sannikov, and it says so in the thread). In the HDDAGI pull request (https://github.com/godotengine/godot/pull/86267, comment of 2024-07-12) it says:

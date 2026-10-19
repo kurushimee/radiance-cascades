@@ -9,6 +9,15 @@
 
 A rough, unoptimized C++ and GLSL implementation of radiance cascades on a world-space dense 3D probe grid. The scene is an analytic signed distance function with one emitter sphere. The cascades are built once by sphere tracing rays from every probe into a 2D-array octahedral atlas, merged from the top level down, and read per pixel by a trilinear lookup of level-0 probes. The code includes headers from HotCart, an unreleased engine wrapper that is not in the repository. The README states the project cannot run as published.
 
+## Contents
+
+- [Files](#files)
+- [Scene representation](#scene-representation)
+- [Passes](#passes)
+- [RC parameters and math](#rc-parameters-and-math)
+- [Issues and notes](#issues-and-notes)
+- [Links found](#links-found)
+
 ## Files
 
 | File | Contents |

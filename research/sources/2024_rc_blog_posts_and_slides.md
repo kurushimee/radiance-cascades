@@ -11,6 +11,15 @@ Seven smaller sources. Each adds only a few facts, so they share one file.
 | Radiance Cascades: New Approach to Calculating Global Illumination; Asbjorn Lystrup's Sticky Slime Simulation Gets Better Lighting | 80.lv news | 2023-11-09, 2024-04-08 | https://80.lv/articles/radiance-cascades-new-approach-to-calculating-global-illumination, https://80.lv/articles/asbjorn-lystrup-s-sticky-slime-simulation-gets-better-lighting |
 | This Week in Bevy, 2024-07-22 | Chris Biscardi and the Bevy community | 2024-07-22 | https://thisweekinbevy.com/issue/2024-07-22-bevy-jam-5-radiance-cascades-and-calculators-in-many-ui-kits |
 
+## Contents
+
+- [tmpvar implementation notes](#tmpvar-implementation-notes)
+- [Osborne slides](#osborne-slides)
+- [tlegoc Vulkan blog post](#tlegoc-vulkan-blog-post)
+- [This Week in Bevy](#this-week-in-bevy)
+- [kornel.ski penumbra calculator](#kornelski-penumbra-calculator)
+- [80.lv news](#80lv-news)
+
 ## tmpvar implementation notes
 
 A short list of open questions from an early implementer. For screen-space probes the author guessed at marching the depth buffer, or moving each probe onto the surface under its pixel for world-space rays. For participating media it gives the opacity correction for a changed step length, `A = 1 − (1 − A0)^(s0/s)` (GPU Gems, chapter 39), which applies when a cascade marches a coarser volume with longer steps. It notes that world-space 3D needs a lot of memory.

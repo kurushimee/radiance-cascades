@@ -9,6 +9,21 @@
 
 The founding paper. It defines the penumbra condition, radiance intervals, the merge rule, the cascade scaling laws, and the memory math for flatland, 3D grids, and surfaces. It also describes five early implementations, including the one shipped in Path of Exile 2. The math is loose on purpose: the paper gives asymptotic scaling only and leaves all base parameters to tuning.
 
+## Contents
+
+- [Penumbra condition](#penumbra-condition)
+- [Radiance intervals](#radiance-intervals)
+  - [Merge](#merge)
+  - [Shift and extend](#shift-and-extend)
+- [Cascade scaling](#cascade-scaling)
+  - [Memory by dimensionality](#memory-by-dimensionality)
+- [Using the cascades](#using-the-cascades)
+- [Cost analysis (flatland)](#cost-analysis-flatland)
+- [Failure modes and tuning](#failure-modes-and-tuning)
+- [Early implementations](#early-implementations)
+- [Limitations stated by the author](#limitations-stated-by-the-author)
+- [Context from the related-work section](#context-from-the-related-work-section)
+
 ## Penumbra condition
 
 Take the smallest light in the scene, of size `w`, at distance `d` from an occluder edge. The penumbra opens at angle `α = 2·atan(w / 2d) ≈ w/d`. At distance `D` from the light (assuming `D ≫ d`), the penumbra is `α·D` wide, and the light covers an angle of `w/D`. To resolve both:

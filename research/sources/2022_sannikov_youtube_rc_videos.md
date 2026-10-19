@@ -24,6 +24,22 @@ The channel shows radiance cascades (RC) from the first 2D tests in 2022 to spar
 | Polygonal Radiance Cascades | 2026-02-28 | AhbnwZFp5iE |
 | Testing polygonal block RC layout (no description, not in the channel's video list) | 2026-03-15 | JcWFXYnYC5M |
 
+## Contents
+
+- [Earlier screen-space GI (2017–2018)](#earlier-screen-space-gi-20172018)
+- [2D GI #1 and #2 (2022)](#2d-gi-1-and-2-2022)
+- [Hierarchal radiance cascades GI experiment (2022)](#hierarchal-radiance-cascades-gi-experiment-2022)
+- [Single shot global illumination with no denoiser (2023)](#single-shot-global-illumination-with-no-denoiser-2023)
+- [Radiance Cascades Rendered Directly (2023)](#radiance-cascades-rendered-directly-2023)
+- [Announcement for graphics programming enthusiasts! (2023)](#announcement-for-graphics-programming-enthusiasts-2023)
+- [Exploring 3d holographic radiance cascades (2025)](#exploring-3d-holographic-radiance-cascades-2025)
+- [Sparse 3d Radiance Cascades (2025)](#sparse-3d-radiance-cascades-2025)
+- [Sparse Radiance Cascades: goodbye screenspace (2025)](#sparse-radiance-cascades-goodbye-screenspace-2025)
+- [Polygonal Radiance Cascades (2026)](#polygonal-radiance-cascades-2026)
+- [Testing polygonal block RC layout (2026)](#testing-polygonal-block-rc-layout-2026)
+- [Interview at ExileCon 2023](#interview-at-exilecon-2023)
+- [Other channel videos](#other-channel-videos)
+
 ## Earlier screen-space GI (2017–2018)
 
 These videos show the screen-space GI that came before RC. A later video says a hierarchical version of it shipped in Path of Exile.

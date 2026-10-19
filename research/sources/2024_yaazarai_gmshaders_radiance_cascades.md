@@ -9,6 +9,55 @@
 
 Part One is an introduction to Radiance Cascades (RC) in 2D: the penumbra hypothesis, the cascade layout, the cascade count, interval math, merging, and the screen-space output. Part Two covers optimizations (pre-averaging and a direction-first layout), walks through the GameMaker shader code, and gives frame times. The repository holds the GameMaker projects behind both posts: a position-first version, a direction-first version with several merge variants, and a visual demo.
 
+## Contents
+
+- [Notation](#notation)
+- [Part One: Introduction to Radiance Cascades](#part-one-introduction-to-radiance-cascades)
+  - [Overview claims](#overview-claims)
+  - [Penumbra hypothesis](#penumbra-hypothesis)
+  - [Cascade layout](#cascade-layout)
+  - [Cascade count](#cascade-count)
+  - [Raymarching from probes (index math)](#raymarching-from-probes-index-math)
+  - [Visibility term](#visibility-term)
+  - [Merging cascades](#merging-cascades)
+  - [Screen-space radiance field](#screen-space-radiance-field)
+  - [Extensions mentioned](#extensions-mentioned)
+  - [Limitations and reader comments](#limitations-and-reader-comments)
+  - [Inconsistencies in Part One](#inconsistencies-in-part-one)
+- [Part Two: Optimizations and Code Deep Dive](#part-two-optimizations-and-code-deep-dive)
+  - [Problems listed in the overview](#problems-listed-in-the-overview)
+  - [Optimization 1: Pre-averaging](#optimization-1-pre-averaging)
+  - [Optimization 2: Direction-first layout and hardware interpolation](#optimization-2-direction-first-layout-and-hardware-interpolation)
+  - [Shader inputs (as in the post)](#shader-inputs-as-in-the-post)
+  - [Raymarching (post version)](#raymarching-post-version)
+  - [Probe and ray index math (post version, `cascadeTexelInfo`)](#probe-and-ray-index-math-post-version-cascadetexelinfo)
+  - [Merge (post version, `merge`)](#merge-post-version-merge)
+  - [main() (post version)](#main-post-version)
+  - [Performance (post)](#performance-post)
+  - [Limitations and reader comments (Part Two)](#limitations-and-reader-comments-part-two)
+  - [Inconsistencies in Part Two](#inconsistencies-in-part-two)
+- [Repository: GMShaders-Radiance-Cascades](#repository-gmshaders-radiance-cascades)
+  - [Repository layout](#repository-layout)
+  - [Distance field and JFA (both versions)](#distance-field-and-jfa-both-versions)
+  - [Original version: `RadianceCascades/`](#original-version-radiancecascades)
+    - [Position-first index math (original shaders)](#position-first-index-math-original-shaders)
+  - [Optimized version: `RadianceCascades-Optimized/`](#optimized-version-radiancecascades-optimized)
+    - [Direction-first index math](#direction-first-index-math)
+    - [Pre-averaging and the merge (what changes)](#pre-averaging-and-the-merge-what-changes)
+    - [Default configuration: derived values](#default-configuration-derived-values)
+  - [Shader variants (optimized folder)](#shader-variants-optimized-folder)
+    - [Bilinear fix in detail (`Shd_RadianceCascades_BilinearFix.fsh`)](#bilinear-fix-in-detail-shd_radiancecascades_bilinearfixfsh)
+    - [Base shader per-texel flow (`Shd_RadianceCascades.fsh`)](#base-shader-per-texel-flow-shd_radiancecascadesfsh)
+  - [Inconsistencies in the repository](#inconsistencies-in-the-repository)
+- [Earlier post: 2D GI by random rays per pixel](#earlier-post-2d-gi-by-random-rays-per-pixel)
+  - [Distance field](#distance-field)
+  - [Raymarch and GI pass](#raymarch-and-gi-pass)
+  - [Bounces and noise](#bounces-and-noise)
+  - [Limits and uses](#limits-and-uses)
+  - [Voxels post](#voxels-post)
+- [Cross-source comparison](#cross-source-comparison)
+- [Links found](#links-found)
+
 ## Notation
 
 The symbols below are labels for these notes; the sources do not use them.
@@ -643,7 +692,7 @@ https://mini.gmshaders.com/p/voxels (Xor, 2024-06-01) is paywalled. The public p
 - Alex's 2D quick ray tracing GLSL | https://github.com/Yaazarai/2D-QuickRayTracing-GLSL | Single-probe method; Part One's figure 6 is an image from it. The repository (LGPL-2.1, with a 9-page write-up) places one probe at each light's center. A first pass traces `2πR` rays, one pixel apart at the light's radius `R`, in whole-pixel steps through a collision texture, and stores each ray's first hit distance over `R` in two 8-bit channels (`R = floor(255x)/255`, `G = fract(255x)`) in a square texture of side `2^ceil(log2 √(2πR))`. A second pass draws a quad per light and compares each pixel's distance with the nearest ray by angle, so shadows are hard and step at ray boundaries. Nothing is cached: every light is traced again each frame, about `O(R²)` samples per light. The size tables limit `R` to above 4 and at most 4096 px; the "65,535 px" maximum in the README is only a loop bound. Read from the code and not run: steps can skip walls thinner than a pixel along the ray, a solid texel at the exact center is ignored, and when `fract(2πR) ≥ 0.5` the rounded ray count leaves a final wedge just below 2π that reads as unobstructed.
 - Alex's bilinear Shadertoy example | https://www.shadertoy.com/view/cslSW4 | Bilinear interpolation example for the merge. The shader (FatalSleep, 2022-11-19) predates RC and blends four corner-aligned samples per 50 px cell ([code notes](2023_rc_shadertoys.md#cslsw4-fatalsleep-local-bilinear-interpolation)).
 - Fad's Shadertoy | https://www.shadertoy.com/view/mtlBzX | Base implementation the repository builds on; source of the skybox integral.
-- Sannikov gravity simulation (Shadertoy) | https://www.shadertoy.com/view/XcB3Ry | Listed as another use of RC. Shadertoy lists it under Suslik, Sannikov's account ([code notes](2023_rc_shadertoys.md#xcb3ry-and-mfs3wm-suslik-cascades-for-gravity)).
+- Sannikov gravity simulation (Shadertoy) | https://www.shadertoy.com/view/XcB3Ry | Listed as another use of RC. Shadertoy lists it under Suslik, Sannikov's account ([code notes](2023_rc_shadertoys_hrc_3d_and_other.md#xcb3ry-and-mfs3wm-suslik-cascades-for-gravity)).
 - Sannikov 3D screen-space GI video | https://www.youtube.com/watch?v=N6RP3r1M9g4 | Listed as another use of RC. The video is "Single shot global illumination with no denoiser" (2023), cascaded image-space GI in one frame in about 5 ms ([notes](2022_sannikov_youtube_rc_videos.md#single-shot-global-illumination-with-no-denoiser-2023)).
 - Mytino volumetrics (tweet) | https://x.com/MytinoGames/status/1777029143282295153 | Volumetrics through high-viscosity fluids. The April 2024 post shows a glowing slime simulation in Mytino's own engine; asked whether it is RC, Mytino answered that it is, or at least heavily based on it. No demo was planned.
 - Yaazarai RadianceCascades demonstration | https://github.com/Yaazarai/RadianceCascades | Demonstration repository the README points to.

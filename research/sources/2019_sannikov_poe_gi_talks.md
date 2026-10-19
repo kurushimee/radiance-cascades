@@ -2,6 +2,37 @@
 
 Two recorded talks on Path of Exile rendering. The 2019 talk covers the hierarchical screen-space shadows and screen-space GI that led to radiance cascades. The 2023 talk covers the first radiance cascades version in Path of Exile 2.
 
+## Contents
+
+- [ExileCon Dev Talk - Evolving Path of Exile's Renderer](#exilecon-dev-talk---evolving-path-of-exiles-renderer)
+  - [Source notes](#source-notes)
+  - [Point light shadows (about 09:00 to 18:30)](#point-light-shadows-about-0900-to-1830)
+    - [Problem and requirements](#problem-and-requirements)
+    - [Method name and stages](#method-name-and-stages)
+    - [Cost model](#cost-model)
+    - [Limits](#limits)
+  - [Screen-space global illumination (about 18:30 to 28:00)](#screen-space-global-illumination-about-1830-to-2800)
+    - [Scope and effects](#scope-and-effects)
+    - [Model](#model)
+    - [Methods not used](#methods-not-used)
+    - [Sampling method](#sampling-method)
+    - [Execution](#execution)
+- [Most Performant Global Illumination POE2 Rendering](#most-performant-global-illumination-poe2-rendering)
+  - [Source notes](#source-notes-1)
+  - [Problem statement (31:00)](#problem-statement-3100)
+  - [Earlier screen-space GI in PoE (32:00)](#earlier-screen-space-gi-in-poe-3200)
+  - [Radiance probes and the hierarchy (33:30)](#radiance-probes-and-the-hierarchy-3330)
+  - [2D prototype (35:00)](#2d-prototype-3500)
+  - [Cascades in 2D (36:00)](#cascades-in-2d-3600)
+  - [Scaling with cascade count (38:00)](#scaling-with-cascade-count-3800)
+  - [3D version in PoE (40:00)](#3d-version-in-poe-4000)
+  - [Storage layout (41:00)](#storage-layout-4100)
+  - [Emissive surfaces (41:45)](#emissive-surfaces-4145)
+  - [Screen space and world space (42:30)](#screen-space-and-world-space-4230)
+  - [Specular GI (42:50)](#specular-gi-4250)
+  - [Speed and convergence (43:30)](#speed-and-convergence-4330)
+  - [Limits stated](#limits-stated)
+
 ## ExileCon Dev Talk - Evolving Path of Exile's Renderer
 
 | | |

@@ -9,6 +9,31 @@
 
 Visibility-bitmask GI (VBGI). Split RC uses it as "cascade −1" for contact detail below the cascade 0 spacing, and a Chalmers thesis combines it with screen-space RC. The paper replaces the two horizon angles used by GTAO and HBIL with a bit field of N sectors per hemisphere slice. Each depth sample is treated as a thin slab of constant world-space thickness t, so light can pass behind it. The same bitmask drives ambient occlusion, directionally weighted ambient light, and one-bounce indirect diffuse light.
 
+## Contents
+
+- [Introduction](#introduction)
+- [Proposed algorithm](#proposed-algorithm)
+  - [Core idea](#core-idea)
+  - [Sample geometry](#sample-geometry)
+  - [Hit criterion](#hit-criterion)
+  - [Bit assignment (restated from Algorithm 1)](#bit-assignment-restated-from-algorithm-1)
+  - [Algorithm 1 structure](#algorithm-1-structure)
+  - [Sector count and word size](#sector-count-and-word-size)
+  - [Thickness](#thickness)
+  - [Ambient occlusion](#ambient-occlusion)
+  - [Directionally occluded ambient lighting](#directionally-occluded-ambient-lighting)
+  - [Indirect diffuse](#indirect-diffuse)
+- [Results and evaluation](#results-and-evaluation)
+  - [Test setup stated in the source](#test-setup-stated-in-the-source)
+  - [AO sampling pass (source Table 1)](#ao-sampling-pass-source-table-1)
+  - [Indirect diffuse (source Table 2, constant thickness 0.2)](#indirect-diffuse-source-table-2-constant-thickness-02)
+  - [Qualitative findings the paper reports](#qualitative-findings-the-paper-reports)
+- [Differences from horizon-based methods (as the source states them)](#differences-from-horizon-based-methods-as-the-source-states-them)
+- [Code post (2023)](#code-post-2023)
+- [Limitations (from the source)](#limitations-from-the-source)
+- [Conclusion and future work](#conclusion-and-future-work)
+- [Links found](#links-found)
+
 ## Introduction
 
 Indirect diffuse light is hard to compute in real time. Screen-space methods keep the cost independent of scene complexity.

@@ -4,6 +4,34 @@ Radiance cascades (RC) grew out of Alexander Sannikov's rendering work on Path o
 
 Sannikov publishes as Raikiri on GitHub and as Suslik on Shadertoy: the paper repository and Godot PR #86267 name Sannikov as Raikiri, and three-rc's README and Gavras's thesis credit Sannikov with Suslik's 4XXSWS ([Shadertoys](../sources/2023_rc_shadertoys.md), [discussions](../sources/2026_rc_discussions.md#sannikov-on-world-space-rc-godot-pr-86267)).
 
+## Contents
+
+- [Timeline](#timeline)
+- [Before RC: Sannikov's earlier work](#before-rc-sannikovs-earlier-work)
+  - [Path of Exile 1: shadows and GI](#path-of-exile-1-shadows-and-gi)
+  - [Other work on Sannikov's channel](#other-work-on-sannikovs-channel)
+  - [Sannikov's tools](#sannikovs-tools)
+- [From 2D tests to the paper (2022 to 2023)](#from-2d-tests-to-the-paper-2022-to-2023)
+  - [The paper](#the-paper)
+- [ExileCon 2023 and Path of Exile 2](#exilecon-2023-and-path-of-exile-2)
+  - [PoE2 cost figures](#poe2-cost-figures)
+  - [When ExileCon 2023 took place](#when-exilecon-2023-took-place)
+- [First public implementations and the Shadertoy lineage](#first-public-implementations-and-the-shadertoy-lineage)
+- [How the method spread](#how-the-method-spread)
+  - [Explainers and guides](#explainers-and-guides)
+    - [SimonDev's video](#simondevs-video)
+    - [Non-English overviews](#non-english-overviews)
+  - [Community site, wiki and tools](#community-site-wiki-and-tools)
+  - [News and discussion](#news-and-discussion)
+- [Research lines](#research-lines)
+- [Adoption: shipped, tried and turned down](#adoption-shipped-tried-and-turned-down)
+- [Positions on 3D RC](#positions-on-3d-rc)
+- [Who built what](#who-built-what)
+  - [Repositories that hold nothing usable](#repositories-that-hold-nothing-usable)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Timeline
 
 Shadertoy dates are creation dates. Shadertoy keeps only the current code under the original date, so a date bounds when a shader first appeared, not when its present code was written.
@@ -190,7 +218,7 @@ The community wiki and Sohojoe's Godot port give the same fad → Quinchilion �
 | Building Intuition around RC | tmpvar | 2024 | 2D WebGPU (Chrome or Edge) and 3D (https://tmpvar.com/poc/radiance-cascades-3d/) playgrounds | controls for every parameter; a 3D comparison of probe direction sets (cube-face subdivision, golden spiral and others) | [2D articles and demos](2d_articles_and_demos.md#tmpvars-playground), [3D world space](3d_world_space.md) |
 | GM Shaders Part One and Two | Yaazarai (Alex), with Xor | 2024-04-13, 2024-07-13 | articles with GameMaker code | pre-averaging and direction-first layout (first prototyped there, per the wiki), a single-shader version under 100 lines, bilinear-fix and nearest-fix branches | [cascade layout](cascade_layout_and_merging.md) |
 | Exploring a New Approach to Realistic Lighting | SimonDev | 2024-07-02 | 15-min video | rendering equation, penumbra idea, interval merging, 2×2 pixel probes | [below](#simondevs-video) |
-| Building Real-Time GI, parts 1 and 2 | Jason McGhee | 2024-07-27, 2024-08-31 | interactive articles | distance fields and JFA, then RC step by step with sRGB handling and ringing | [2D articles and demos](2d_articles_and_demos.md#jasontoday-jason-mcghee) |
+| Building Real-Time GI, parts 1 and 2 | Jason McGhee | 2024-07-27, 2024-08-31 | interactive articles | distance fields and JFA, then RC step by step with sRGB handling and ringing | [2D articles and demos](2d_articles_and_demos_jason_today.md#jasontoday-jason-mcghee) |
 | [Radiance Cascades slides](https://goobley.github.io/RadianceCascadesSlides/) | Christopher Osborne (Goobley) | 2024-08 | slides | branching-factor cost comparison, a WebGL demo, slides on variance-limited mipmaps that the DexRT paper covers in full | [core theory](core_theory.md) |
 | RadiCalc penumbra calculator | Kornel Lesiński (kornelski) | 2024-08 | spreadsheet | interval sizing from the exact penumbra condition | [core theory](core_theory.md) |
 | Fundamentals of Radiance Cascades | Max Coppen (mxcop) | 2024-10-22 | article with 8 animations (video elements, content not transcribed) and 10 diagrams (angular and spatial observations, rings, cascade memory, interval merging, nearest and bilinear merges; the final image credits Fad's mtlBzX) | 2D fundamentals, merging, interval casting | [core theory](core_theory.md) |

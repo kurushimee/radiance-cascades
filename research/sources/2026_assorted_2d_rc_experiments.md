@@ -16,6 +16,20 @@ Small 2D projects that each add one idea or one warning. None reports timings ex
 | https://github.com/qJay44/radiance-cascades-2d | C++20, OpenGL 4.6 | none | 2026-06 | HDR cascades, hardware-bilinear merge |
 | https://github.com/tsukinousagi18/radiance-cascades-2D | C, OpenGL | MIT | 2025-12 | overlapping intervals, analytic sun and sky |
 
+## Contents
+
+- [CoreCascade](#corecascade)
+- [Adaptive ray skipping (mebyz)](#adaptive-ray-skipping-mebyz)
+- [kiss3d decoupled cascades](#kiss3d-decoupled-cascades)
+- [HRC samples (cute_framework, folkjs)](#hrc-samples-cute_framework-folkjs)
+- [SimonDev demo](#simondev-demo)
+- [Bugs worth recognizing](#bugs-worth-recognizing)
+- [futureengine2 gist](#futureengine2-gist)
+- [Hybrid46 (Raylib port)](#hybrid46-raylib-port)
+- [qJay44 (OpenGL 4.6)](#qjay44-opengl-46)
+- [tsukinousagi18 (C, OpenGL)](#tsukinousagi18-c-opengl)
+- [Kelkar et al. (IEEE ICWITE 2025)](#kelkar-et-al-ieee-icwite-2025)
+
 ## CoreCascade
 
 A CPU program in Go that renders one image per run with plain RC, RC with the bilinear fix, light propagation volumes, or a path tracer, which makes it a ready comparison harness. The main branch has 2D and an experimental 3D renderer, light propagation volumes, directional emitters and float32 storage. The `absorption` branch is 2D only and float64; it carries unused OKLab conversions and a README line about light propagation with no code behind it. The absorption model, cascade geometry and merge are the same in both. The README says the method would run in real time on a GPU, without a measurement.

@@ -9,6 +9,17 @@
 
 This 14:56 video explains the Radiance Cascades paper from Grinding Gear Games, the studio behind Path of Exile 2. It covers the rendering equation, the penumbra idea behind the method, interval merging, and a 2D screen-space layout. It is a gentle introduction; the paper itself is covered in [2023_sannikov_radiance_cascades_paper.md](2023_sannikov_radiance_cascades_paper.md).
 
+## Contents
+
+- [Global illumination and the rendering equation (00:00 to 03:00)](#global-illumination-and-the-rendering-equation-0000-to-0300)
+- [Radiance and the key observation (04:00 to 05:00)](#radiance-and-the-key-observation-0400-to-0500)
+- [Penumbras and sample spacing (06:00 to 08:00)](#penumbras-and-sample-spacing-0600-to-0800)
+- [Merging intervals (09:00 to 10:00)](#merging-intervals-0900-to-1000)
+- [Probe levels and interpolation (10:00 to 11:00)](#probe-levels-and-interpolation-1000-to-1100)
+- [Pixel layout on a 2D screen (12:00 to 13:00)](#pixel-layout-on-a-2d-screen-1200-to-1300)
+- [Demo, limits, and artifacts (13:00 to 14:56)](#demo-limits-and-artifacts-1300-to-1456)
+- [Links found](#links-found)
+
 ## Global illumination and the rendering equation (00:00 to 03:00)
 
 - The video compares three images: no lighting, direct lighting with a shadow, and direct plus global illumination. The third looks most realistic.

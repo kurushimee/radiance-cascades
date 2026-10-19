@@ -9,6 +9,16 @@
 
 These are BVH builders with GPU node layouts that a compute shader can traverse without hardware ray tracing. tinybvh ships Vulkan GLSL compute kernels for each layout, which is the closest ready-made match for a Godot `RenderingDevice` tracer. Coppen's surfel RC credits tinybvh for its traversal code ([surfel RC](2025_coppen_surfel_radiance_cascades.md)). Wicked Engine is the one that builds on the GPU: it rebuilds its whole BVH in compute shaders every frame, so moving meshes cost no CPU work.
 
+## Contents
+
+- [tinybvh layouts](#tinybvh-layouts)
+- [Building and updating](#building-and-updating)
+- [Traversal kernels](#traversal-kernels)
+- [Measurements](#measurements)
+- [unity-tinybvh](#unity-tinybvh)
+- [obvhs](#obvhs)
+- [Wicked Engine: a BVH built on the GPU every frame](#wicked-engine-a-bvh-built-on-the-gpu-every-frame)
+
 ## tinybvh layouts
 
 | Layout | Node | Child bounds | Triangles | Built from |

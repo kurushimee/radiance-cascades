@@ -8,6 +8,17 @@
 
 Light propagation volumes (LPVs) inject reflective-shadow-map lights into a coarse grid of low-order spherical harmonics and spread the light cell to cell, all in one frame. They are the propagation member of the probe family and shipped in CryENGINE 3. Section numbers are the paper's; page numbers were not printed in the copy.
 
+## Contents
+
+- [Injection (sec. 3.1, 6)](#injection-sec-31-6)
+- [Geometry volume (sec. 3.2, 3.3)](#geometry-volume-sec-32-33)
+- [Propagation (sec. 3.3, 6)](#propagation-sec-33-6)
+- [Lookup (sec. 3.4)](#lookup-sec-34)
+- [Cascades (sec. 4)](#cascades-sec-4)
+- [Results (sec. 6, 7)](#results-sec-6-7)
+- [Limitations (sec. 1, 3, 7)](#limitations-sec-1-3-7)
+- [Irradiance volumes (Greger et al. 1998)](#irradiance-volumes-greger-et-al-1998)
+
 ## Injection (sec. 3.1, 6)
 
 - Each light renders a reflective shadow map (RSM) of depth (32-bit float) plus normals and flux (RGBA8 each), 256² on PC and 128² on consoles, so each texel is one virtual point light (VPL), 2^16 or 2^14 per light. Environment maps inject VPLs into the outer grids.

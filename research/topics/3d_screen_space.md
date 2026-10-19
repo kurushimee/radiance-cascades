@@ -4,6 +4,33 @@ Screen-space RC puts the probes on the depth buffer: a 2D grid of probes in scre
 
 The material is split over three files. This one covers the two families, Path of Exile 2, the design choices every screen-probe code makes, temporal behaviour and the single-frame view. [Screen-space theses](3d_screen_space_theses.md) holds the six theses and papers with their measurements; [screen-space implementations](3d_screen_space_implementations.md) holds the repositories, Shadertoys, engine plugins and upscaling shaders. World-space designs are in [3D world space](3d_world_space.md) and surface-bound ones in [3D surface probes](3d_surface_probes.md).
 
+## Contents
+
+- [Two families](#two-families)
+- [Path of Exile 2](#path-of-exile-2)
+- [Screen probes with world intervals](#screen-probes-with-world-intervals)
+- [Parameters across projects](#parameters-across-projects)
+- [Interval units and view depth](#interval-units-and-view-depth)
+- [Probe placement](#probe-placement)
+  - [Min/max probes](#minmax-probes)
+  - [Filling gaps and keeping anchors](#filling-gaps-and-keeping-anchors)
+- [Directions in 3D](#directions-in-3d)
+- [Tracing](#tracing)
+  - [Depth-buffer marching](#depth-buffer-marching)
+  - [World rays](#world-rays)
+  - [What a hit returns](#what-a-hit-returns)
+- [Merging across depth edges](#merging-across-depth-edges)
+- [Depth-aware upscaling](#depth-aware-upscaling)
+- [Final gather](#final-gather)
+- [Temporal stability](#temporal-stability)
+- [Hybrids](#hybrids)
+- [Other findings](#other-findings)
+- [Measurements](#measurements)
+  - [Ray throughput across the measured SPWI codes (derived)](#ray-throughput-across-the-measured-spwi-codes-derived)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Two families
 
 The two families differ only in the ray march function; storage, merging and upscaling are the same ([screen-space RC](../sources/2026_screen_space_rc.md#ssrc-or-spwi)).
@@ -234,7 +261,7 @@ Screen probes move with the camera and jump in depth between frames, so the GI f
 
 Screen probes handle the near field well and world probes the far field, so several designs split the work:
 
-- EggyStudio traces screen probes through the depth buffer out to twice the world probe spacing and takes world probes' light beyond it, 0.6 to 1.0 ms at 800×450 on a laptop GPU; genos-engine walks outward from near world-fixed probes to a screen cascade to a coarse world volume; creikey's screen probes trace a world voxel clipmap ([design documents](3d_world_space_implementations.md#rc-design-documents), [creikey](3d_world_space_implementations.md#creikeyvoxel-radiance-cascades)).
+- EggyStudio traces screen probes through the depth buffer out to twice the world probe spacing and takes world probes' light beyond it, 0.6 to 1.0 ms at 800×450 on a laptop GPU; genos-engine walks outward from near world-fixed probes to a screen cascade to a coarse world volume; creikey's screen probes trace a world voxel clipmap ([design documents](3d_world_space_implementations.md#rc-design-documents), [creikey](3d_world_space_implementations_grids.md#creikeyvoxel-radiance-cascades)).
 - Godot's lead developer planned world-space GI for low-frequency light plus a screen-space layer for detail and occlusion; the 2026 draft that adds screen probes to HDDAGI does this, a Hi-Z trace up to 2 units, then the voxel cascades ([Godot integration](godot_integration.md#screen-probes-in-122999)).
 - Lumen shortens the screen-probe ray and reads its world radiance cache when the ray misses, with a short contact AO in front; Brixelizer GI blends screen-probe SH with a world SH probe per brick; HSGI's phone path places one 4×4 hemisphere probe per 64×64-pixel tile and lets pixels on dynamic objects read the world probe volume directly; daGI2 cuts each screen-probe ray at 3 to 6 world-grid probe sizes and reads its world radiance clipmap there ([related engine GI](related_engine_gi.md)).
 - KingTheFifth lifts screen probes by depth and traces their world intervals through voxels or Hi-Z; Split RC uses a screen-space cascade −1 below its world cascades.

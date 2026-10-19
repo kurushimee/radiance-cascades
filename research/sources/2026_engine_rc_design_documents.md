@@ -12,6 +12,17 @@ Design documents found in five engine repositories. Only EggyStudio's describes 
 
 The last two are described at the end of this note.
 
+## Contents
+
+- [EggyStudio/3DEngine](#eggystudio3dengine)
+  - [Scene field](#scene-field)
+  - [Probes](#probes)
+  - [Measurements (laptop GPU, 800×450, bounce-room test scene)](#measurements-laptop-gpu-800450-bounce-room-test-scene)
+- [genos-engine](#genos-engine)
+- [infinite-canvas-tutorial](#infinite-canvas-tutorial)
+- [anoptic-engine](#anoptic-engine)
+- [XRENGINE](#xrengine)
+
 ## EggyStudio/3DEngine
 
 ### Scene field

@@ -14,6 +14,27 @@ Methods that compete with RC or extend it beyond diffuse light: line sweeps, the
 | [Caustics and refraction](#caustics-and-refraction) | rays double per split | yes | 2D and small 3D builds |
 | [Wavelet point-based GI](#wavelet-point-based-gi) | offline, hours | microbuffer | a direction encoding |
 
+## Contents
+
+- [Line sweeping](#line-sweeping)
+  - [Berhard's sweep framework](#berhards-sweep-framework)
+  - [Three ways to parallelize a sweep](#three-ways-to-parallelize-a-sweep)
+- [Sweep solvers for radiative transfer](#sweep-solvers-for-radiative-transfer)
+- [Grid visibility](#grid-visibility)
+- [Cellular automata and cone sweeping](#cellular-automata-and-cone-sweeping)
+- [Solutions without occlusion](#solutions-without-occlusion)
+- [Wave optics](#wave-optics)
+- [Extended gathering](#extended-gathering)
+- [Resampling view of RC](#resampling-view-of-rc)
+- [Caustics and refraction](#caustics-and-refraction)
+- [Multi-bounce](#multi-bounce)
+- [Wavelet point-based GI](#wavelet-point-based-gi)
+- [Light sampling and guiding](#light-sampling-and-guiding)
+- [Other uses](#other-uses)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Line sweeping
 
 A sweep marches every parallel ray of one direction across the grid at once, so one march serves every pixel it passes and costs O(1) per pixel per direction, with only two columns of `N` directions in flight. Sweeps suit a uniform screen grid better than a BVH.
@@ -123,7 +144,7 @@ Goldstein's recurrence ("A Quick and Clear Look at Grid-Based Visibility", 2023-
 The fixed-point view of bounces is in [core theory](core_theory.md#bounces).
 
 - **Feedback:** last frame's radiance times albedo comes back as emission. Without a transmittance bound it explodes: one 256² test went from 65 to 5700 at albedo 0.9, 88 times, beyond the 10 times a closed box at albedo 0.9 can reach, so the feedback itself gained energy (derived and inference). Closed reflective boxes need decay or a reset of the temporal input; emission should count only on the first bounce; splitting floors and walls into two layers stabilized one build. Albedo 0.5 sums to twice the direct light after infinite bounces.
-- **Without temporal lag:** stored ray hit distances allow `N` bounces in one frame without recasting rays, in opaque scenes. Bounces can also run as separate RC iterations, with Jacobi iteration or Anderson acceleration to converge faster ([solver math](supporting_techniques.md#light-transport-and-solver-math)).
+- **Without temporal lag:** stored ray hit distances allow `N` bounces in one frame without recasting rays, in opaque scenes. Bounces can also run as separate RC iterations, with Jacobi iteration or Anderson acceleration to converge faster ([solver math](supporting_techniques_transport_and_math.md#light-transport-and-solver-math)).
 - Path of Exile 2 shipped one extra indirect bounce for directly lit objects. One unnamed game found 3D RC too slow and used a two-bounce method instead.
 
 ## Wavelet point-based GI

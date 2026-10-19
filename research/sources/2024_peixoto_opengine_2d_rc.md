@@ -12,6 +12,18 @@ A 2D RC renderer inside the author's own OpenGL engine. Light comes from strokes
 
 File and line references below are to `Radiance2DRenderer.h` (here `R.h`) or to the named shader, on the `main` branch. Everything marked "read from the code" was not run.
 
+## Contents
+
+- [Article](#article)
+- [Parameters and storage](#parameters-and-storage)
+- [Cascade layout (MarchCascade.frag 45-55)](#cascade-layout-marchcascadefrag-45-55)
+- [Intervals](#intervals)
+- [Tracing (MarchCascade.frag 32-40)](#tracing-marchcascadefrag-32-40)
+- [Merging (MergeCascades.frag 37-80; R.h 329-351)](#merging-mergecascadesfrag-37-80-rh-329-351)
+- [Final pass (RenderRadiance.frag 16-67)](#final-pass-renderradiancefrag-16-67)
+- [Distance field (genLineSDF.frag; R.h 103, 180)](#distance-field-genlinesdffrag-rh-103-180)
+- [Issues read from the code](#issues-read-from-the-code)
+
 ## Article
 
 - Each cascade has 4× the rays per probe and 4× fewer probes, with probe spacing doubling per axis.

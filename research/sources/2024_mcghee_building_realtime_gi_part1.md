@@ -9,6 +9,24 @@
 
 Part 1 of a two-part series on 2D global illumination (GI). It builds a "naive" GI method in three.js: a paintable scene, brute-force raymarching, a jump flood algorithm (JFA) that produces a distance field (DF), and a marcher that steps through that field. Part 2 is [2024_mcghee_building_realtime_gi_part2_rc.md](2024_mcghee_building_realtime_gi_part2_rc.md).
 
+## Contents
+
+- [1. Drawable surface](#1-drawable-surface)
+- [2. Naive raymarching](#2-naive-raymarching)
+- [3. Jump flood algorithm (JFA)](#3-jump-flood-algorithm-jfa)
+- [4. Distance field (DF)](#4-distance-field-df)
+- [5. Naive GI with the distance field](#5-naive-gi-with-the-distance-field)
+- [Sun and sky (bonus)](#sun-and-sky-bonus)
+- [Temporal accumulation (bonus)](#temporal-accumulation-bonus)
+- [Code structure](#code-structure)
+- [Parameters and defaults](#parameters-and-defaults)
+- [Artifacts discussed](#artifacts-discussed)
+- [Performance](#performance)
+- [Limitations and open problems (author)](#limitations-and-open-problems-author)
+- [Source versus code](#source-versus-code)
+- [Observations from the code (not stated by the source)](#observations-from-the-code-not-stated-by-the-source)
+- [Links found](#links-found)
+
 ## 1. Drawable surface
 
 Strokes are painted into a float scene texture S. Each pixel holds rgb = paint color and a = 1 when painted, a = 0 when empty.

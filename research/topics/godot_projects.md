@@ -9,6 +9,26 @@ The public RC implementations built on Godot, and the compositor-effect projects
 | [2D projects](#2d-projects) | seven 2D repositories, four of them working | local device with readback, SubViewport chains, or the main device with `Texture2DRD` |
 | [compositor effects](#compositor-effect-projects) | seven screen-space effects that read depth or normals and write light or occlusion | CompositorEffect, editing the color layer |
 
+## Contents
+
+- [gomezzz: world-space 3D RC](#gomezzz-world-space-3d-rc)
+  - [Files](#files)
+  - [Godot integration](#godot-integration)
+  - [Scene](#scene)
+  - [Passes](#passes)
+  - [Cascade layout and merge](#cascade-layout-and-merge)
+  - [Limitations and discrepancies](#limitations-and-discrepancies)
+  - [Measurements](#measurements)
+  - [Derived points](#derived-points)
+- [Phreakyx: voxel-cone RC as a GDExtension](#phreakyx-voxel-cone-rc-as-a-gdextension)
+- [2D projects](#2d-projects)
+- [Compositor effect projects](#compositor-effect-projects)
+  - [Multiple views](#multiple-views)
+- [Checklist from these projects](#checklist-from-these-projects)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## gomezzz: world-space 3D RC
 
 [gomezzz/godot-3d-radiance-cascades](https://github.com/gomezzz/godot-3d-radiance-cascades) (last commit 2026-09-13; MIT for code, some assets under their own licences) is a world-space 3D RC solver for Godot 4.7 Forward+ ([notes](../sources/2026_gomezzz_godot_3d_radiance_cascades.md)). Five cascade levels (`LEVELS`) sit on a 24 × 16 × 24 base grid, and each level is a Vulkan compute pass on the main device. Static geometry enters as a CPU-built triangle BVH snapshot, up to 64 moving analytic boxes and spheres are packed every frame, and spatial shaders sample the resulting irradiance atlas. The addon in `addons/radiance_cascades/` is meant to be copied into other projects; the rest of the repository holds demos, tests and tools. Only Windows with an RTX 4060 Ti was tested, and the README says Compatibility, WebGL and headless rendering cannot run the solver.
@@ -51,7 +71,7 @@ The root (downloaded as text) holds `README.md` (43,555 bytes: documentation, te
 
 Everything traced is world-space and lives under `geometry_root`.
 
-**Static triangles.** Every `MeshInstance3D` under `geometry_root` except Box and Sphere `RCPrimitive`s (other `RCPrimitive` meshes come here too) is read with `surface_get_arrays`, indexed or not, and multiplied by `global_transform`, so translation, rotation and non-uniform scale are baked in. Skinned meshes (asserted), singular transforms and non-triangle primitives are rejected, and triangles with `|cross(b − a, c − a)|² < 1e−14` are skipped. Each triangle carries three world vertices, a linear albedo (`albedo_color` through `srgb_to_linear()`) and a linear emission (`emission.srgb_to_linear() · emission_energy_multiplier` when `emission_enabled`); no material means white albedo and no emission, `RCPrimitive` meshes use their own `albedo` and `radiance`, and texture maps are not read. The BVH layout, split rule and build time are in [scene representation](scene_representation_and_tracing.md#other-software-bvhs-in-rc-projects). Beyond those: the split cost is `area(left)·n_left + area(right)·n_right` over 8 bins on all three centroid axes, with no traversal or intersection constants despite the "surface-area splitting" comment; a node with no valid split is cut at its index midpoint; traversal shrinks `closest` as hits are found; triangles are opaque and two-sided, with the normal flipped toward the ray; hits closer than 0.0001 are ignored; and moving meshes keep their build-time transform until `rebuild_geometry()`.
+**Static triangles.** Every `MeshInstance3D` under `geometry_root` except Box and Sphere `RCPrimitive`s (other `RCPrimitive` meshes come here too) is read with `surface_get_arrays`, indexed or not, and multiplied by `global_transform`, so translation, rotation and non-uniform scale are baked in. Skinned meshes (asserted), singular transforms and non-triangle primitives are rejected, and triangles with `|cross(b − a, c − a)|² < 1e−14` are skipped. Each triangle carries three world vertices, a linear albedo (`albedo_color` through `srgb_to_linear()`) and a linear emission (`emission.srgb_to_linear() · emission_energy_multiplier` when `emission_enabled`); no material means white albedo and no emission, `RCPrimitive` meshes use their own `albedo` and `radiance`, and texture maps are not read. The BVH layout, split rule and build time are in [scene representation](scene_representation_and_tracing_voxels_and_bvhs.md#other-software-bvhs-in-rc-projects). Beyond those: the split cost is `area(left)·n_left + area(right)·n_right` over 8 bins on all three centroid axes, with no traversal or intersection constants despite the "surface-area splitting" comment; a node with no valid split is cut at its index midpoint; traversal shrinks `closest` as hits are found; triangles are opaque and two-sided, with the normal flipped toward the ray; hits closer than 0.0001 are ignored; and moving meshes keep their build-time transform until `rebuild_geometry()`.
 
 **Analytic primitives.** Box and Sphere `RCPrimitive`s, at most 64 (`RCGPU.MAX_OBJECTS`), pack 112 bytes each (`STRIDE`) in `RCPrimitive.pack()`: the inverse world transform (`global_transform.affine_inverse()`) as a mat4 (64 bytes), a `shape` vec4, linear albedo, and radiance with the point flag in `.w`. A box stores its size in `shape.xyz` with `w = 0`; a sphere stores `(radius, point_range or 0, 0, 1)` and must have `height = 2·radius` (asserted). Boxes use the slab test in object space with the direction transformed but not normalized, so `t` stays in world units; spheres solve the full quadratic with `dot(d, d)`; normals return through the inverse transpose; a ray starting inside a solid hits at `t = 0`. A sphere with `point_source` sets `emission.w = 1`, is never intersected and acts as the one explicit light (at most one, asserted). Any other primitive with radiance emits from its surface and also occludes.
 
@@ -188,7 +208,7 @@ The docs say load from other processes affected some runs and treat old figures 
 **Gather and denoise.**
 - At half resolution each pixel reads the 8 cascade-0 probes with trilinear weights times `step(0, f)·(0.5 + 0.5f)`, where `f` is the normal dotted with the direction to the probe, so probes behind the surface are ignored.
 - `E = Σ_d (R + T·sky(d))·max(n·d, 0)·4π/16`, with the sky gated by elevation, `sky_color·smoothstep(−0.2, 0.3, d.y)` (`rc_patch_gather.glsl:126`).
-- Four [à-trous](supporting_techniques.md#denoising-upscaling-and-temporal-reuse) passes (steps 1, 2, 4, 8, B-spline 5×5) with depth, normal (power 8) and luminance weights, then a bilateral upsample with an edge fallback (`rc_irradiance_upsample.glsl:28-29, 70-76`): `edge = 1 − smoothstep(0.20, 0.60, wsum)` of the bilateral weight sum, and where `edge > 0.001` and a full-resolution cascade-0 gather finds a probe, the result is `mix(bilateral, gather, edge)`. The gather replaces the bilateral result below a weight sum of 0.2 and is unused above 0.6.
+- Four [à-trous](supporting_techniques.md#edge-avoiding-à-trous-wavelet-filter) passes (steps 1, 2, 4, 8, B-spline 5×5) with depth, normal (power 8) and luminance weights, then a bilateral upsample with an edge fallback (`rc_irradiance_upsample.glsl:28-29, 70-76`): `edge = 1 − smoothstep(0.20, 0.60, wsum)` of the bilateral weight sum, and where `edge > 0.001` and a full-resolution cascade-0 gather finds a probe, the result is `mix(bilateral, gather, edge)`. The gather replaces the bilateral result below a weight sum of 0.2 and is unused above 0.6.
 
 **Header comments against the code.**
 
@@ -305,7 +325,7 @@ Each item is a failure seen above, stated as the rule that avoids it.
 - **gomezzz is closest to single-frame.** Every update solves all five levels top-down with no frame-lagged merge. Its temporal parts are the resolve's blend (0.15 to 0.5 in the demos) and bounce light read from the previous update's atlas. With `temporal_blend = 1`, direct light and emitters are single-frame, and each frame adds one bounce from the frame before (inference).
 - **Phreakyx leans on time in its scene, not its cascades.** Its light fades in over 10 frames after a rebake, moving voxels decay by 0.95 per frame, and the 1-in-N re-trace option spreads tracing over frames. With N = 1 and no fade, the cascades and the à-trous filter are spatial only.
 - **Neither has single-frame multi-bounce.** Both get bounces by reading last frame's light at hits.
-- **Dynamic triangles cannot enter in the same frame.** gomezzz's CPU BVH takes 1.2 s for 72,012 triangles, and only its 64 analytic primitives move per frame; a single-frame design with moving meshes needs a GPU-built structure ([Wicked Engine](scene_representation_and_tracing.md#wicked-engine-a-bvh-built-on-the-gpu-every-frame)).
+- **Dynamic triangles cannot enter in the same frame.** gomezzz's CPU BVH takes 1.2 s for 72,012 triangles, and only its 64 analytic primitives move per frame; a single-frame design with moving meshes needs a GPU-built structure ([Wicked Engine](scene_representation_and_tracing_voxels_and_bvhs.md#wicked-engine-a-bvh-built-on-the-gpu-every-frame)).
 - **The dense layout limits the volume.** At 1 KiB per base probe and a 128 MiB guaranteed buffer for level 0, gomezzz's layout stops near a 64³ grid unless levels are split across buffers, which caps a 0.5 m grid at 32 m on a side (derived).
 
 ## Open questions

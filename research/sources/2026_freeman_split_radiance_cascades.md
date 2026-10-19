@@ -10,6 +10,18 @@
 
 The first full world-space 3D RC with a published evaluation. Probes live in a sparse hash map near visible surfaces, with distance-based levels of detail. Instead of tracing rays from probes per cascade, rays are traced once from visible pixels and **split** by hit distance into the cascade intervals they cover. It gives one diffuse bounce in a single frame (no temporal reuse needed) and supports accumulation and multi-bounce. It also gives the best current argument for parameter choice.
 
+## Contents
+
+- [Parameters and why](#parameters-and-why)
+- [Merge with cones](#merge-with-cones)
+- [Sparse probes](#sparse-probes)
+- [Ray splitting](#ray-splitting)
+- [Implementation details](#implementation-details)
+- [Numbers (RTX 3080 Laptop, single frame, fp32 storage, not micro-optimized)](#numbers-rtx-3080-laptop-single-frame-fp32-storage-not-micro-optimized)
+- [Quality versus DDGI and reference](#quality-versus-ddgi-and-reference)
+- [Extensions shown](#extensions-shown)
+- [Context from related work](#context-from-related-work)
+
 ## Parameters and why
 
 - Cascade `n`: probe spacing `Δsₙ = Δs₀·2ⁿ`, direction count `|Ωₙ| = |Ω₀|·Kⁿ`, cutoff length `tₙ = t₀·lⁿ`, with branching factor `K` and length scaling `l`.

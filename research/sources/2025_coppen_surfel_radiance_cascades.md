@@ -10,6 +10,26 @@
 
 The repository is a Vulkan implementation written in Slang (compiled to SPIR-V) inside a custom C++ engine named "wyre" in the source. It is not a Godot project. It keeps six cascades of surfel probes, where cascade 0 has 262,144 probes and each later cascade has a quarter as many. Each probe holds a 4x4 to 128x128 grid of directional intervals, which are ray traced against the scene BVH, merged from the coarsest cascade down, and finally gathered per pixel from cascade 0.
 
+## Contents
+
+- [Frame order](#frame-order)
+- [Parameters](#parameters)
+- [Surfel storage](#surfel-storage)
+- [Spawning (spawn.slang)](#spawning-spawnslang)
+- [Acceleration structure (hash grid)](#acceleration-structure-hash-grid)
+- [Recycling (recycle.slang)](#recycling-recycleslang)
+- [Cascade layout and interval geometry](#cascade-layout-and-interval-geometry)
+- [Gathering (gather.slang)](#gathering-gatherslang)
+- [Merging (merge.slang)](#merging-mergeslang)
+- [Composite (composite.slang)](#composite-compositeslang)
+- [Pass table](#pass-table)
+- [Ground-truth pass (reference)](#ground-truth-pass-reference)
+- [Artifacts and fixes](#artifacts-and-fixes)
+- [Performance](#performance)
+- [Limitations and future work](#limitations-and-future-work)
+- [Observations from reading the code (not run)](#observations-from-reading-the-code-not-run)
+- [Links found](#links-found)
+
 ## Frame order
 
 Order taken from GIStage::enqueue in the stage file:

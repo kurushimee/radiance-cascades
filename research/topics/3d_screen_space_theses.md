@@ -11,6 +11,18 @@ Six academic works build or measure screen-probe 3D RC: four master's theses fro
 | Kung (Linköping, Beartwigs) | SSRC | fixed-thickness depth march | RTX 3060 | 4.9 to 295 ms; artifact catalogue against VCT |
 | Gerassimov (DiGRA 2026) | unnamed | unnamed | RTX 4060 Laptop | RC about as fast as realtime lightmaps, 2× faster than SSGI |
 
+## Contents
+
+- [Gavras (2025): SPWI on Metal](#gavras-2025-spwi-on-metal)
+- [Kaméus (2025): min/max probe placement](#kaméus-2025-minmax-probe-placement)
+- [Abou Dan and Jensen (2025): visibility-bitmask screen probes](#abou-dan-and-jensen-2025-visibility-bitmask-screen-probes)
+- [Dell'Ova (2025): performance scaling with DXR](#dellova-2025-performance-scaling-with-dxr)
+- [Kung (2025): RC against voxel cone tracing](#kung-2025-rc-against-voxel-cone-tracing)
+- [Gerassimov (2026): RC against Unity's GI](#gerassimov-2026-rc-against-unitys-gi)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Gavras (2025): SPWI on Metal
 
 | | |

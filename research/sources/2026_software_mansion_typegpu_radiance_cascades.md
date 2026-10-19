@@ -9,6 +9,34 @@
 
 @typegpu/radiance-cascades (version 0.12.1; 0.12.2 at commit 7af6a9e) computes 2D lighting for TypeGPU through two runners: an SDF runner that ray-marches a user signed distance function through a stack of cascade layers, and a holographic runner that solves light transport over a pixel grid with per-pixel emission and extinction. Both runners are created with `create`, recomputed with `run()`, and expose a texture (`output`) that the app samples in its own shader. All GPU code is TGSL (functions marked `'use gpu'`, compiled through unplugin-typegpu); the package contains no hand-written WGSL.
 
+## Contents
+
+- [Guide](#guide)
+- [Source files](#source-files)
+- [SDF runner](#sdf-runner)
+  - [Signature and options](#signature-and-options)
+  - [Derived constants](#derived-constants)
+  - [Passes per `run()`](#passes-per-run)
+  - [Cascade pass (per thread)](#cascade-pass-per-thread)
+- [Holographic runner](#holographic-runner)
+  - [Signature and options](#signature-and-options-1)
+  - [Data types and packing](#data-types-and-packing)
+  - [Buffers and layout (`layout.ts`)](#buffers-and-layout-layoutts)
+  - [Quadrant sweeps](#quadrant-sweeps)
+  - [Up-sweep (intervals)](#up-sweep-intervals)
+  - [Down-sweep (fluence)](#down-sweep-fluence)
+  - [Integrate pass](#integrate-pass)
+  - [Source pass](#source-pass)
+  - [Holographic: notes on the model](#holographic-notes-on-the-model)
+- [Examples](#examples)
+  - [radiance-cascades (from scratch, no package use)](#radiance-cascades-from-scratch-no-package-use)
+  - [global-illumination ("Holographic Global Illumination")](#global-illumination-holographic-global-illumination)
+  - [radiance-cascades-drawing ("Holographic Radiance Cascades (with drawing)")](#radiance-cascades-drawing-holographic-radiance-cascades-with-drawing)
+- [Issues and notes](#issues-and-notes)
+  - [Behavior notes (from code)](#behavior-notes-from-code)
+  - [Code comments of note](#code-comments-of-note)
+- [Links found](#links-found)
+
 ## Guide
 
 Holographic scene inputs (guide table):

@@ -9,6 +9,15 @@
 
 The thesis behind voxel cone tracing ([2011_crassin_voxel_cone_tracing.md](2011_crassin_voxel_cone_tracing.md)): a sparse voxel octree with bricks in a 3D texture, rendered by pre-integrated cone tracing and streamed on demand by the rays themselves. The RC discussions link it for its storage and streaming design ([sparse 3D RC](2026_sparse_and_3d_rc.md)). Page numbers are the printed ones, equal to the PDF's.
 
+## Contents
+
+- [Octree and bricks (ch. 5)](#octree-and-bricks-ch-5)
+- [Rendering (ch. 4, 6)](#rendering-ch-4-6)
+- [Streaming (ch. 7)](#streaming-ch-7)
+- [Frame rates](#frame-rates)
+- [Indirect light (ch. 9)](#indirect-light-ch-9)
+- [For RC](#for-rc)
+
 ## Octree and bricks (ch. 5)
 
 - One child pointer per node, with siblings stored together in blocks of `N³` nodes (`N = 2`), grouped as 2×2×2 node tiles in linear memory (pp. 100-101). A node is two 32-bit words: flags (terminal, and whether the second word is a constant or a brick pointer) with a 30-bit child pointer, and a constant colour or a 30-bit brick pointer (p. 102).

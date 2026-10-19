@@ -8,6 +8,24 @@
 
 HRC (holographic RC) works in 2D in practice. This note covers what implementers learned after the paper: which cascades to trace and which to build from extensions, the artifacts and their fixes, bandwidth-driven optimizations with timings, why 3D and screen-space HRC are not practical, and later variants such as half HRC, polygonal HRC, gradient RC and the line-space view. For a 3D project, the useful parts are the cost of 3D HRC, the cone-weighting rules, and the idea of building long intervals from short ones.
 
+## Contents
+
+- [How it behaves next to vanilla RC](#how-it-behaves-next-to-vanilla-rc)
+- [Tracing and extensions](#tracing-and-extensions)
+- [Merging rules](#merging-rules)
+- [Artifacts and fixes](#artifacts-and-fixes)
+- [Performance](#performance)
+- [3D and screen space](#3d-and-screen-space)
+- [Off-screen light](#off-screen-light)
+- [Variants](#variants)
+- [Debugging](#debugging)
+- [Demos and visualizers read from code](#demos-and-visualizers-read-from-code)
+  - [deadlyredcube: extensions and oriented probe lines](#deadlyredcube-extensions-and-oriented-probe-lines)
+  - [Adrian Margel: line space and a hierarchical diffusion solver](#adrian-margel-line-space-and-a-hierarchical-diffusion-solver)
+  - [jason.today/hrc](#jasontodayhrc)
+  - [Discrete Radon transform (Press 2006)](#discrete-radon-transform-press-2006)
+- [Links](#links)
+
 ## How it behaves next to vanilla RC
 
 - Each cascade halves probes along one axis only and doubles directions, so the total interval count per cascade stays constant. A probe in cascade `N` has `2^N + 1` rays, and ray length equals plane spacing, so length only doubles per cascade: a 1024 px scene needs 10 cascades where vanilla 4x needs 5. Every cascade is needed; dropping from 11 to 8 left artifacts.
@@ -65,7 +83,7 @@ HRC is bound by memory bandwidth (96% in one profile), so most gains come from w
 
 | Setup | Time |
 |---|---|
-| 512², 4×4 px light, 10 cascades ([tfKyRw](https://www.shadertoy.com/view/tfKyRw) is a similar 11-cascade build of one frustum without the extension step, over a three-frame ring; [code notes](2023_rc_shadertoys.md#tfkyrw-youssef_afella-one-frustum-with-paper-geometry); the same author's [WfyyDm](https://www.shadertoy.com/view/WfyyDm) runs four frustums at half resolution with ten levels, also without the extension step ([code notes](2023_rc_shadertoys.md#wfyydm-youssef_afella-four-frustums-in-one-buffer))) | 0.88 ms |
+| 512², 4×4 px light, 10 cascades ([tfKyRw](https://www.shadertoy.com/view/tfKyRw) is a similar 11-cascade build of one frustum without the extension step, over a three-frame ring; [code notes](2023_rc_shadertoys_hrc_3d_and_other.md#tfkyrw-youssef_afella-one-frustum-with-paper-geometry); the same author's [WfyyDm](https://www.shadertoy.com/view/WfyyDm) runs four frustums at half resolution with ten levels, also without the extension step ([code notes](2023_rc_shadertoys_hrc_3d_and_other.md#wfyydm-youssef_afella-four-frustums-in-one-buffer))) | 0.88 ms |
 | 1024², 4 traced and 6 extended cascades, RTX 3080 | about 7 ms; about 3 ms with RGBA16 merges, RGBA8 extensions and cones built on the fly |
 | 1024² and 2048² without stored cascade 0 or cone transmittance, RTX 3080 | 1.8 ms and 7.5 ms |
 | Volumetric extensions from cascade 0, all four frustums | under 2 ms at 1024², 5 ms at 2048² |
@@ -169,7 +187,7 @@ Press, "Discrete Radon transform has an exact, fast inverse and generalizes to o
 - HRC and basis visualizers: https://entropylost.github.io/hrcviz/ and https://entropylost.github.io/hrcviz/basis.html
 - Line-space demos: https://adrianmargel.ca/demo/linespace/ and https://adrianmargel.ca/demo/linespace-rotation/ ([code notes](#adrian-margel-line-space-and-a-hierarchical-diffusion-solver))
 - Skewed instead of rotated probe lines: https://deadlyredcube.com/RCStuff/orientedProbeLines.html ([code notes](#deadlyredcube-extensions-and-oriented-probe-lines))
-- HRC Shadertoy proof of concept: https://www.shadertoy.com/view/4ctczl (two families of probe lines with directions doubling per level and no extension step; [code notes](2023_rc_shadertoys.md#4ctczl-suslik-two-families-of-probe-lines))
+- HRC Shadertoy proof of concept: https://www.shadertoy.com/view/4ctczl (two families of probe lines with directions doubling per level and no extension step; [code notes](2023_rc_shadertoys_hrc_3d_and_other.md#4ctczl-suslik-two-families-of-probe-lines))
 - Discrete Radon transform: https://www.pnas.org/doi/10.1073/pnas.0609228103 ([notes](#discrete-radon-transform-press-2006))
 - Line-sweep ambient occlusion on height maps: http://wili.cc/research/lsao/lsao.pdf (Timonen 2013, screen-space depth buffer; [notes](2013_timonen_line_sweep_ambient_obscurance.md))
 - Thesis comparing RC methods with voxel cone tracing: https://www.diva-portal.org/smash/get/diva2:1967544/FULLTEXT01.pdf

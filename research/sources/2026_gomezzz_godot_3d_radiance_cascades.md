@@ -9,6 +9,30 @@
 
 A world-space 3D radiance cascades (RC) solver for Godot 4.7 Forward+. It has five cascade levels on a 24 x 16 x 24 base probe grid, and every level is a Vulkan compute pass dispatched through the main RenderingDevice. Static scene geometry enters as a CPU-built triangle BVH snapshot, and up to 64 moving analytic box or sphere primitives are packed every frame. Spatial shaders sample the resulting irradiance atlas. The addon lives in `addons/radiance_cascades/` and is meant to be copied into other projects; the rest of the repository holds the demos, tests and tools.
 
+## Contents
+
+- [Files](#files)
+- [Godot integration](#godot-integration)
+- [Scene representation](#scene-representation)
+  - [1. Static triangles (CPU BVH snapshot)](#1-static-triangles-cpu-bvh-snapshot)
+  - [2. Analytic primitives (per-frame packed)](#2-analytic-primitives-per-frame-packed)
+  - [Volume](#volume)
+- [Passes](#passes)
+- [RC parameters and math](#rc-parameters-and-math)
+  - [Constants and layout](#constants-and-layout)
+  - [Per-level layout (base spacing 0.5)](#per-level-layout-base-spacing-05)
+  - [Direction mapping](#direction-mapping)
+  - [Merge (cascade pass), per probe p, per stored direction d at level L](#merge-cascade-pass-per-probe-p-per-stored-direction-d-at-level-l)
+  - [Interval tracing (`trace_interval`)](#interval-tracing-trace_interval)
+  - [Resolve (six-lobe irradiance)](#resolve-six-lobe-irradiance)
+  - [Surface and hit lookup (`history_irradiance`, `sample_lighting`)](#surface-and-hit-lookup-history_irradiance-sample_lighting)
+  - [Other numeric facts](#other-numeric-facts)
+- [Issues and notes](#issues-and-notes)
+  - [Stated limitations (README, implementation.md, TODO.md)](#stated-limitations-readme-implementationmd-todomd)
+  - [Documentation discrepancies (text versus code)](#documentation-discrepancies-text-versus-code)
+  - [Code-level notes](#code-level-notes)
+  - [Performance and validation records (docs and README)](#performance-and-validation-records-docs-and-readme)
+
 ## Files
 
 Addon files, all under `addons/radiance_cascades/`:

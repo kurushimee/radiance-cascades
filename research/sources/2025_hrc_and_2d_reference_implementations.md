@@ -11,6 +11,16 @@ HRC (see [2025_freeman_holographic_radiance_cascades.md](2025_freeman_holographi
 
 Other HRC implementations they link: https://github.com/entropylost/nihil (CPU, continuous line functions) and Suslik's Shadertoy 4ctczl. Both, with entropylost's visualizers and a half-HRC copy, are described at the end of this note.
 
+## Contents
+
+- [amitabha: reference HRC](#amitabha-reference-hrc)
+- [Volumetric-HRC (Yaazarai)](#volumetric-hrc-yaazarai)
+- [amida: merge variants compared](#amida-merge-variants-compared)
+- [AdrianMargel: nested RC](#adrianmargel-nested-rc)
+- [nihil: HRC with continuous line functions](#nihil-hrc-with-continuous-line-functions)
+- [entropylost's visualizers (hrcviz and hrcviz2)](#entropylosts-visualizers-hrcviz-and-hrcviz2)
+- [Half HRC (brucelevis copy)](#half-hrc-brucelevis-copy)
+
 ## amitabha: reference HRC
 
 - Four rotated frames, each covering ±45°. Each frame has two interleaved probe grids offset by one pixel across the travel axis, so there is one probe per pixel across the rays.

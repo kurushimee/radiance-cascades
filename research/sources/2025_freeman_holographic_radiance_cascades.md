@@ -10,6 +10,16 @@
 
 A 2D-only variant of RC (HRC) that removes RC's main remaining error: penumbras from small, distant lights, which plain RC blurs because the cascade that sees the occluder has coarse probe spacing. HRC keeps full probe resolution across the direction of travel and coarsens only along it. It also replaces ray tracing above the first three levels with an acceleration structure built by merging short rays, so cost does not depend on the scene at all. Results come within reach of a converged path tracer.
 
+## Contents
+
+- [What it fixes in plain RC](#what-it-fixes-in-plain-rc)
+- [Formulation](#formulation)
+  - [Merging down (`R_n` from `R_n+1`)](#merging-down-r_n-from-r_n1)
+  - [Ray acceleration structure (`T_n`)](#ray-acceleration-structure-t_n)
+  - [Final gather and cleanup](#final-gather-and-cleanup)
+- [Numbers (RTX 3080 Laptop, Rust with LuisaCompute over CUDA, fp16 RGB radiance and transmittance)](#numbers-rtx-3080-laptop-rust-with-luisacompute-over-cuda-fp16-rgb-radiance-and-transmittance)
+- [Limitations](#limitations)
+
 ## What it fixes in plain RC
 
 With base probe spacing `s` and ray length `r`, a small light of size `l` far away, partly blocked by an occluder halfway, casts a penumbra about `l` wide near the probe. The occluder is seen by cascade `log₄(D/r)`, whose probe spacing is `s·D/r`. Once that spacing exceeds `l`, interpolation smears the penumbra. In the paper's test, standard RC tuned to equal time had twice the RMSE of HRC, all of it in penumbras.

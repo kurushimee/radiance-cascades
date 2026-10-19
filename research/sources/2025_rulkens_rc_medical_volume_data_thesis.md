@@ -10,6 +10,19 @@
 
 The thesis applies a dense 3D world-grid RC to CT volume rendering, combining it with surface shading and a volumetric illumination model to show single-bounce GI on CT data in real time. It claims no convergence time and no limit on the number or shape of lights. Page numbers are PDF pages; printed numbers are 4 lower.
 
+## Contents
+
+- [Goal and background](#goal-and-background)
+- [Method](#method)
+  - [Direction mappers (sec. 5)](#direction-mappers-sec-5)
+  - [Collection and merge (sec. 5.5)](#collection-and-merge-sec-55)
+  - [Shading (sec. 6)](#shading-sec-6)
+- [Parameters](#parameters)
+- [Results](#results)
+- [Limits and future work](#limits-and-future-work)
+- [Inconsistencies](#inconsistencies)
+- [For RC](#for-rc)
+
 ## Goal and background
 
 - The one stated goal is physically based single-bounce GI for CT scans in real time, with no light limit and no convergence (p. 5). The abstract says adding lights does not change performance (p. 3); the results say it changes little (p. 26), and no light-count sweep is measured.

@@ -11,6 +11,15 @@
 
 These sources are linked from RC discussions of line sweeping as a way to trace many parallel rays at once ([light transport alternatives](2026_light_transport_alternatives.md)). They show three ways to parallelize a sweep: hyperplane wavefronts that start at a corner (Ardra, Kripke, and the anti-diagonals of the grid-visibility recurrence); planes swept in order with parallel work inside each plane (MURaM); and one independent thread per ray with atomic accumulation (compute.toys 1418, [LSAO](2013_timonen_line_sweep_ambient_obscurance.md), [Berhard](2016_berhard_gpu_line_sweeping_thesis.md)). None of them describes a 45° sweep by name or compares with RC.
 
+## Contents
+
+- [Ardra on CUDA (OSTI 1559411)](#ardra-on-cuda-osti-1559411)
+- [Kripke (2015)](#kripke-2015)
+- [MURaM short characteristics (`rt.cc`)](#muram-short-characteristics-rtcc)
+- [Short characteristics lecture (Piskunov)](#short-characteristics-lecture-piskunov)
+- [Grid-based visibility (Goldstein)](#grid-based-visibility-goldstein)
+- [compute.toys 1418](#computetoys-1418)
+
 ## Ardra on CUDA (OSTI 1559411)
 
 The link labelled "Kripke report" in the RC discussions resolves to this paper.

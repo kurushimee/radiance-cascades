@@ -9,6 +9,45 @@
 
 This is version 2 of the preprint (file reservoir-cascades-preprint-v2.pdf, 10 pages). The concept DOI for all versions is 10.5281/zenodo.21506521. The Zenodo record holds only this PDF; the code is at https://github.com/ivanyou028/reservoir-cascades (MIT, read at 15b4557), described at the end of this note. The paper keeps the Radiance Cascades (RC) discretization, rewrites the level merge as a GRIS-style resampling step, and tests the result on three 2D scenes with a CPU oracle and a WebGPU build.
 
+## Contents
+
+- [Abstract (restated)](#abstract-restated)
+- [1 Introduction](#1-introduction)
+- [2 Related Work](#2-related-work)
+- [3 Background and Notation](#3-background-and-notation)
+  - [Cascade discretization](#cascade-discretization)
+  - [Estimand](#estimand)
+  - [GRIS in brief](#gris-in-brief)
+- [4 Method](#4-method)
+  - [Reprojected bin lookup](#reprojected-bin-lookup)
+  - [Per-level collapse (layered RIS)](#per-level-collapse-layered-ris)
+  - [Validation: renormalize before selecting](#validation-renormalize-before-selecting)
+  - [Merge as RIS, with beta in the proposal and never in the target](#merge-as-ris-with-beta-in-the-proposal-and-never-in-the-target)
+  - [Temporal reuse, re-evaluation, and revival](#temporal-reuse-re-evaluation-and-revival)
+  - [Block-consistent interval jitter](#block-consistent-interval-jitter)
+  - [Per-frame algorithm (Figure 2, transcribed)](#per-frame-algorithm-figure-2-transcribed)
+  - [Degenerate mode](#degenerate-mode)
+- [5 Theory](#5-theory)
+- [6 Experiments](#6-experiments)
+  - [Setup](#setup)
+  - [Main results (Table 1)](#main-results-table-1)
+  - [Cost accounting](#cost-accounting)
+  - [Where the rho-dial recovery cost lives](#where-the-rho-dial-recovery-cost-lives)
+  - [Equal-ray attribution (Table 2)](#equal-ray-attribution-table-2)
+  - [Flat world-space control (Table 3)](#flat-world-space-control-table-3)
+  - [Dynamics (S3)](#dynamics-s3)
+  - [The leak ring: residual bias with a predicted address](#the-leak-ring-residual-bias-with-a-predicted-address)
+  - [WebGPU](#webgpu)
+  - [Negative results](#negative-results)
+- [7 Discussion and Limitations](#7-discussion-and-limitations)
+  - [Scope](#scope)
+  - [Hypotheses and constants](#hypotheses-and-constants)
+  - [Design axes exposed by the theory](#design-axes-exposed-by-the-theory)
+- [8 Conclusion](#8-conclusion)
+- [Source inconsistencies and unclear items](#source-inconsistencies-and-unclear-items)
+- [Links found](#links-found)
+- [Code](#code)
+
 ## Abstract (restated)
 
 RC discretizes radiance over a hierarchy of probes and angular bins, with spatial and angular resolution following the penumbra condition. Levels are merged by deterministic bilinear interpolation. The paper argues that this merge causes biases that more samples cannot remove: light leaks, ringing, a hard per-level angular resolution ceiling, and a visibility-radiance factorization error.

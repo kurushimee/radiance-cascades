@@ -9,6 +9,17 @@
 
 Irradiance caching computes indirect diffuse light at sparse points, stores each as a record, and interpolates between records elsewhere. It is the ancestor of every radiance cache in this collection, and its record spacing rule is an early form of the spatial half of the penumbra condition. The 1988 and 1992 papers sit behind the ACM paywall and Radiance's site holds only scanned figures, so the formulas below come from Ward's own slides in the 2008 course. Slide formulas were read from rendered pages, since the PDF text layer drops them.
 
+## Contents
+
+- [The 1988 algorithm (Ward's course slides)](#the-1988-algorithm-wards-course-slides)
+- [Gradients (Ward and Heckbert 1992)](#gradients-ward-and-heckbert-1992)
+- [Radiance's implementation (Ward's second talk)](#radiances-implementation-wards-second-talk)
+- [Problems and fixes (Křivánek)](#problems-and-fixes-křivánek)
+- [Radiance caching for glossy surfaces (Křivánek et al. 2005, 2006)](#radiance-caching-for-glossy-surfaces-křivánek-et-al-2005-2006)
+- [Irradiance splatting on the GPU (Gautron et al. 2005)](#irradiance-splatting-on-the-gpu-gautron-et-al-2005)
+- [Temporal radiance caching (Gautron et al. 2007)](#temporal-radiance-caching-gautron-et-al-2007)
+- [Tabellion and Lamorlette at PDI/DreamWorks (2004)](#tabellion-and-lamorlette-at-pdidreamworks-2004)
+
 ## The 1988 algorithm (Ward's course slides)
 
 - **Lazy evaluation.** A query point near enough records interpolates (or extrapolates) from them; otherwise it computes a new record by sampling its hemisphere. Ward called it "lazy evaluation"; the name "irradiance caching" came from someone else.

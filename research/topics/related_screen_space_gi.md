@@ -4,16 +4,27 @@ Screen-space GI and AO read only the depth, normal and lit-colour buffers, so th
 
 | Method | Per slice or sample | Cost per pixel | Thickness model | Indirect light |
 |---|---|---|---|---|
-| [SSAO](supporting_techniques.md#visibility-shadows-and-screen-space) | point samples in a hemisphere | N samples | none, or a range check | no |
-| [HBAO](supporting_techniques.md#visibility-shadows-and-screen-space) | one horizon angle per direction | K directions × N steps | infinite (height field) | no |
-| [GTAO](supporting_techniques.md#visibility-shadows-and-screen-space) | two horizons per slice, cosine-weighted closed form | slices × steps | infinite, with falloff | no |
-| [SAO](supporting_techniques.md#visibility-shadows-and-screen-space) | spiral samples on a depth mip pyramid | constant in radius | range falloff | no |
+| [SSAO](supporting_techniques_structures_and_tracing.md#ssao) | point samples in a hemisphere | N samples | none, or a range check | no |
+| [HBAO](supporting_techniques_structures_and_tracing.md#hbao) | one horizon angle per direction | K directions × N steps | infinite (height field) | no |
+| [GTAO](supporting_techniques_structures_and_tracing.md#gtao) | two horizons per slice, cosine-weighted closed form | slices × steps | infinite, with falloff | no |
+| [SAO](supporting_techniques_structures_and_tracing.md#sao) | spiral samples on a depth mip pyramid | constant in radius | range falloff | no |
 | [LSAO](#line-sweep-ambient-obscurance) | a stack of occluders along a swept line | about 2K operations, any radius | infinite | no |
 | [HBIL](#horizon-based-indirect-lighting) | horizon per slice, bent cone | 2 slices × 16 steps | infinite | near field from last frame's radiance |
 | [PoE1 GI](#path-of-exile-1s-screen-space-gi) | random screen points with mips | fixed sample count | not stated | every pixel a shadowed point light |
 | [Visibility bitmask](#visibility-bitmask-ssgi) | 32 sector bits per slice | about 15 instructions per sample over GTAO | constant world thickness `t` | newly occluded sectors × cosines |
 
 The glossary entries explain SSAO, HBAO, GTAO, SAO, bent normals and bent cones; Godot compute implementations of all four AO methods, with their parameters and bugs, are in [Godot projects](godot_projects.md#compositor-effect-projects).
+
+## Contents
+
+- [Line-sweep ambient obscurance](#line-sweep-ambient-obscurance)
+- [Horizon-based indirect lighting](#horizon-based-indirect-lighting)
+- [Path of Exile 1's screen-space GI](#path-of-exile-1s-screen-space-gi)
+- [Visibility-bitmask SSGI](#visibility-bitmask-ssgi)
+- [Heightmap horizons](#heightmap-horizons)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
 
 ## Line-sweep ambient obscurance
 

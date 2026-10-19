@@ -8,6 +8,17 @@ Three recorded talks besides [ExileCon 2023](2023_sannikov_exilecon_rendering_po
 | Student showcase, RC segment (about 38:00 to 46:00) | Max, a BUas student (the talk points to the student's RC fundamentals article, so likely Max Coppen) | Graphics Programming Conference 2024 | https://www.youtube.com/watch?v=MONs5wMy6Rw |
 | Realtime Global Illumination in Enshrouded | Jacob, Keen Games | Graphics Programming Conference 2024 | https://www.youtube.com/watch?v=57F1ezwH7Mk |
 
+## Contents
+
+- [Love and Deepspace: surfel RC on mobile](#love-and-deepspace-surfel-rc-on-mobile)
+  - [Scene representation](#scene-representation)
+  - [Cascades and probes](#cascades-and-probes)
+  - [Artifacts and fixes](#artifacts-and-fixes)
+  - [Gather and timing](#gather-and-timing)
+- [GPC 2024 student showcase](#gpc-2024-student-showcase)
+- [Enshrouded: a cascaded probe cache](#enshrouded-a-cascaded-probe-cache)
+- [Other videos checked](#other-videos-checked)
+
 ## Love and Deepspace: surfel RC on mobile
 
 The only shipped 3D RC found. The game (Unity 2019 with a custom pipeline, over 80 million players) lets players place furniture and follows real-world time of day, so GI must be dynamic, need no baking and run on phones without hardware ray tracing. It went through three versions:

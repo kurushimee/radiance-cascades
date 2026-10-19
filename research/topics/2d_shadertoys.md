@@ -4,6 +4,23 @@ Shadertoy holds the reference 2D RC codes: fad's original, Sannikov's testbed li
 
 Statements marked "derived" were computed from the code's constants; "inference" marks conclusions drawn here; "read from the code" marks behaviour found by reading, not by running.
 
+## Contents
+
+- [Index](#index)
+- [How Shadertoy shapes the code](#how-shadertoy-shapes-the-code)
+- [fad's line](#fads-line)
+- [The testbed line](#the-testbed-line)
+- [Independent codes](#independent-codes)
+- [Diagrams and helpers](#diagrams-and-helpers)
+- [Media](#media)
+- [Extended gathering](#extended-gathering)
+- [Cascades for gravity](#cascades-for-gravity)
+- [Shaders that are not RC](#shaders-that-are-not-rc)
+- [Code locations](#code-locations)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Index
 
 | ID | Title | Author | Created | Forked from | Covered in |
@@ -33,7 +50,7 @@ Statements marked "derived" were computed from the code's constants; "inference"
 | ffl3Rf | 2D RC with Hardware Bilinear | codyjbennett | 2026-03-10 | wfyyDz | [media](#media) |
 | NfySzt | Fork 2D RC HW bilinear | codyjbennett | 2026-09-01 | ffl3Rf | [media](#media) |
 | X3XfRM | Radiance Cascades 3D | Mathis | 2024-11-02 | | [3D surface probes](3d_surface_probes.md) |
-| M3ycWt | Volumetric Radiance Cascades | Mathis | 2025-02-08 | | [3D world-space implementations](3d_world_space_implementations.md#m3ycwt-mathis-voxel-cascades-with-hemisphere-probes) |
+| M3ycWt | Volumetric Radiance Cascades | Mathis | 2025-02-08 | | [3D world-space implementations](3d_world_space_implementations_grids.md#m3ycwt-mathis-voxel-cascades-with-hemisphere-probes) |
 | lXByRh | RC - Screen Space Probes | Mathis | 2024-12-16 | | [3D screen space](3d_screen_space.md) |
 | scy3Dd | 3D Radiance Cascades GI (SPWI) | codyjbennett | 2026-08-08 | | [3D screen space](3d_screen_space.md) |
 | 33ycDm | Radiance Cascades GTAO | youssef_afella | 2026-01-24 | | [3D screen space](3d_screen_space.md) |

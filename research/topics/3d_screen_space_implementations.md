@@ -14,6 +14,40 @@ Public code for screen-probe 3D RC: standalone repositories, two engine plugins,
 | [Unity URP plugin](#unity-urp-plugin) | SSRC | Unity 6.2 URP | depth march, three modes | 2025-08 |
 | [lXByRh](#lxbyrh-hit-point-reprojection), [scy3Dd](#scy3dd-spwi-in-one-shader), [33ycDm](#33ycdm-gtao-from-cascaded-horizons) | Shadertoys | GLSL | analytic, depth | 2024 to 2026 |
 
+## Contents
+
+- [three-rc](#three-rc)
+- [ClaikoCode/DX12RadianceCascades](#claikocodedx12radiancecascades)
+- [Qirias/RC-SPWI](#qiriasrc-spwi)
+- [Alexander-Koutrakis/Alpha-Renderer](#alexander-koutrakisalpha-renderer)
+- [KingTheFifth/radiance-cascades](#kingthefifthradiance-cascades)
+- [BeansEngine](#beansengine)
+- [Engine plugins](#engine-plugins)
+  - [Unreal: screen-space bitmask RC](#unreal-screen-space-bitmask-rc)
+- [Unity URP plugin](#unity-urp-plugin)
+  - [Unity: direction-first screen probes](#unity-direction-first-screen-probes)
+  - [Unity: 2D screen probes](#unity-2d-screen-probes)
+  - [Unity: cube-map probes](#unity-cube-map-probes)
+- [Shadertoys](#shadertoys)
+  - [lXByRh: hit-point reprojection](#lxbyrh-hit-point-reprojection)
+  - [scy3Dd: SPWI in one shader](#scy3dd-spwi-in-one-shader)
+  - [33ycDm: GTAO from cascaded horizons](#33ycdm-gtao-from-cascaded-horizons)
+- [Design sketches](#design-sketches)
+  - [CorylusDonuts: 2.5D pseudocode](#corylusdonuts-25d-pseudocode)
+  - [tmpvar's storage calculator](#tmpvars-storage-calculator)
+  - [Other](#other)
+- [Depth-aware upscaling shaders](#depth-aware-upscaling-shaders)
+  - [4XXSWS: depth-aware upscaling](#4xxsws-depth-aware-upscaling)
+  - [MXjcWK: selective bilinear subsets](#mxjcwk-selective-bilinear-subsets)
+  - [4cffDX: normal- and depth-weighted upsampling](#4cffdx-normal--and-depth-weighted-upsampling)
+  - [ffSSz1: linear min/max interpolation](#ffssz1-linear-minmax-interpolation)
+  - [NfBSz1: perspective-correct min/max interpolation](#nfbsz1-perspective-correct-minmax-interpolation)
+  - [l3scz8: occlusion from depth variance](#l3scz8-occlusion-from-depth-variance)
+  - [pixelmager's depth-aware upscaling gist](#pixelmagers-depth-aware-upscaling-gist)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## three-rc
 
 | | |
@@ -201,7 +235,7 @@ Five cascades in one 512×384 ARGBHalf atlas, each probe a 2×3 grid of cube fac
 
 ### lXByRh: hit-point reprojection
 
-"RC - Screen Space Probes" by Mathis (2024-12-16) places hemispherical probes on a half-resolution G-buffer and merges each cascade from the next coarser one by reprojecting the coarser rays' hit points into the finer probe with a visibility test, instead of compositing intervals. Its only smoothing is temporal; the comments say there is no spatial denoising and some flicker remains ([Shadertoys](../sources/2023_rc_shadertoys.md#lxbyrh-mathis-screen-space-probes-merged-by-hit-point-reprojection)).
+"RC - Screen Space Probes" by Mathis (2024-12-16) places hemispherical probes on a half-resolution G-buffer and merges each cascade from the next coarser one by reprojecting the coarser rays' hit points into the finer probe with a visibility test, instead of compositing intervals. Its only smoothing is temporal; the comments say there is no spatial denoising and some flicker remains ([Shadertoys](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#lxbyrh-mathis-screen-space-probes-merged-by-hit-point-reprojection)).
 
 - Six cascades in the top and bottom halves of Buffers B, C and D (cascades 2 and 5, 1 and 4, 0 and 3). Cascade `n` tiles the half-resolution G-buffer into probes of `P × P` texels with `P = 2^(n+1)`, one texel per direction, so every cascade traces about one ray per half-resolution texel.
 
@@ -225,7 +259,7 @@ Five cascades in one 512×384 ARGBHalf atlas, each probe a 2×3 grid of cube fac
 
 ### scy3Dd: SPWI in one shader
 
-codyjbennett's Shadertoy (2026-08-08): screen-space probes with world-space intervals, six cascades over two frames ([Shadertoys](../sources/2023_rc_shadertoys.md#scy3dd-codyjbennett-spwi-in-one-shader)).
+codyjbennett's Shadertoy (2026-08-08): screen-space probes with world-space intervals, six cascades over two frames ([Shadertoys](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#scy3dd-codyjbennett-spwi-in-one-shader)).
 
 | Cascade | Probe spacing (px) | Directions per probe | Interval (world units) |
 |---|---|---|---|
@@ -248,7 +282,7 @@ scy3Dd is the only screen-probe code that combines the bilinear fix with bilinea
 
 ### 33ycDm: GTAO from cascaded horizons
 
-youssef_afella's Shadertoy computes GTAO in one frame from cascaded horizons ([Shadertoys](../sources/2023_rc_shadertoys.md#33ycdm-youssef_afella-gtao-from-cascaded-horizons)):
+youssef_afella's Shadertoy computes GTAO in one frame from cascaded horizons ([Shadertoys](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#33ycdm-youssef_afella-gtao-from-cascaded-horizons)):
 
 - Three effective levels (a fourth buffer returns −1 and is never read). Level `n` has origins every `2^n` px and `4^(n+1)` directions, 45° apart at level 0, 22.5° at level 1 and 5.625° at level 2. Radial intervals are `[4^n − 1, 4^(n+1) − 1]·0.1/63` in UV, divided by `1 + depth`, with 2, 4 and 4 samples.
 - Each direction keeps the maximum cosine to the view vector over its samples, minus twice a falloff starting at 0.1 view units. The merge takes `max(own, parent − w)`, where the parent is the bilinear mean of the four child horizons of block `4b + i` and `w = 2·clamp(|Δdepth|, 0, 1)`. The author notes the depth weight should be applied per probe, not to an average.
@@ -291,7 +325,7 @@ At the defaults, 1080p has 480 × 270 = 129,600 cells, 2,073,600 entries per lev
 
 ## Depth-aware upscaling shaders
 
-Test shaders for reading low-resolution data at full-resolution pixels; the principles are in [3D screen space](3d_screen_space.md#depth-aware-upscaling) ([Shadertoys](../sources/2023_rc_shadertoys.md#depth-aware-upscaling-and-occlusion)).
+Test shaders for reading low-resolution data at full-resolution pixels; the principles are in [3D screen space](3d_screen_space.md#depth-aware-upscaling) ([Shadertoys](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#depth-aware-upscaling-and-occlusion)).
 
 ### 4XXSWS: depth-aware upscaling
 

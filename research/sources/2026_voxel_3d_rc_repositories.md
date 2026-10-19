@@ -8,6 +8,16 @@ Three small 3D projects, each with a different scene representation. Together th
 | https://github.com/rbnelr/voxel_game | C++, OpenGL 4.6 compute | fixed world box | 512³ toroidal block window with a distance field |
 | https://github.com/jumeder/dx12-radiance-cascades | C++, D3D12 DXR and HLSL compute | fixed world box, full 3D grid | hardware ray tracing (BLAS per model, TLAS rebuilt each frame) |
 
+## Contents
+
+- [creikey/voxel-radiance-cascades](#creikeyvoxel-radiance-cascades)
+  - [Scene](#scene)
+  - [Cascades](#cascades)
+  - [Numbers (D3D11, 640×360, GPU not named)](#numbers-d3d11-640360-gpu-not-named)
+  - [Lessons recorded](#lessons-recorded)
+- [rbnelr/voxel_game](#rbnelrvoxel_game)
+- [jumeder/dx12-radiance-cascades](#jumederdx12-radiance-cascades)
+
 ## creikey/voxel-radiance-cascades
 
 Screen-space RC at 640×360, tracing a world voxel clipmap. Its report has the most detailed timings of any small 3D RC project.

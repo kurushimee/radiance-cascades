@@ -11,6 +11,45 @@ Master's thesis from Chalmers University of Technology, supervised by Ulf Assars
 
 Source files: PDF at https://odr.chalmers.se/bitstreams/256da4eb-990c-4e51-aae1-c7878609e314/download (67 pages), handle https://hdl.handle.net/20.500.12380/310889. Figures are images; these notes use captions and text only. Sections marked "(derived)" are arithmetic from the source's own formulas, not values the source states. Sections marked "(compiled)" summarize several parts of the source and are not thesis sections.
 
+## Contents
+
+- [1 Introduction](#1-introduction)
+- [2 Previous Work](#2-previous-work)
+- [3 Observations in 2D](#3-observations-in-2d)
+  - [3.1 Angular observation](#31-angular-observation)
+  - [3.2 Spatial observation](#32-spatial-observation)
+  - [3.3 Penumbra condition](#33-penumbra-condition)
+  - [3.4 Radiance cascade in 2D](#34-radiance-cascade-in-2d)
+    - [3.4.1 Efficient ray marching](#341-efficient-ray-marching)
+  - [3.5 Cascade creation process](#35-cascade-creation-process)
+- [4 Implementation in a Higher Dimension](#4-implementation-in-a-higher-dimension)
+  - [4.1 Comparison of approaches](#41-comparison-of-approaches)
+  - [4.2 Placing the probes in depth](#42-placing-the-probes-in-depth)
+  - [4.3 Encoding intervals using octahedral maps](#43-encoding-intervals-using-octahedral-maps)
+  - [4.4 Cascade hierarchy in SPWI](#44-cascade-hierarchy-in-spwi)
+  - [4.5 Merging with the upper cascade](#45-merging-with-the-upper-cascade)
+    - [4.5.1 Bilateral filtering (Algorithm 7)](#451-bilateral-filtering-algorithm-7)
+    - [4.5.2 Bilinear 3D (Algorithm 8)](#452-bilinear-3d-algorithm-8)
+    - [4.5.3 Dispatch strategy (Algorithm 9)](#453-dispatch-strategy-algorithm-9)
+    - [4.5.4 Ray tracing kernel (Algorithm 10)](#454-ray-tracing-kernel-algorithm-10)
+    - [4.5.5 Tracing and merging results](#455-tracing-and-merging-results)
+    - [Merge and upscaling methods (compiled)](#merge-and-upscaling-methods-compiled)
+  - [4.6 Final composition](#46-final-composition)
+    - [4.6.1 Direction-first layout](#461-direction-first-layout)
+  - [4.7 Pass summary (compiled)](#47-pass-summary-compiled)
+- [5 Experiments](#5-experiments)
+  - [5.1 Pre averaging](#51-pre-averaging)
+    - [5.1.1 Thread organization](#511-thread-organization)
+    - [5.1.2 SIMD shuffle operations (Metal)](#512-simd-shuffle-operations-metal)
+    - [5.1.3 Pre-averaging algorithm (Algorithm 12)](#513-pre-averaging-algorithm-algorithm-12)
+    - [5.1.4 Pre averaging result](#514-pre-averaging-result)
+- [6 Results](#6-results)
+- [7 Discussion and Future Work](#7-discussion-and-future-work)
+  - [7.1 Min max depth buffer](#71-min-max-depth-buffer)
+- [8 Conclusion](#8-conclusion)
+- [Inconsistencies and unclear points (compiled)](#inconsistencies-and-unclear-points-compiled)
+- [Links found](#links-found)
+
 ## 1 Introduction
 
 Real-time global illumination with path tracing relies on denoisers and temporal accumulation. The thesis says these can cause artifacts such as ghosting in dynamic scenes.

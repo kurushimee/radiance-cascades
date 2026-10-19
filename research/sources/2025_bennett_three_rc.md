@@ -9,6 +9,27 @@
 
 Three.js implementation of radiance cascades global illumination for 3D scenes, written as one module (src/index.js) with inline GLSL. Screen-space probes trace rays against a world-space BVH built once at startup, the cascade results are stored in screen-sized float textures, and a composite pass shades the G-buffer from the level-0 result. In this code only emitter radiance enters the cascades, and the repository has no license because the README says the upscaler credited to Sannikov cannot be licensed.
 
+## Contents
+
+- [Architecture](#architecture)
+- [Passes](#passes)
+  - [1. G-buffer (scene render)](#1-g-buffer-scene-render)
+  - [2. Cascade passes, level L = N-1 down to 0](#2-cascade-passes-level-l--n-1-down-to-0)
+  - [3. Composite (canvas)](#3-composite-canvas)
+- [RC parameters and math](#rc-parameters-and-math)
+  - [Notation](#notation)
+  - [Cascade table](#cascade-table)
+  - [Probe placement](#probe-placement)
+  - [Directions and octahedral mapping](#directions-and-octahedral-mapping)
+  - [Texel layout](#texel-layout)
+  - [Tracing](#tracing)
+  - [Merge (level L+1 to level L, on a miss)](#merge-level-l1-to-level-l-on-a-miss)
+  - [Final gather (composite)](#final-gather-composite)
+  - [Cascade count](#cascade-count)
+- [Upscaler](#upscaler)
+- [Issues and notes](#issues-and-notes)
+- [Links found](#links-found)
+
 ## Architecture
 
 1. Scene load. The Sponza glTF is loaded with a Draco decoder from gstatic (version 1.5.5). A 1x1x1 box at (0, 0.5, 0) is added with a MeshStandardMaterial whose emissive color is white and whose emissiveIntensity is 10.

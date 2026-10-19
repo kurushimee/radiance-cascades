@@ -10,6 +10,17 @@ DDGI makes the visibility-weighted probes of [light field probes](2017_mcguire_l
 
 DDGI is the probe-grid method world-space RC is most often compared with: one cascade of probes, each tracing a full sphere every frame and blending into octahedral irradiance and depth maps. Its leak prevention, probe relocation and probe states apply directly to the probe grid of a world-space RC, and its blend and query code is mature. See [2014_cigolle_octahedral_unit_vectors.md](2014_cigolle_octahedral_unit_vectors.md) for the octahedral mapping and border copy.
 
+## Contents
+
+- [Probes and storage](#probes-and-storage)
+- [Update](#update)
+- [Query](#query)
+- [Probe relocation and states](#probe-relocation-and-states)
+- [Volumes](#volumes)
+- [Timings](#timings)
+- [GDC and GTC 2019 talk](#gdc-and-gtc-2019-talk)
+- [SDK code](#sdk-code)
+
 ## Probes and storage
 
 - Probes sit on a uniform grid with power-of-two counts, one cage of 8 per cell; 1 to 2 m spacing suits human-scale scenes (the SDK docs say 2 to 3 m). At least one full cage should fit in each room.

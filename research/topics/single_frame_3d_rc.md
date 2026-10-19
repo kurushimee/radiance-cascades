@@ -2,6 +2,28 @@
 
 What the whole body of research says about 3D global illumination from radiance cascades alone, computed from scratch every frame with no temporal accumulation and no denoiser, for a Godot `RenderingDevice` implementation. Each conclusion names the evidence it rests on and links the topic that holds it. Conclusions drawn here, not stated in any source, are marked "inference" or "derived" as in the other topics.
 
+## Contents
+
+- [What a single frame allows](#what-a-single-frame-allows)
+- [Why RC fits](#why-rc-fits)
+- [Where existing designs lean on time](#where-existing-designs-lean-on-time)
+- [Design families](#design-families)
+  - [Screen-space RC](#screen-space-rc)
+  - [Screen probes with world intervals (SPWI)](#screen-probes-with-world-intervals-spwi)
+  - [Sparse world probes near surfaces (Split RC)](#sparse-world-probes-near-surfaces-split-rc)
+  - [Dense and clipmap world grids](#dense-and-clipmap-world-grids)
+  - [Hybrids: screen near field, world far field](#hybrids-screen-near-field-world-far-field)
+  - [Surface probes](#surface-probes)
+  - [Holographic RC and volumetric grids](#holographic-rc-and-volumetric-grids)
+  - [The families compared](#the-families-compared)
+- [Budgets](#budgets)
+- [Tracing and scene representation under `RenderingDevice`](#tracing-and-scene-representation-under-renderingdevice)
+- [Leaks without history](#leaks-without-history)
+- [Lighting the hits and the composite](#lighting-the-hits-and-the-composite)
+- [Bounces](#bounces)
+- [Parameters the evidence supports](#parameters-the-evidence-supports)
+- [Open problems, ranked](#open-problems-ranked)
+
 ## What a single frame allows
 
 A single-frame result depends on this frame's scene, camera, lights and emitters only. That rules out every form of lighting history and keeps scene structures:

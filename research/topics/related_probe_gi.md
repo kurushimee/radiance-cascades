@@ -13,6 +13,22 @@ Probe and volume methods that store light on a grid and interpolate it to surfac
 | [Voxel cone tracing](#voxel-cone-tracing) (2011) | none: a prefiltered voxel octree | about five cones per pixel | light reinjected only when lights move | yes, with the scene blurred into mips |
 | [Godot SDFGI, HDDAGI](godot_integration.md#sdfgi-the-shipped-gi) | 17³ or 17 × 9 × 17 probes per cascade, 16 to 25 rays | SDF or voxel DDA | 6 to 32 frames | no |
 
+## Contents
+
+- [Irradiance volumes](#irradiance-volumes)
+- [Light-field probes](#light-field-probes)
+- [DDGI](#ddgi)
+- [DDGI resampling](#ddgi-resampling)
+- [Other probe grids](#other-probe-grids)
+  - [Chen's Monter probes](#chens-monter-probes)
+  - [Enshrouded](#enshrouded)
+- [Light propagation volumes](#light-propagation-volumes)
+- [Voxel cone tracing](#voxel-cone-tracing)
+- [Lambru's comparison of engine GI classes](#lambrus-comparison-of-engine-gi-classes)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Irradiance volumes
 
 Greger, Shirley, Hubbard and Greenberg, "The Irradiance Volume", IEEE CG&A 18(2):32-43, 1998 (doi 10.1109/38.656788), extends irradiance to every point and direction in space for scenes that overwhelm conventional GI (abstract excerpt), a 5D function of position and direction, so objects anywhere in a lit scene can be shaded from it. At the time this meant static scenes, precomputation and interpolation; partial real-time updates of such grids came around 2010 ([LIRIS talk](history_and_landscape.md#non-english-overviews)). The full text could not be read: the Cornell pages and PDF returned 403 or timed out, the IEEE and DOI routes returned empty shells or reset connections, and no other copy turned up (2026-10; [notes](../sources/2010_kaplanyan_cascaded_light_propagation_volumes.md#irradiance-volumes-greger-et-al-1998)), so its storage and interpolation details are not recorded here. Its descendants in this topic keep the idea and add what it lacked: DDGI adds per-probe visibility and runtime updates, LPVs compute the volume in one frame by propagation, and the ambient cubes of daGI v1 and HSGI's mobile probes are compact irradiance volumes ([engine GI](related_engine_gi.md)).
@@ -33,7 +49,7 @@ McGuire, Mara, Nowrouzezahrai and Luebke, "Real-Time Global Illumination using P
 - On UNKNOWN the ray origin advances to the exit point and the next of the eight surrounding probes is tried, by `i' = (i + 3) mod 8` with offsets `(i mod 2, ⌊i/2⌋ mod 2, ⌊i/4⌋ mod 2)`, which moves to the farthest probe (Fig. 3). If all eight fail, the ray is taken to hit at the last seen location.
 - A two-level min-mip hierarchy of radial depth, the second level at 1/16² resolution, speeds the depth tests; more levels would need a stack, which shaders cannot hold without spilling to memory (sec. 4.2). Back faces are rejected with the stored normal.
 
-**Shading (sec. 5).** Each pixel traces two indirect rays, one Lambertian and one glossy, with cosine-weighted BRDF sampling (sec. 5.1). Lambertian results get a 12-pixel cross-bilateral filter at stride 2 and an exponential moving average with 98% hysteresis; glossy a 3-pixel filter and 75%. Visibility-aware irradiance (sec. 5.2): probes prefilter cosine-weighted irradiance and the first two moments of radial distance, `E[r]` and `E[r²]`, and a query blends 8 probes with trilinear weights times a clamped dot product between the normal and the direction to the probe, times a Chebyshev test with `σ² = |E[r]² − E[r²]|` ([Chebyshev bound](supporting_techniques.md#visibility-shadows-and-screen-space)), normalized to sum to one: eight texture fetches per shading point. This removes light and dark leaks around occluders (Figs. 10-12), while probe-indexing noise remains where visibility is complex.
+**Shading (sec. 5).** Each pixel traces two indirect rays, one Lambertian and one glossy, with cosine-weighted BRDF sampling (sec. 5.1). Lambertian results get a 12-pixel cross-bilateral filter at stride 2 and an exponential moving average with 98% hysteresis; glossy a 3-pixel filter and 75%. Visibility-aware irradiance (sec. 5.2): probes prefilter cosine-weighted irradiance and the first two moments of radial distance, `E[r]` and `E[r²]`, and a query blends 8 probes with trilinear weights times a clamped dot product between the normal and the direction to the probe, times a Chebyshev test with `σ² = |E[r]² − E[r²]|` ([Chebyshev bound](supporting_techniques_structures_and_tracing.md#variance-shadow-maps-and-the-chebyshev-bound)), normalized to sum to one: eight texture fetches per shading point. This removes light and dark leaks around occluders (Figs. 10-12), while probe-indexing noise remains where visibility is complex.
 
 **Results (sec. 6).** GeForce 1080, 1920×1080, full-resolution shading (Table 1, ms):
 
@@ -64,7 +80,7 @@ Majercik, Guertin, Nowrouzezahrai and McGuire, "Dynamic Diffuse Global Illuminat
 2. Shade the hits with the normal shading path, reading last frame's probes for indirect light, which adds one bounce per frame.
 3. Blend into each texel: irradiance `Σ max(0, n·ω)·L / (2·Σ w)`, distance with a cosine power of 50 and distances clamped to `1.5·|spacing|`.
 
-[Hysteresis](supporting_techniques.md#denoising-upscaling-and-temporal-reuse) is 0.85 to 0.98 (SDK default 0.97). The 2021 paper adds a perceptual encoding, storing `pow(irradiance, 1/5)`, blending in that space and at query raising each sample to `5/2`, interpolating and squaring; gamma 5 converged fastest and damps fireflies. Its convergence heuristics: per texel, a change above 25% lowers hysteresis by 0.15 and above 80% sets it to 0, and scene events lower it for a few frames (15% for 4 frames after a small light change, 50% for 10 frames after a large one). The SDK instead lowers hysteresis by 0.75 past its threshold, scales large brightness jumps by 0.25, and bounds each update so dark-going texels still move at least 1/1024 per frame.
+[Hysteresis](supporting_techniques.md#hysteresis) is 0.85 to 0.98 (SDK default 0.97). The 2021 paper adds a perceptual encoding, storing `pow(irradiance, 1/5)`, blending in that space and at query raising each sample to `5/2`, interpolating and squaring; gamma 5 converged fastest and damps fireflies. Its convergence heuristics: per texel, a change above 25% lowers hysteresis by 0.15 and above 80% sets it to 0, and scene events lower it for a few frames (15% for 4 frames after a small light change, 50% for 10 frames after a large one). The SDK instead lowers hysteresis by 0.75 past its threshold, scales large brightness jumps by 0.25, and bounds each update so dark-going texels still move at least 1/1024 per frame.
 
 **Query.** For each of the 8 surrounding probes:
 - Bias the sample point by `(0.2·n + 0.8·v)·0.75·minSpacing·0.3` in the 2021 paper (`v` toward the camera), or `0.1·n + 0.1·v` in the SDK; too much bias leaks through walls.
@@ -114,7 +130,7 @@ Majercik, Müller, Keller, Nowrouzezahrai and McGuire, "Dynamic Diffuse Global I
 - Glossy (sec. 3.3, eq. 6): irradiance at the specular direction approximates prefiltered radiance, with one Monte Carlo sample in proportion to the glossy lobe; converting irradiance to radiance needs a factor of 2 (prefactor garbled). Glossy recursion stops when the path footprint (squared vertex distances weighted by sampling density, after Bekaert et al.) exceeds 0.2 times the camera footprint (eqs. 7-8).
 - The combined estimator (eq. 9) is `L ≈ L_e + T̄_f(L_e + L_DDGI+) + T̃_f(L_e + L_DDGI+)`, where `T̄_f` clamps the geometry term at `G_max = 1` and `T̃_f` estimates the residual with an extra BSDF sample (Kollig and Keller 2006, sec. 3.5).
 - Bias (sec. 3.4, Fig. 5): DDGI's view-and-normal offset leaks at short distances, so the query point moves a fixed distance back along the incoming path instead.
-- Caching (sec. 3.6): each candidate reuses the DDGI value computed when its vertex was shaded, removing one query per candidate; MAPE goes from 0.63 to 0.64 and frame time from 50.3 to 18.4 ms (Fig. 7), the added error being noise, not bias. The error metric (sec. 4) is `MAPE = (1/N)·Σ |v_i − v̂_i|/(v̂_i + 0.01)` ([metrics](supporting_techniques.md#image-metrics)).
+- Caching (sec. 3.6): each candidate reuses the DDGI value computed when its vertex was shaded, removing one query per candidate; MAPE goes from 0.63 to 0.64 and frame time from 50.3 to 18.4 ms (Fig. 7), the added error being noise, not bias. The error metric (sec. 4) is `MAPE = (1/N)·Σ |v_i − v̂_i|/(v̂_i + 0.01)` ([metrics](supporting_techniques_transport_and_math.md#image-metrics)).
 
 **Results.** Direct3D 12 in Falcor, Core i7-6800K and RTX 3090, 1920×1080, 1 spp. Frame time (ms) and MAPE (Fig. 8):
 
@@ -220,7 +236,7 @@ Only RSM rendering depends on scene complexity, and the per-pixel lookup is 71% 
 
 ## Voxel cone tracing
 
-Crassin, Neyret, Sainz, Green and Eisemann, "Interactive Indirect Illumination Using Voxel Cone Tracing", Pacific Graphics 2011, CGF 30(7) ([notes](../sources/2011_crassin_voxel_cone_tracing.md), the GIVoxels paper; section numbers refer to the PDF). VCT voxelizes the scene into a sparse octree, prefilters light and occlusion up the mip levels, and gathers indirect light along a few wide cones per pixel by sampling the level whose voxel size matches the cone's radius. RC shares its core idea, that far light needs less spatial detail, but VCT applies it inside each cone by blurring the scene, while RC keeps exact rays and coarsens probe spacing. The octree's construction and the GigaVoxels thesis behind it are in [scene representation](scene_representation_and_tracing.md#gigavoxels-sparse-voxel-octrees-with-ray-guided-streaming).
+Crassin, Neyret, Sainz, Green and Eisemann, "Interactive Indirect Illumination Using Voxel Cone Tracing", Pacific Graphics 2011, CGF 30(7) ([notes](../sources/2011_crassin_voxel_cone_tracing.md), the GIVoxels paper; section numbers refer to the PDF). VCT voxelizes the scene into a sparse octree, prefilters light and occlusion up the mip levels, and gathers indirect light along a few wide cones per pixel by sampling the level whose voxel size matches the cone's radius. RC shares its core idea, that far light needs less spatial detail, but VCT applies it inside each cone by blurring the scene, while RC keeps exact rays and coarsens probe spacing. The octree's construction and the GigaVoxels thesis behind it are in [scene representation](scene_representation_and_tracing_voxels_and_bvhs.md#gigavoxels-sparse-voxel-octrees-with-ray-guided-streaming).
 
 **Structure (sec. 4).**
 - A sparse voxel octree with pointer-based nodes in 2×2×2 tiles, so one pointer addresses 8 children (sec. 4.1). Each node has a 3×3×3 brick with voxel centers at node corners, a vertex-centered layout that needs less than half the memory of bricks with a one-voxel border at the same sampling precision; neighbour pointers are stored.
@@ -234,7 +250,7 @@ Crassin, Neyret, Sainz, Green and Eisemann, "Interactive Indirect Illumination U
 - Anisotropic voxels keep six values, one per major axis direction, each from a depth integration averaged over four directional values; a lookup interpolates the three of the six closest to the view direction. This fixes the leak where two walls of different colors blend into one voxel, for 1.5× the memory, since directional values are stored only above the finest level. This is the precedent for directional opacity in mipmapped RC volumes ([marching on mips](volumetric_and_radiative_transfer.md#marching-on-mips)).
 
 **Cone tracing (sec. 5, 6, 8).**
-- A cone steps along its axis and samples the mip level matching its radius with quadrilinear interpolation ([interpolation](supporting_techniques.md#interpolation-and-footprints)).
+- A cone steps along its axis and samples the mip level matching its radius with quadrilinear interpolation ([interpolation](supporting_techniques_transport_and_math.md#interpolation-and-footprints)).
 - Accumulation is front-to-back emission-absorption (Max 1995): `c := c + (1 − α)·α₂·c₂` and `α := α + (1 − α)·α₂`. A step `d` that differs from the voxel size gets an opacity correction with exponent `d/d_voxel` (partly garbled in extraction).
 - Ambient occlusion is `A(p) = (1/N)·Σ V_c(p, ω_i)` over `N` cones, with falloff `f(r) = 1/(1 + r)` on occlusion.
 - Indirect diffuse uses about five wide cones and indirect specular one narrow cone whose aperture follows the specular exponent (sec. 8.1).

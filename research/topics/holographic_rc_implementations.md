@@ -22,6 +22,37 @@ Statements marked "derived" were computed with a script from the codes' own form
 
 Margel's line-space and diffusion demos, deadlyredcube's extension and sheared-probe-line pages and fad's Desmos graph draw HRC geometry without solving lighting; they are described with the ideas they illustrate in [holographic RC](holographic_rc.md#variants).
 
+## Contents
+
+- [amitabha](#amitabha)
+- [Volumetric-HRC](#volumetric-hrc)
+- [TypeGPU holographic runner](#typegpu-holographic-runner)
+  - [Options and outputs](#options-and-outputs)
+  - [Data and transport](#data-and-transport)
+  - [Buffers and memory](#buffers-and-memory)
+  - [Quadrant sweeps](#quadrant-sweeps)
+  - [Up-sweep: intervals](#up-sweep-intervals)
+  - [Down-sweep: fluence](#down-sweep-fluence)
+  - [Integrate and source passes](#integrate-and-source-passes)
+  - [Behaviour read from the code](#behaviour-read-from-the-code)
+  - [Examples](#examples)
+- [pixi-GI](#pixi-gi)
+- [lancimir](#lancimir)
+- [hbattal](#hbattal)
+- [cute_framework and folkjs](#cute_framework-and-folkjs)
+- [Youssef-Afella's Unity port](#youssef-afellas-unity-port)
+- [Shadertoys](#shadertoys)
+  - [4ctczl (Suslik)](#4ctczl-suslik)
+  - [tfKyRw (youssef_afella)](#tfkyrw-youssef_afella)
+  - [WfyyDm (youssef_afella)](#wfyydm-youssef_afella)
+- [jason.today/hrc](#jasontodayhrc)
+- [nihil](#nihil)
+- [hrcviz and hrcviz2](#hrcviz-and-hrcviz2)
+- [Half HRC](#half-hrc)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## amitabha
 
 The reference HRC (Rust on LuisaCompute over CUDA), by entropylost, who also wrote nihil, hrcviz and the Split RC code chandra ([reference codes](../sources/2025_hrc_and_2d_reference_implementations.md#amitabha-reference-hrc)).
@@ -44,7 +75,7 @@ Yaazarai's GameMaker HRC with volumetrics and a write-up, credited by pixi-GI ([
 - **Merging.** The README says the even-plane interpolation cannot be replaced by interpolating before merging. Emitters must be drawn into both the emission and the absorption textures.
 - **Half probes.** The README describes an option to cast only half as many probes along each plane and let rays interpolate between them when extending and merging, to "double performance where needed".
 - **Timings (README, RTX 3080).** 256² about 1 ms, 512² 1 to 2 ms, 1024² 5 to 6 ms, 2048² 9 to 11 ms, 4096² 35 to 45 ms; 8192² runs out of memory. The README's header gives a "simple" 2048² volumetric scene at 11 to 12 ms. The community notes give 2.61 ms at 1024² on an RTX 3080 and 0.75 ms at 512² on a GTX 970 ([holographic RC](holographic_rc.md#performance)).
-- **Earlier plain RC.** The same author's port of fad's Shadertoy (Yaazarai/RadianceCascades) stores radiance in RGBA8 gamma space, which bands visibly; the GM Shaders version later moved to RGBA16F ([2D articles and demos](2d_articles_and_demos.md#gm-shaders-yaazarai-and-xor)).
+- **Earlier plain RC.** The same author's port of fad's Shadertoy (Yaazarai/RadianceCascades) stores radiance in RGBA8 gamma space, which bands visibly; the GM Shaders version later moved to RGBA16F ([2D articles and demos](2d_articles_and_demos_gm_shaders.md#gm-shaders-yaazarai-and-xor)).
 
 The README rows do not scale together. From 1024² to 2048² the midpoints grow ×1.82 where `X·Y·log X` predicts ×4.40, while from 2048² to 4096² they grow ×4.00 against ×4.36 predicted (derived). The 1024² row is about twice what the scaling from the larger sizes implies, and 2.61 ms at 1024² on the same GPU fits that scaling, so the 5 to 6 ms row most likely comes from an older build or a heavier scene (inference).
 
@@ -219,7 +250,7 @@ Youssef-Afella/UnityURP-HolographicRadianceCascades2DGI, an unfinished HRC port 
 
 ## Shadertoys
 
-The three HRC Shadertoys march every level its full length; none builds rays by extension ([Shadertoy notes](../sources/2023_rc_shadertoys.md#holographic-cascades)). Their place in the Shadertoy lineage is in [2D Shadertoys](2d_shadertoys.md).
+The three HRC Shadertoys march every level its full length; none builds rays by extension ([Shadertoy notes](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#holographic-cascades)). Their place in the Shadertoy lineage is in [2D Shadertoys](2d_shadertoys.md).
 
 ### 4ctczl (Suslik)
 
@@ -236,7 +267,7 @@ The origin slide over the cell with 16 sub-steps integrates each interval over i
 
 ### tfKyRw (youssef_afella)
 
-"Holographic Radiance Cascades 2D" (2025-12-01, https://www.shadertoy.com/view/tfKyRw), one frustum with the paper's geometry ([code notes](../sources/2023_rc_shadertoys.md#tfkyrw-youssef_afella-one-frustum-with-paper-geometry)).
+"Holographic Radiance Cascades 2D" (2025-12-01, https://www.shadertoy.com/view/tfKyRw), one frustum with the paper's geometry ([code notes](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#tfkyrw-youssef_afella-one-frustum-with-paper-geometry)).
 
 - Eleven levels (0 to 10) for one 90° frustum facing +x. Level `n` has planes `2^n` px apart with one probe per pixel row, and rays `(2^n, 2k − 2^n)` for `k = 0..2^n`: the paper's `2^n + 1` rays spanning slopes −1 to 1 (Common:62-63, 103-107). Each texel is one cone between neighbouring rays, so every level is a full-viewport texture.
 - Cone weights come from angles: with `mid` the average of the two rays, `w1 = angle(ray1, mid)/angle(ray1, ray2)` and `w2 = 1 − w1` (Common:82-94). Level 0 gives 0.5 and 0.5; level 1 cone 0 gives about 0.41 and 0.59. Each ray is weighted by the angular width of its half of the cone.
@@ -246,7 +277,7 @@ The origin slide over the cell with 16 sub-steps integrates each interval over i
 
 ### WfyyDm (youssef_afella)
 
-"HRC 2D GI" (2025-12-03, https://www.shadertoy.com/view/WfyyDm, [code notes](../sources/2023_rc_shadertoys.md#wfyydm-youssef_afella-four-frustums-in-one-buffer)) recreates the paper's figure, and its comment calls tfKyRw a simpler version of it. It shares tfKyRw's cone weights, doubled even-plane rays, two-sample even-plane average, buffer ring and sRGB encode, and like it has no extension step.
+"HRC 2D GI" (2025-12-03, https://www.shadertoy.com/view/WfyyDm, [code notes](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#wfyydm-youssef_afella-four-frustums-in-one-buffer)) recreates the paper's figure, and its comment calls tfKyRw a simpler version of it. It shares tfKyRw's cone weights, doubled even-plane rays, two-sample even-plane average, buffer ring and sRGB encode, and like it has no extension step.
 
 - Four 90° frustums (toward −x, +x, −y and +y) at half resolution, stored as the four quadrants of each buffer; the author says full resolution would need about 40 dispatches (Common:8, 229-233).
 - Ten levels. Level `n` has planes `2^n` px apart with one probe per lateral pixel row and `2^n` cones per probe, each cone between rays `(L, 2k − L)` and `(L, 2k + 2 − L)` with `L = 2^n`, spanning ±45° (Common:112-158). Odd-plane rays reach the next parent plane (length `L` to `√2·L`) and read one nearest parent texel; even-plane rays are twice as long and average two parent samples (Common:169-211). Ray `i` of cone `c` reads parent cone `2c + i`.
@@ -259,7 +290,7 @@ The community timing table's "512², 4×4 px light, 10 cascades, 0.88 ms" row is
 
 ## jason.today/hrc
 
-The page serves no article text; the HRC code is in its inline scripts ([HRC notes](../sources/2026_holographic_rc.md#jasontodayhrc)). The author's earlier RC articles are in [2D articles and demos](2d_articles_and_demos.md#jasontoday-jason-mcghee).
+The page serves no article text; the HRC code is in its inline scripts ([HRC notes](../sources/2026_holographic_rc.md#jasontodayhrc)). The author's earlier RC articles are in [2D articles and demos](2d_articles_and_demos_jason_today.md#jasontoday-jason-mcghee).
 
 - **Defaults.** Probes at 1 px spacing (`hrcExtentScales` [0.25, 0.5, 1, 2], index 2), linear upscale, density scale 0.25, footprint seeding on, exposure 1, sRGB exponent 2.2, sun off. Four direction fields come from axis swaps and flips of the probe grid.
 - **Seeding.** Transmittance `t = exp(−densityScale·spacing·(−ln max(1 − α, 10^−4)))`, that is `(1 − α)^(spacing/4)` by default, and 0 for `α ≥ 0.999`. Emission is the part of the scene colour above 1, `max(rgb − 1, 0)`, and the seeded radiance is `(1 − t)·source^2.2`. When the spacing exceeds 1.01 px, the seed averages 2×2, 4×4 or 8×8 sub-samples. Each axis pair has one atlas holding a direction and its opposite.

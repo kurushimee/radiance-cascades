@@ -9,6 +9,29 @@
 
 This page is a set of small interactive demos with short explanations, meant to build intuition for radiance cascades (RC). The 2D section has four demos: radiance interval shapes, ray distributions per level, probe ray interpolation (ray geometry only), and a full WebGPU 2D global illumination playground called "Flatland". The 3D section has a settings panel that estimates storage for screen-space probes with world-space intervals, and a table of storage costs for world-space probes.
 
+## Contents
+
+- [Files and sources](#files-and-sources)
+- [Demo 1: Radiance Intervals (2D)](#demo-1-radiance-intervals-2d)
+- [Page text for the 2D section](#page-text-for-the-2d-section)
+- [Demo 2: Ray Distributions (2D)](#demo-2-ray-distributions-2d)
+- [Demo 3: Probe Ray Interpolation (2D)](#demo-3-probe-ray-interpolation-2d)
+- [Demo 4: Flatland (2D global illumination, WebGPU)](#demo-4-flatland-2d-global-illumination-webgpu)
+  - [Controls and defaults](#controls-and-defaults)
+  - [GPU resources](#gpu-resources)
+  - [Index math](#index-math)
+  - [Frame order (RenderFrame)](#frame-order-renderframe)
+  - [Shaders and roles](#shaders-and-roles)
+  - [Per-ray math (ProbeAtlasRaymarch, ComputeMain)](#per-ray-math-probeatlasraymarch-computemain)
+  - [Upper-level merge (SampleUpperProbes, SampleUpperProbe)](#upper-level-merge-sampleupperprobes-sampleupperprobe)
+  - [Raymarch](#raymarch)
+  - [Fluence (BuildFluenceTexture)](#fluence-buildfluencetexture)
+  - [Derived from reading the code (not stated by the author, not tested)](#derived-from-reading-the-code-not-stated-by-the-author-not-tested)
+  - [Limitations and notes stated in the source](#limitations-and-notes-stated-in-the-source)
+- [Demo 5: Screenspace probes with worldspace intervals (3D)](#demo-5-screenspace-probes-with-worldspace-intervals-3d)
+- [Demo 6: World-space probe storage table (3D)](#demo-6-world-space-probe-storage-table-3d)
+- [Links found](#links-found)
+
 ## Files and sources
 
 - `flatland-2d/flatland-2d.js`: 2,025 lines, 61,092 bytes. Holds all WGSL shaders and the WebGPU pipeline for the 2D GI demo.

@@ -6,6 +6,39 @@ The index math, interval formulas of each implementation, storage layouts, merge
 
 Statements marked "derived" were computed from the sources' own formulas and are not stated in them; statements marked "inference" are conclusions drawn here.
 
+## Contents
+
+- [The penumbra condition](#the-penumbra-condition)
+  - [The penumbra hypothesis](#the-penumbra-hypothesis)
+  - [Which distance: occluder and light separated](#which-distance-occluder-and-light-separated)
+  - [Rays cast against directions stored](#rays-cast-against-directions-stored)
+- [Radiance intervals](#radiance-intervals)
+- [The merge operator](#the-merge-operator)
+- [Shift and extend](#shift-and-extend)
+  - [Where the merge is exact (derived)](#where-the-merge-is-exact-derived)
+- [Cascade scaling](#cascade-scaling)
+  - [Two criteria for interval scaling (derived)](#two-criteria-for-interval-scaling-derived)
+  - [Parallax in bin units (derived)](#parallax-in-bin-units-derived)
+  - [Choosing cascade 0 (derived and reported)](#choosing-cascade-0-derived-and-reported)
+  - [Sizing from the exact condition](#sizing-from-the-exact-condition)
+- [Memory and cost](#memory-and-cost)
+  - [Memory by domain](#memory-by-domain)
+  - [Rays traced and rays built](#rays-traced-and-rays-built)
+  - [Independence from light count and scene content](#independence-from-light-count-and-scene-content)
+  - [Constant cost](#constant-cost)
+- [Interpolation and band limits](#interpolation-and-band-limits)
+  - [Angle: cones, not rays](#angle-cones-not-rays)
+- [Using the cascades](#using-the-cascades)
+  - [Diffuse](#diffuse)
+  - [Radiometry in flatland](#radiometry-in-flatland)
+  - [Specular](#specular)
+  - [Sky and environment](#sky-and-environment)
+  - [Bounces](#bounces)
+- [Colour space and range](#colour-space-and-range)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## The penumbra condition
 
 Take the smallest light in the scene, of size `w`, at distance `d` behind an occluder edge. The penumbra opens at angle `α = 2·atan(w/2d) ≈ w/d`. At distance `D` from the light (with `D ≫ d`) the penumbra is `α·D` wide, and the light covers an angle of about `w/D`. A discretization resolves both when ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#penumbra-condition)):
@@ -25,7 +58,7 @@ Other statements of the same idea:
 - McGhee: the linear resolution needed to capture an area is inversely proportional to its distance and the angular resolution proportional to it, "the farther the light, the more rays per pixel are needed and the fewer pixels need to be looked at". With 4 rays a black dot far from a light is lost and more rays recover it ([jason.today](../sources/2024_mcghee_building_realtime_gi_part2_rc.md#2-penumbra-hypothesis-article)).
 - The LIRIS talk frames classic probe GI as leaving three things undefined (spatial and directional resolution, interpolation between probes, interpolation between hierarchy levels) and the penumbra condition as the rule that fixes them ([non-English overviews](../sources/2025_non_english_rc_overviews.md#liris-gdl-talk-irradiance-volumes--radiance-cascades-19962026)).
 
-The condition is a sampling-rate rule in the sense of Nyquist ([supporting techniques](supporting_techniques.md#light-transport-and-solver-math)): it states the spatial and angular frequencies a penumbra can contain at each distance, and spaces samples to match.
+The condition is a sampling-rate rule in the sense of Nyquist ([supporting techniques](supporting_techniques_transport_and_math.md#light-transport-and-solver-math)): it states the spatial and angular frequencies a penumbra can contain at each distance, and spaces samples to match.
 
 ### The penumbra hypothesis
 
@@ -59,9 +92,9 @@ The penumbra condition concerns rays cast, not directions stored: 4×2 stored co
 L[a,b](p, ω) = ∫ₐᵇ exp(−∫ₐˣ σ(p + y·ω) dy) · L_emi(p + x·ω, −ω) dx
 ```
 
-The matching transparency `β[a,b](p, ω)` is 0 if something opaque lies in `[a, b]` and 1 otherwise; in a medium it is the transmittance of the segment, the Beer-Lambert `exp(−∫σ)` ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#radiance-intervals), [Beer-Lambert](supporting_techniques.md#light-transport-and-solver-math)). A probe texel stores RGB radiance with `β` in alpha. Osborne writes the interval as `R[a,b](p, ω) = [I(b→a), τ(b→a)]`, intensity and optical depth accumulated over the segment, which any 1D solver can integrate ([radiative transfer](../sources/2024_osborne_radiance_cascades_radiative_transfer.md#method-restated-more-precisely)). Volumetric marching and its pitfalls are in [volumetric and radiative transfer](volumetric_and_radiative_transfer.md).
+The matching transparency `β[a,b](p, ω)` is 0 if something opaque lies in `[a, b]` and 1 otherwise; in a medium it is the transmittance of the segment, the Beer-Lambert `exp(−∫σ)` ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#radiance-intervals), [Beer-Lambert](supporting_techniques_transport_and_math.md#beer-lambert-law)). A probe texel stores RGB radiance with `β` in alpha. Osborne writes the interval as `R[a,b](p, ω) = [I(b→a), τ(b→a)]`, intensity and optical depth accumulated over the segment, which any 1D solver can integrate ([radiative transfer](../sources/2024_osborne_radiance_cascades_radiative_transfer.md#method-restated-more-precisely)). Volumetric marching and its pitfalls are in [volumetric and radiative transfer](volumetric_and_radiative_transfer.md).
 
-Conventions differ between codes. GM Shaders' text and original code store 1.0 for a hit while its optimized code stores 0 for a hit, and several codes drop alpha and stop merging after any hit ([GM Shaders](../sources/2024_yaazarai_gmshaders_radiance_cascades.md#inconsistencies-in-part-one), [2D articles and demos](2d_articles_and_demos.md#gm-shaders-yaazarai-and-xor)). A hit-stops-merging shortcut is the binary case `β = 0`; fades, pre-averaging, mips and the inner parallax fix need a continuous `β`, so binary shortcuts break them ([merging notes](../sources/2026_merging_and_ringing.md#parameters-that-look-like-merge-bugs)).
+Conventions differ between codes. GM Shaders' text and original code store 1.0 for a hit while its optimized code stores 0 for a hit, and several codes drop alpha and stop merging after any hit ([GM Shaders](../sources/2024_yaazarai_gmshaders_radiance_cascades.md#inconsistencies-in-part-one), [2D articles and demos](2d_articles_and_demos_gm_shaders.md#gm-shaders-yaazarai-and-xor)). A hit-stops-merging shortcut is the binary case `β = 0`; fades, pre-averaging, mips and the inner parallax fix need a continuous `β`, so binary shortcuts break them ([merging notes](../sources/2026_merging_and_ringing.md#parameters-that-look-like-merge-bugs)).
 
 An interval ignores everything before its start. A small occluder sitting on a probe therefore does not shadow that probe's upper-cascade rays, which Split RC uses deliberately ([Split RC](../sources/2026_freeman_split_radiance_cascades.md#merge-with-cones)). The flip side is that what an interval sees at its start depends on where the start lands: inside a solid, codes return the solid's emission at once (fad), black on every cascade but 0 (the interior mask), or zero (Dolkar's mask), and the choice changes ringing and darkening ([artifacts and fixes](artifacts_and_fixes.md)).
 
@@ -87,7 +120,7 @@ Full radiance is the interval `[0, ∞)`, rebuilt by merging `[0, t1], [t1, t2],
 
 Properties:
 
-- **It is Porter and Duff's "over" with premultiplied colour.** Emitted radiance plays premultiplied colour and `β = 1 − α` ([Split RC](../sources/2026_freeman_split_radiance_cascades.md#merge-with-cones), [HRC paper](../sources/2025_freeman_holographic_radiance_cascades.md#formulation), [glossary](supporting_techniques.md#visibility-shadows-and-screen-space)). Scene textures accordingly store emission times opacity ([tmpvar playground](../sources/2024_tmpvar_rc_playground.md)).
+- **It is Porter and Duff's "over" with premultiplied colour.** Emitted radiance plays premultiplied colour and `β = 1 − α` ([Split RC](../sources/2026_freeman_split_radiance_cascades.md#merge-with-cones), [HRC paper](../sources/2025_freeman_holographic_radiance_cascades.md#formulation), [glossary](supporting_techniques_structures_and_tracing.md#visibility-shadows-and-screen-space)). Scene textures accordingly store emission times opacity ([tmpvar playground](../sources/2024_tmpvar_rc_playground.md)).
 - **It is associative with identity `(0, 1)`**, so intervals form a monoid (derived). Back-to-front and front-to-back give the same result ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#merge)); front to back allows early exit once a long interval is opaque ([radiative transfer](../sources/2024_osborne_radiance_cascades_radiative_transfer.md#other-implementation-notes)). Associativity is what lets HRC build long rays by merging short ones and lets a parallel scan combine segments in any grouping (derived).
 - **It is linear in the far interval for a fixed near one.** For weights summing to 1, `Σ w_k·merge(n, f_k) = merge(n, Σ w_k·f_k)` (derived). So in vanilla RC, where all upper samples sit behind one shared lower interval, interpolating the upper cascade before merging equals merging each sample and interpolating after. The bilinear fix is different because each upper probe gets its own lower interval ([artifacts and fixes](artifacts_and_fixes.md)). This also settles two items Coppen leaves unexplained (derived): multiplying the merged alpha by the bilinear weight is correct when the weights sum to 1, since the sum is then the interpolated transmittance behind the shared lower interval; and the final division by 4.0 is the average over the 4 child directions that make up the parent's cone ([Coppen](../sources/2024_coppen_fundamentals_of_radiance_cascades.md#merging-algorithm)).
 - **It needs no attenuation term.** Merging produces the `1/r` falloff of 2D light by itself ([merging notes](../sources/2026_merging_and_ringing.md#formats-and-color)).
@@ -252,7 +285,7 @@ The paper names RC's high constant cost as its main limitation: a 3D cascade 0 g
 
 ## Interpolation and band limits
 
-The paper argues that probe data in a cascade meeting the penumbra condition is band-limited, so plain linear interpolation in space and direction reconstructs it without bilateral filtering or disocclusion handling; classic probes need those fixes because they store full radiance rather than intervals ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#cost-analysis-flatland)). The LIRIS talk puts it the same way: the interval constraint is what makes the sampled function possible to reconstruct and interpolate ([non-English overviews](../sources/2025_non_english_rc_overviews.md#liris-gdl-talk-irradiance-volumes--radiance-cascades-19962026)). The contrast is with probe methods such as DDGI, which store full-length radiance and need a Chebyshev visibility test to interpolate across walls ([glossary](supporting_techniques.md#visibility-shadows-and-screen-space), [related probe GI](related_probe_gi.md)).
+The paper argues that probe data in a cascade meeting the penumbra condition is band-limited, so plain linear interpolation in space and direction reconstructs it without bilateral filtering or disocclusion handling; classic probes need those fixes because they store full radiance rather than intervals ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#cost-analysis-flatland)). The LIRIS talk puts it the same way: the interval constraint is what makes the sampled function possible to reconstruct and interpolate ([non-English overviews](../sources/2025_non_english_rc_overviews.md#liris-gdl-talk-irradiance-volumes--radiance-cascades-19962026)). The contrast is with probe methods such as DDGI, which store full-length radiance and need a Chebyshev visibility test to interpolate across walls ([glossary](supporting_techniques_structures_and_tracing.md#visibility-shadows-and-screen-space), [related probe GI](related_probe_gi.md)).
 
 The same paper's screen-probe variant with world-space intervals interpolates spatially with bilateral weights, counting only neighbours of similar depth ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#early-implementations)). The two statements are compatible once the condition behind the claim is explicit (inference): band-limiting holds for probes that sample one continuous field in free space, as on a regular grid; probes placed on a depth buffer sit on different surfaces at different depths, so neighbours are samples of different fields and need depth-aware weights. Every screen-space design confirms this ([3D screen space](3d_screen_space.md)).
 
@@ -275,7 +308,7 @@ C_n(x, ω) = J_n(x, ω) + β_n(x, ω) · (1/|π_n⁻¹(ω)|) · Σ over ω' in �
 
 where `π_n⁻¹(ω)` is the set of higher-cascade directions whose nearest direction is `ω`. `C0` then holds full radiance per cone, and shading integrates over `Ω0` with the cosine weight. Coppen draws the same structure as a cone built from intervals ([Coppen](../sources/2024_coppen_fundamentals_of_radiance_cascades.md#merging-cones)).
 
-Each merged direction thus has an implicit cone footprint: its angular width is the cascade's `Δω`, and its spatial width at distance `t` is about `t·Δω` (derived, [cone footprint](supporting_techniques.md#interpolation-and-footprints)). The penumbra condition is the statement that this footprint stays below the features it must resolve.
+Each merged direction thus has an implicit cone footprint: its angular width is the cascade's `Δω`, and its spatial width at distance `t` is about `t·Δω` (derived, [cone footprint](supporting_techniques_transport_and_math.md#cone-footprint)). The penumbra condition is the statement that this footprint stays below the features it must resolve.
 
 ## Using the cascades
 
@@ -287,13 +320,13 @@ Turning cascade 0 into irradiance needs care in 3D: one cosine per cone is wrong
 
 ### Radiometry in flatland
 
-2D GI has its own radiometry. Fluence is radiance integrated over all directions without a cosine, the natural output when 2D points need not lie on surfaces; HRC works in fluence and treats every surface as a dense medium ([HRC paper](../sources/2025_freeman_holographic_radiance_cascades.md#formulation), [glossary](supporting_techniques.md#light-transport-and-solver-math)). Tantalum, the 2D spectral path tracer used for reference images, works in intrinsic 2D radiometry (Jarosz et al. 2012): radiance is per metre, a 2D Lambertian BRDF is 1/2 instead of `1/π`, and normalized Phong and microfacet lobes are rederived for one angle ([merging notes](../sources/2026_merging_and_ringing.md#links)). A 2D RC compared against a 3D-calibrated reference, or a 3D BRDF used in a 2D RC, is off by these factors (inference).
+2D GI has its own radiometry. Fluence is radiance integrated over all directions without a cosine, the natural output when 2D points need not lie on surfaces; HRC works in fluence and treats every surface as a dense medium ([HRC paper](../sources/2025_freeman_holographic_radiance_cascades.md#formulation), [glossary](supporting_techniques_transport_and_math.md#light-transport-and-solver-math)). Tantalum, the 2D spectral path tracer used for reference images, works in intrinsic 2D radiometry (Jarosz et al. 2012): radiance is per metre, a 2D Lambertian BRDF is 1/2 instead of `1/π`, and normalized Phong and microfacet lobes are rederived for one angle ([merging notes](../sources/2026_merging_and_ringing.md#links)). A 2D RC compared against a 3D-calibrated reference, or a 3D BRDF used in a 2D RC, is off by these factors (inference).
 
-Under a uniform field the expected 2D values are simple: a closed hollow emitter of colour `c` gives `c` everywhere inside, and just outside its surface half the directions see it, so mean radiance approaches `c/2` there, which is the white furnace test of the [merging notes](../sources/2026_merging_and_ringing.md#debugging-routine) (derived; [white furnace](supporting_techniques.md#numerics-and-statistics)).
+Under a uniform field the expected 2D values are simple: a closed hollow emitter of colour `c` gives `c` everywhere inside, and just outside its surface half the directions see it, so mean radiance approaches `c/2` there, which is the white furnace test of the [merging notes](../sources/2026_merging_and_ringing.md#debugging-routine) (derived; [white furnace](supporting_techniques_transport_and_math.md#white-furnace-test)).
 
 ### Specular
 
-A glossy lobe is a cone around the reflected view vector, and RC answers cone queries in O(N), like a prefiltered environment map indexed by roughness ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#using-the-cascades), [split sum](supporting_techniques.md#shading)):
+A glossy lobe is a cone around the reflected view vector, and RC answers cone queries in O(N), like a prefiltered environment map indexed by roughness ([paper](../sources/2023_sannikov_radiance_cascades_paper.md#using-the-cascades), [split sum](supporting_techniques_transport_and_math.md#split-sum-approximation)):
 
 - The narrowest cone queries each cascade separately in that direction and merges the results, giving the angular step of the top cascade.
 - The widest cone is one lookup into the fully merged cascade 0.
@@ -311,23 +344,23 @@ The sky must be integrated over each top-cascade direction bin, not sampled at t
 - `Sun(a0, a1) = SunColor/√S·[atan(√S·(A − a0)) − atan(√S·(A − a1))]` integrates a Lorentzian sun `SunColor/(1 + S·(a − A)²)` at `A = 2` rad with half-width `1/√S = 0.125` rad (`S = 64`).
 - The RC shaders divide each bin's integral by its width, which gives the mean radiance over the bin, then by an unexplained 6; bins that cross 2π are split ([fad's mtlBzX](../sources/2023_rc_shadertoys.md#mtlbzx-fad-the-original-2d-implementation)).
 
-No 3D form of the analytic sky integral was published; Coppen said in 2024 that Coppen's first 3D RC had none ([discussions](../sources/2026_rc_discussions.md#coppens-first-3d-rc-on-x-2024-08)). The 3D equivalent is the mean of the environment over each top-cascade direction cell, which a prefiltered environment map read at the mip whose texel matches the cell's solid angle approximates; on an octahedral map the cells differ in solid angle by up to 5.2×, so the mip must follow the cell, not the cascade (inference, [octahedral Jacobian](supporting_techniques.md#direction-parameterizations)). Volumetric clouds can be baked into the sky integral merged at the top cascade more cheaply than marched ([volumetric RC](../sources/2026_volumetric_rc.md)).
+No 3D form of the analytic sky integral was published; Coppen said in 2024 that Coppen's first 3D RC had none ([discussions](../sources/2026_rc_discussions.md#coppens-first-3d-rc-on-x-2024-08)). The 3D equivalent is the mean of the environment over each top-cascade direction cell, which a prefiltered environment map read at the mip whose texel matches the cell's solid angle approximates; on an octahedral map the cells differ in solid angle by up to 5.2×, so the mip must follow the cell, not the cascade (inference, [octahedral Jacobian](supporting_techniques.md#octahedral-map)). Volumetric clouds can be baked into the sky integral merged at the top cascade more cheaply than marched ([volumetric RC](../sources/2026_volumetric_rc.md)).
 
 ### Bounces
 
-RC computes incoming radiance from given outgoing radiance, so one solve gives one bounce of whatever the scene emits; the Habr overview frames it as an approximation of the rendering equation limited to one indirect bounce, and a vpinball comment makes the same point ([non-English overviews](../sources/2025_non_english_rc_overviews.md#habr-radiance-cascades-a-new-look-at-global-illumination), [discussions](../sources/2026_rc_discussions.md)). Multi-bounce GI is the fixed point `L_out = E + ρ·K(L_out)`, with `K` the RC solve and `ρ` the albedo. Feeding last frame's result back as emission applies `K` once per frame, a Jacobi iteration of that fixed point spread over frames (derived, [Jacobi iteration](supporting_techniques.md#light-transport-and-solver-math)). Bounce methods, including ones that need no temporal lag, are in [light transport alternatives](light_transport_alternatives.md).
+RC computes incoming radiance from given outgoing radiance, so one solve gives one bounce of whatever the scene emits; the Habr overview frames it as an approximation of the rendering equation limited to one indirect bounce, and a vpinball comment makes the same point ([non-English overviews](../sources/2025_non_english_rc_overviews.md#habr-radiance-cascades-a-new-look-at-global-illumination), [discussions](../sources/2026_rc_discussions.md)). Multi-bounce GI is the fixed point `L_out = E + ρ·K(L_out)`, with `K` the RC solve and `ρ` the albedo. Feeding last frame's result back as emission applies `K` once per frame, a Jacobi iteration of that fixed point spread over frames (derived, [Jacobi iteration](supporting_techniques_transport_and_math.md#jacobi-iteration)). Bounce methods, including ones that need no temporal lag, are in [light transport alternatives](light_transport_alternatives.md).
 
 ## Colour space and range
 
-All RC math runs in linear space. sRGB inputs must be converted before any interpolation, since converting after a hardware bilinear fetch is not equivalent, and the result encoded once at output; a plain power curve in place of the piecewise sRGB curve gave blocky shadows that cut to black, and gamma applied only when sampling gave green ringing ([merging notes](../sources/2026_merging_and_ringing.md#formats-and-color), [sRGB](supporting_techniques.md#formats-and-colour)). McGhee's linearization with gamma 2.2 produced "a much brighter (accurate) result" and made vanilla RC's ringing clearly visible ([jason.today](../sources/2024_mcghee_building_realtime_gi_part2_rc.md#33-srgb-correction-article)); fad linearizes emission with `pow(c, 2.2)`.
+All RC math runs in linear space. sRGB inputs must be converted before any interpolation, since converting after a hardware bilinear fetch is not equivalent, and the result encoded once at output; a plain power curve in place of the piecewise sRGB curve gave blocky shadows that cut to black, and gamma applied only when sampling gave green ringing ([merging notes](../sources/2026_merging_and_ringing.md#formats-and-color), [sRGB](supporting_techniques_transport_and_math.md#srgb)). McGhee's linearization with gamma 2.2 produced "a much brighter (accurate) result" and made vanilla RC's ringing clearly visible ([jason.today](../sources/2024_mcghee_building_realtime_gi_part2_rc.md#33-srgb-correction-article)); fad linearizes emission with `pow(c, 2.2)`.
 
 RC values exceed 1, so 8-bit cascades clamp and band. White emitters at 1.0 look muted and emission around 5 to 10 looked right, and tone mapping belongs on the result, not on each ray ([merging notes](../sources/2026_merging_and_ringing.md#formats-and-color)). Storage formats are in [cascade layout and merging](cascade_layout_and_merging.md).
 
 ## Connections
 
-- **Discrete ordinates.** RC is a discrete-ordinates scheme for the transfer equation whose ordinate count grows with distance, built by merging intervals that any 1D solver can integrate; this is why it transferred directly to solar radiative transfer ([radiative transfer](../sources/2024_osborne_radiance_cascades_radiative_transfer.md), [RTE](supporting_techniques.md#light-transport-and-solver-math), [volumetric and radiative transfer](volumetric_and_radiative_transfer.md)).
+- **Discrete ordinates.** RC is a discrete-ordinates scheme for the transfer equation whose ordinate count grows with distance, built by merging intervals that any 1D solver can integrate; this is why it transferred directly to solar radiative transfer ([radiative transfer](../sources/2024_osborne_radiance_cascades_radiative_transfer.md), [RTE](supporting_techniques_transport_and_math.md#radiative-transfer-equation-and-discrete-ordinates), [volumetric and radiative transfer](volumetric_and_radiative_transfer.md)).
 - **Structured sampling.** GM Shaders presents RC as a structured alternative to random ray sampling ([GM Shaders](../sources/2024_yaazarai_gmshaders_radiance_cascades.md#part-one-introduction-to-radiance-cascades)). Coppen calls it fully deterministic ([Coppen](../sources/2024_coppen_fundamentals_of_radiance_cascades.md#limitations-and-author-statements)): the same scene gives the same image, and its errors are structured (blur, ringing, aliasing, leaks) rather than noise.
-- **Far-field compression.** Distance-dependent resolution is the idea behind multipole expansions: far sources are represented coarsely in position and finely in direction ([glossary](supporting_techniques.md#light-transport-and-solver-math)).
+- **Far-field compression.** Distance-dependent resolution is the idea behind multipole expansions: far sources are represented coarsely in position and finely in direction ([glossary](supporting_techniques_transport_and_math.md#light-transport-and-solver-math)).
 - **The probe-GI lineage.** Irradiance volumes discretized the same 5D function (3D position, 2D direction) with static scenes in 1998; RC is the first scheme in that line with a rule for its resolutions ([non-English overviews](../sources/2025_non_english_rc_overviews.md#liris-gdl-talk-irradiance-volumes--radiance-cascades-19962026), [related probe GI](related_probe_gi.md)).
 - **Three derivations, one scaling.** Split RC's equal-error criterion, Reservoir Cascades' alignment lemma and RCPG's Nyquist parallax bound all select `l = 2·K^(1/m)`, which is `K = 4, l = 4` in 3D ([sampling and guiding](rc_for_sampling_and_guiding.md#connections)).
 - **Ward's split sphere is the spatial half of the penumbra condition.** Irradiance caching spaces records in proportion to the distance of the nearest surface; RC applies the same rule per distance band ([radiance caches](related_radiance_caches.md#connections)).

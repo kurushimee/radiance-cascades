@@ -11,6 +11,25 @@ One developer's engine, Black Engine (earlier Lucida Engine), with a 3D radiance
 
 No source states the design. This note records what the videos, their on-screen HUDs and panels, and the author's posts and replies show, as read from 2026-10-17 to 2026-10-19. A *claim* is the author's statement. *Observed* means read from a video frame or image. *(derived)* marks arithmetic on those numbers, and *(inference)* marks reconstruction. HUD times vary from frame to frame, so ranges are given where several frames were read.
 
+## Contents
+
+- [Sources read](#sources-read)
+- [Timeline](#timeline)
+- [The Shadertoy port (2026-08-17)](#the-shadertoy-port-2026-08-17)
+- [Hardware and engine](#hardware-and-engine)
+- [The world-probe build (2026-08-29)](#the-world-probe-build-2026-08-29)
+- [The glass demo (2026-09-05)](#the-glass-demo-2026-09-05)
+- [The atlas build (2026-09-12 onward)](#the-atlas-build-2026-09-12-onward)
+  - [Claims](#claims)
+  - [HUD and passes, 2026-09-12](#hud-and-passes-2026-09-12)
+  - [Inspector, 2026-09-22](#inspector-2026-09-22)
+  - [HUD, 2026-10-03](#hud-2026-10-03)
+  - [Comparisons with path tracing](#comparisons-with-path-tracing)
+  - [The author's technical replies](#the-authors-technical-replies)
+- [Derived numbers](#derived-numbers)
+- [Reconstruction (inference)](#reconstruction-inference)
+- [Open questions](#open-questions)
+
 ## Sources read
 
 Videos on the YouTube channel, with descriptions and comments (none has captions):

@@ -8,6 +8,20 @@
 
 Not RC. daGI2 is the dynamic GI of Gaijin's engine, and all of its C++ and shader source is open. It needs no hardware ray tracing: rays march a signed distance field (SDF) clipmap, and hits read light from a voxel copy of the lit frame. It is the closest open match to a world-space RC in Godot, because it splits rays into intervals much like RC does. Screen probes trace a few world-probe sizes and then read a world probe clipmap, and world probes that scroll into a clip trace a few coarser-probe sizes and then read the next coarser clip.
 
+## Contents
+
+- [Pieces and defaults](#pieces-and-defaults)
+- [Frame flow](#frame-flow)
+- [World SDF](#world-sdf)
+- [Voxel lit scene](#voxel-lit-scene)
+- [Albedo and media scenes](#albedo-and-media-scenes)
+- [Screen probes](#screen-probes)
+- [Radiance grid](#radiance-grid)
+- [Volumetric GI](#volumetric-gi)
+- [Problems recorded in todo.txt and comments](#problems-recorded-in-todotxt-and-comments)
+- [daGI v1 in Enlisted (2019)](#dagi-v1-in-enlisted-2019)
+- [Lessons for RC in Godot](#lessons-for-rc-in-godot)
+
 ## Pieces and defaults
 
 `DaGISettings` in `daGI2.h` turns each piece on with a nonzero size.

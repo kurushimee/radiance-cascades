@@ -9,6 +9,22 @@ Two open implementations of [Split Radiance Cascades](2026_freeman_split_radianc
 
 chandra's `Cargo.toml` (lines 20-21) takes `keter` and `yesod` as sibling path dependencies (`../sefirot/yesod`, `../sefirot/keter`): both are directories of the entropylost/sefirot monorepo (read at 590f48f), not repositories of their own, and the `testbed` crate was not located. So chandra builds only next to a sefirot checkout. The direction mapping and `project_line` from `yesod` are described under chandra below.
 
+## Contents
+
+- [chandra](#chandra)
+  - [Frame](#frame)
+  - [Probes and LOD](#probes-and-lod)
+  - [Split deposit](#split-deposit)
+  - [Merge and temporal reuse](#merge-and-temporal-reuse)
+  - [Shading and memory](#shading-and-memory)
+- [split-radiance-cascades-webgpu: native GLSL build](#split-radiance-cascades-webgpu-native-glsl-build)
+  - [Data layout](#data-layout)
+  - [Passes](#passes)
+  - [Tracing and deposit](#tracing-and-deposit)
+  - [Merge, history and shading](#merge-history-and-shading)
+- [split-radiance-cascades-webgpu: browser build](#split-radiance-cascades-webgpu-browser-build)
+- [The live demo](#the-live-demo)
+
 ## chandra
 
 ### Frame

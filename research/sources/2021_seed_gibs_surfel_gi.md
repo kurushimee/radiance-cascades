@@ -11,6 +11,23 @@ GIBS computes indirect diffuse light with hardware ray tracing on surfels, small
 
 Page numbers below are PDF pages of the slides and printed pages of the chapter.
 
+## Contents
+
+- [GIBS (SIGGRAPH 2021)](#gibs-siggraph-2021)
+  - [Surfels and spawning](#surfels-and-spawning)
+  - [Pool and recycling](#pool-and-recycling)
+  - [Acceleration structure](#acceleration-structure)
+  - [Gather and leaks](#gather-and-leaks)
+  - [Rays, integration and guiding](#rays-integration-and-guiding)
+  - [Many lights and transparency](#many-lights-and-transparency)
+  - [Performance](#performance)
+  - [Talk video](#talk-video)
+  - [Known problems](#known-problems)
+- [Ray Tracing Gems chapter 25: Hybrid Rendering for Real-Time Ray Tracing (2019)](#ray-tracing-gems-chapter-25-hybrid-rendering-for-real-time-ray-tracing-2019)
+  - [GI with surfels (p. 22-27)](#gi-with-surfels-p-22-27)
+  - [Other passes](#other-passes)
+  - [Timings (Figure 31, p. 28)](#timings-figure-31-p-28)
+
 ## GIBS (SIGGRAPH 2021)
 
 ### Surfels and spawning

@@ -9,6 +9,16 @@
 
 erhe traces world-space RC with hardware ray queries, merges the cascades, and then reduces cascade 0 into the same irradiance and distance octahedral atlases its DDGI renderer produces. The forward pass samples that field unchanged, so RC drops into an existing probe GI path. Its plan document measures RC against DDGI on test scenes, which makes it the best record of where world-space RC falls short in practice.
 
+## Contents
+
+- [Layout](#layout)
+- [Trace](#trace)
+- [Merge modes](#merge-modes)
+- [Reduce into the probe field](#reduce-into-the-probe-field)
+- [Measurements against DDGI](#measurements-against-ddgi)
+- [Stations and gates](#stations-and-gates)
+- [Other O3DE attempt](#other-o3de-attempt)
+
 ## Layout
 
 | Setting | Default | Meaning |

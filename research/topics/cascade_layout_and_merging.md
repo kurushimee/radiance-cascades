@@ -4,6 +4,29 @@ How cascades are laid out in memory and merged: where probes sit, how directions
 
 Statements marked "derived" were computed from the sources' formulas; "inference" marks conclusions drawn here.
 
+## Contents
+
+- [Probe placement](#probe-placement)
+- [Directions](#directions)
+  - [Flatland](#flatland)
+  - [Direction maps in 3D](#direction-maps-in-3d)
+- [Intervals](#intervals)
+  - [Overlap](#overlap)
+- [Cascade count](#cascade-count)
+- [Storage layouts](#storage-layouts)
+  - [Position-first and direction-first](#position-first-and-direction-first)
+  - [Pre-averaging](#pre-averaging)
+  - [Containers](#containers)
+- [Merge kernels](#merge-kernels)
+- [Tracing and merging order](#tracing-and-merging-order)
+- [Cascade −1 and contact detail](#cascade-1-and-contact-detail)
+- [Final gather](#final-gather)
+- [Formats](#formats)
+- [2D parameters across implementations](#2d-parameters-across-implementations)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Probe placement
 
 Most codes put probes at cell centers: probe `k` of cascade `c` sits at `(k + 0.5)·s0·2^c`, with `s0` the cascade 0 spacing ([GM Shaders](../sources/2024_yaazarai_gmshaders_radiance_cascades.md#direction-first-index-math), [radiance-cascades.com demo](../sources/2026_rc_community_site_and_wiki.md#index-math-per-cascade), [LegitCascades](../sources/2024_sannikov_legitcascades.md#layout)). Each upper probe then sits at the center of a 2×2 (2D) or 2×2×2 (3D) block of lower probes, so a lower probe is a quarter of an upper cell from its nearest upper probe on each axis and its bilinear weights are 0.75 and 0.25 (derived).
@@ -105,7 +128,7 @@ tonsa1's shader warps each cube face by `s = u·(0.7456 + 0.1239u² + 0.1305u⁴
 
 **Sets that do not nest.** A Fibonacci sphere groups child indices `4k … 4k + 3`, which share a height but spread around in azimuth, so a parent's "cone" is not a cone ([voxel 3D repositories](../sources/2026_voxel_3d_rc_repositories.md)). Lebedev and spiral sets have no merge scheme ([screen-space RC](../sources/2026_screen_space_rc.md)).
 
-Other choices: hemisphere-only maps around a surface normal (Mathis's M3ycWt hemisphere probes; Sannikov's lXByRh, whose texel ring `r` at Chebyshev distance from the tile center sits at polar angle `(r + 0.5)·π/P` with `8r + 4` azimuths, neither octahedral nor equal-area; [Shadertoys](../sources/2023_rc_shadertoys.md#3d-and-screen-space)); spherical harmonics for cascade 0 only, since higher cascades need more angular resolution than SH1 holds ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#parameters-and-directions)); and a fixed world orientation for the map rather than one aligned to each surface ([screen-space RC](../sources/2026_screen_space_rc.md)). Cross-shaped artifacts from small lights on walls tracked the cascade 0 direction count, not the octahedral Jacobian ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#parameters-and-directions)).
+Other choices: hemisphere-only maps around a surface normal (Mathis's M3ycWt hemisphere probes; Sannikov's lXByRh, whose texel ring `r` at Chebyshev distance from the tile center sits at polar angle `(r + 0.5)·π/P` with `8r + 4` azimuths, neither octahedral nor equal-area; [Shadertoys](../sources/2023_rc_shadertoys_hrc_3d_and_other.md#3d-and-screen-space)); spherical harmonics for cascade 0 only, since higher cascades need more angular resolution than SH1 holds ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#parameters-and-directions)); and a fixed world orientation for the map rather than one aligned to each surface ([screen-space RC](../sources/2026_screen_space_rc.md)). Cross-shaped artifacts from small lights on walls tracked the cascade 0 direction count, not the octahedral Jacobian ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#parameters-and-directions)).
 
 ## Intervals
 
@@ -300,7 +323,7 @@ Moving one 2D build from RGBA32F everywhere to the formats above took it from 81
 
 Memory at these formats (derived): GM Shaders' optimized two RGBA16F textures at 1920×1088 take 33.4 MB; imnethen's two ping-pong buffers hold 2.1 to 2.3 M texels per cascade at 1080p and take 36.6 MB; GM Shaders' original keeps 5 cascades of 1024² 4-byte texels, about 20 MiB; Rulkens's dense 192³ cube-mapper cascades take 658 MB ([GM Shaders](../sources/2024_yaazarai_gmshaders_radiance_cascades.md#original-version-radiancecascades), [merging notes](../sources/2026_merging_and_ringing.md#links), [Rulkens](../sources/2025_rulkens_rc_medical_volume_data_thesis.md#parameters)).
 
-Shared-exponent and packed formats lose precision when merged values are re-stored, which drifts ([artifacts and fixes](artifacts_and_fixes.md), [glossary](supporting_techniques.md#formats-and-colour)).
+Shared-exponent and packed formats lose precision when merged values are re-stored, which drifts ([artifacts and fixes](artifacts_and_fixes.md), [glossary](supporting_techniques_transport_and_math.md#formats-and-colour)).
 
 ## 2D parameters across implementations
 

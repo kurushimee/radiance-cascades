@@ -11,6 +11,26 @@
 
 The paper is open access on the ACM Digital Library (read from the full-text page; section, table and figure numbers are the paper's). Its claims: bounds on radiance intervals so the hierarchy does not misplace incoming directions; one sampler for the product of incoming radiance and the BSDF; a PDF that can be evaluated for any direction, so it combines with MIS and unbiased ReSTIR; and a world-space structure that serves off-screen path vertices, which multi-bounce guiding needs. Against earlier real-time guiding with multi-sample MIS it traces about twice the paths per pixel in a real-time frame.
 
+## Contents
+
+- [The paper](#the-paper)
+  - [Cascades (sec. 3.1)](#cascades-sec-31)
+  - [Parallax-based interval bounds (sec. 3.2)](#parallax-based-interval-bounds-sec-32)
+  - [Probe mapping and culling (sec. 3.3-3.4)](#probe-mapping-and-culling-sec-33-34)
+  - [Ray casting and gathering (sec. 3.5-3.6)](#ray-casting-and-gathering-sec-35-36)
+  - [Sampling (sec. 4)](#sampling-sec-4)
+  - [Implementation (sec. 5)](#implementation-sec-5)
+  - [Evaluation (sec. 6-8)](#evaluation-sec-6-8)
+  - [Limits and future work (sec. 9-10)](#limits-and-future-work-sec-9-10)
+  - [For RC](#for-rc)
+- [Code: volume and layout](#code-volume-and-layout)
+- [Live probe culling](#live-probe-culling)
+- [Trace](#trace)
+- [Merge and temporal reuse](#merge-and-temporal-reuse)
+- [Guiding](#guiding)
+- [vlam (entropylost)](#vlam-entropylost)
+- [The rcpg branch](#the-rcpg-branch)
+
 ## The paper
 
 ### Cascades (sec. 3.1)

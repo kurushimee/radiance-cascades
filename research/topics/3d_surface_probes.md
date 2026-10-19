@@ -11,6 +11,43 @@ Surface designs tie RC's probes, or the scene the probes trace, to the surfaces 
 | Spatium (Blackline Interactive), reconstructed | texels of a generated surface atlas, 3 to 6 cascades | compute BVH | atlas texels | no |
 | On-surface caches (Tatzgern et al.) | 2×2 texel blocks on mesh islands, not RC | hardware RT | visible islands | no |
 
+## Contents
+
+- [Surfel Radiance Cascades (src-dgi)](#surfel-radiance-cascades-src-dgi)
+  - [Frame order](#frame-order)
+  - [Parameters](#parameters)
+  - [Surfel storage](#surfel-storage)
+  - [Spawning (`spawn.slang`)](#spawning-spawnslang)
+  - [Hash grid (`shared/hash.slang`)](#hash-grid-sharedhashslang)
+  - [Recycling (`recycle.slang`)](#recycling-recycleslang)
+  - [Cascade layout and intervals](#cascade-layout-and-intervals)
+  - [Gathering (`gather.slang`)](#gathering-gatherslang)
+  - [Merging (`merge.slang`)](#merging-mergeslang)
+  - [Composite (`composite.slang`)](#composite-compositeslang)
+  - [Pass table](#pass-table)
+  - [Ground-truth pass](#ground-truth-pass)
+  - [Artifacts and fixes](#artifacts-and-fixes)
+  - [Performance](#performance)
+  - [Limitations and future work](#limitations-and-future-work)
+  - [Found by reading the code (not run)](#found-by-reading-the-code-not-run)
+  - [Links in the repository and article](#links-in-the-repository-and-article)
+  - [Read against the theory (derived)](#read-against-the-theory-derived)
+- [Love and Deepspace](#love-and-deepspace)
+  - [Scene representation](#scene-representation)
+  - [Cascades and probes](#cascades-and-probes)
+  - [Artifacts and fixes](#artifacts-and-fixes-1)
+  - [Gather and timing](#gather-and-timing)
+- [Probes on surface charts](#probes-on-surface-charts)
+  - [X3XfRM (Mathis)](#x3xfrm-mathis)
+  - [yhyu13 surface-chart RC](#yhyu13-surface-chart-rc)
+  - [A generated surface atlas (Blackline Interactive)](#a-generated-surface-atlas-blackline-interactive)
+  - [Other surface parameterizations](#other-surface-parameterizations)
+- [On-surface radiance caches (Tatzgern et al. 2024)](#on-surface-radiance-caches-tatzgern-et-al-2024)
+- [A radiance field stored on a plane](#a-radiance-field-stored-on-a-plane)
+- [Connections](#connections)
+- [Single-frame assessment](#single-frame-assessment)
+- [Open questions](#open-questions)
+
 ## Surfel Radiance Cascades (src-dgi)
 
 | | |
