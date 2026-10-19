@@ -1,6 +1,6 @@
 # Sources: radiance cascades
 
-Source notes on radiance cascades: the founding papers and talks, explainers and 2D implementations, 3D designs and implementations, and Godot. Each row links the note, says what it holds and lists the topics that carry its facts. Notes on related GI methods, data structures and background papers, and the sources that could not be read, are in [related sources](sources_related.md).
+Source notes on radiance cascades: the founding papers and talks, explainers and 2D implementations, 3D designs and implementations, Godot, and original research. Each row links the note, says what it holds and lists the topics that carry its facts. Notes on related GI methods, data structures and background papers, and the sources that could not be read, are in [related sources](sources_related.md).
 
 ## Foundations
 
@@ -85,3 +85,11 @@ Source notes on radiance cascades: the founding papers and talks, explainers and
 | [2026_phreakyx_godot_rc_gdextension.md](../sources/2026_phreakyx_godot_rc_gdextension.md) | Untested GDExtension design with voxel cone tracing | [godot_projects](../topics/godot_projects.md), [supporting_techniques](../topics/supporting_techniques.md) |
 | [2026_godot_hddagi_dynamic_gi.md](../sources/2026_godot_hddagi_dynamic_gi.md) | Unmerged HDDAGI: voxel bit masks, hierarchical DDA, probes, screen-probe draft | [artifacts_and_fixes](../topics/artifacts_and_fixes.md), [godot_integration](../topics/godot_integration.md), [scene_representation_and_tracing_voxels_and_bvhs](../topics/scene_representation_and_tracing_voxels_and_bvhs.md), [supporting_techniques](../topics/supporting_techniques.md), [supporting_techniques_structures_and_tracing](../topics/supporting_techniques_structures_and_tracing.md) |
 | [2023_linietsky_godot_sdfgi_plan.md](../sources/2023_linietsky_godot_sdfgi_plan.md) | reduz's SDFGI design deck: requirements, scrolling, hit caching, on-demand lighting, dynamic-object plan | [godot_integration](../topics/godot_integration.md), [supporting_techniques_structures_and_tracing](../topics/supporting_techniques_structures_and_tracing.md) |
+
+## Original research
+
+Papers written in this repository, in [papers/](../../papers/README.md), each with its derivations checked by assert scripts and its measurements reproducible from seeded experiments.
+
+| Note | Content | Topics |
+|---|---|---|
+| [2026_kurushimee_rc_error_model.md](../sources/2026_kurushimee_rc_error_model.md) | RC error against an exact flatland reference: decomposition by cause, aliasing and seam laws, optimal `t0` and `l`, fixes and a Pareto front | [artifacts_and_fixes](../topics/artifacts_and_fixes.md), [cascade_layout_and_merging](../topics/cascade_layout_and_merging.md), [core_theory](../topics/core_theory.md), [single_frame_3d_rc](../topics/single_frame_3d_rc.md) |
