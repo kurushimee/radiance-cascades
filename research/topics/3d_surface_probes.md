@@ -473,7 +473,7 @@ Not RC. It stores hemispheres of radiance in texture space on the surfaces thems
 
 **Limits:** quality depends on the island split, with seams at island borders, and neighbouring pixels on different islands each allocate an entry. Foliage and fine geometry multiply allocations (Bistro is the one scene slower than GI-1.0). 8×8 hemispheres lose highlights and mirror detail. There is no transparency, translucency or volumes.
 
-The authors' HPG 2024 slides (https://highperformancegraphics.org/slides24/hpg24_oscgi.pdf) add that the predecessor (Weinrauch and Tatzgern 2023) stored only diffuse irradiance on surfaces and lost surface detail; that bad ray starts inside geometry caused artifacts until triangle IDs were decoupled at a higher resolution; that new primary entries are initialized from the adjacent mip level so mip transitions stay seamless; that glossy reflections from stochastic trilinear lookups are noisy; that one secondary entry can serve up to 20 readers; and that a single viewer needs 300 to 700 MB. The abstract claims a 5 to 10% gain in speed and quality over the state of the art. GI-1.0, the baseline, is in [related radiance caches](related_radiance_caches.md).
+The authors' HPG 2024 slides (https://highperformancegraphics.org/slides24/hpg24_oscgi.pdf) add that the predecessor (Weinrauch and Tatzgern 2023) stored only diffuse irradiance on surfaces and lost surface detail; that bad ray starts inside geometry caused artifacts until triangle IDs were decoupled at a higher resolution; that new primary entries are initialized from the adjacent mip level so mip transitions stay seamless; that glossy reflections from stochastic trilinear lookups are noisy; that one secondary entry can serve up to 20 readers; and that a single viewer needs 300 to 700 MB. The abstract claims a 5 to 10% gain in speed and quality over the state of the art. GI-1.0, the baseline, is in [related radiance caches](related_radiance_caches.md). Neither the method and limits above nor the slides cover moving, skinned or deformable meshes, and the slides time the scenes along camera paths (16 through ZeroDay). Because the triangle ID map turns a cache texel into a world position at each update, an entry follows its triangle wherever it moves, so rigid and skinned motion would leave the islands valid while cached radiance trails the motion through the temporal filter (inference).
 
 ## A radiance field stored on a plane
 
@@ -508,6 +508,5 @@ The video stores a 3D scene's light on a 2D surface, the plane, which is the sur
 ## Open questions
 
 - Does an interval length that scales with surfel size (Split RC's `t0` per LOD) fix Coppen's depth-dependent error balance?
-- How do on-surface charts handle dynamic and skinned meshes, given that their islands and triangle ID maps are built per mesh?
 - Is the hit-distance parent test enough to stop leaks in a 3D sparse grid, where parents are not on the same surface as the child?
 - Can a screen-space cascade −1 restore the contact shadows that a 10 to 25 cm atlas texel loses, without the screen-space family's disocclusion problems?

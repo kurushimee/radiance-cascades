@@ -40,6 +40,8 @@ Pass `STORAGE_BUFFER_USAGE_DISPATCH_INDIRECT` as the usage argument of `storage_
 
 Call the main device (`RenderingServer.get_rendering_device()`) through `RenderingServer.call_on_render_thread()` or from `CompositorEffect._render_callback()`.
 
+A callable passed to `call_on_render_thread()` from `_process` runs before that frame's render: with the default Safe thread model at once, and with a separate render thread from the command queue, ahead of the frame's draw.
+
 ## Uniform sets
 
 ```
@@ -59,6 +61,10 @@ A failed GLSL compile does not stop the run, and `shader_create_from_spirv` then
 ## Texture2DRD
 
 Create the RD texture with `TEXTURE_USAGE_SAMPLING_BIT`. Without it, the assignment fails with `Condition "!(tf.usage_bits & RD::TEXTURE_USAGE_SAMPLING_BIT)" is true.`, and that `Texture2DRD` keeps failing even with a correct texture; create a new one.
+
+## Texture3DRD
+
+A `Texture3DRD` works as a global `sampler3D` shader parameter. `set_texture_rd_rid()` accepts only a 3D texture with one layer and applies it on the render thread; until then the resource is a 2D placeholder. Later calls replace the texture under the same RID, so materials keep working.
 
 ## Timestamps
 

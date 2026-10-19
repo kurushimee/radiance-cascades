@@ -52,6 +52,6 @@ So the terms that land in the right place for diffuse GI (multiplied by albedo, 
 ## Other details
 
 - `rendering/driver/depth_prepass/enable` defaults to true; its `disable_for_vendors` list is read only by the Compatibility (GLES3) backend.
-- SSAO runs only with the depth pre-pass on, but its shader flag comes from the environment alone. With the pre-pass off and SSAO enabled, the shader reads whatever `rb_ssao/final` holds (untested).
+- SSAO runs only with the depth pre-pass on, but its shader flag comes from the environment alone. With the pre-pass off and SSAO enabled, the shader reads binding 27: `rb_ssao/final` left from an earlier frame if it exists, the default black texture otherwise (`render_forward_clustered.cpp:3638-3643`). It takes `ao = min(ao, ssao)` (`scene_forward_clustered.glsl:2028-2034`) and multiplies ambient light by `ao` (`2141`), so the black default leaves no ambient light.
 - SSIL's final texture is RGBA16F; SSAO's is R8 even though its interleave shader declares an `rgba8` image.
 - The normal-roughness buffer is RGBA8_UNORM.

@@ -28,7 +28,7 @@ No source states the design. This note records what the videos, their on-screen 
   - [The author's technical replies](#the-authors-technical-replies)
 - [Derived numbers](#derived-numbers)
 - [Reconstruction (inference)](#reconstruction-inference)
-- [Open questions](#open-questions)
+- [Not shown publicly](#not-shown-publicly)
 
 ## Sources read
 
@@ -200,7 +200,7 @@ Computed with a script from the HUD values above.
 - **Throughput on 2026-10-03**, rays per millisecond of the HUD's GI time, which also holds filtering, seams and gathering, so it bounds tracing from below: 405 M rays/s (pillar room), 340 (Cornell box), 272 to 429 (Sponza) and 221 to 387 (Intel Sponza).
 - **Between the builds:** Sponza went from about 82 to 272–429 M rays per GI second, while the cascades went from 3 to 5, the texel density rose (19.9/11.4)² = 3.05×, and the HUD's atlas string changed. It is a trend, not a measured speed-up.
 - **GI share of GPU time on 2026-10-03:** 55 to 79%.
-- **Atlas coverage:** if each cascade traces one ray per occupied texel and the cm/tex figure is a texel's edge, the rays per cascade cover 198 m² in the Cornell box (its six 5.5 m walls are 181.5 m², plus the inner boxes), 8,000 m² in the pillar room (3,357 m² of box interior), 12,700 m² in Sponza on 2026-10-03 and 26,900 m² in Sponza on 2026-09-12. The Cornell box fits one ray per texel per cascade; the two Sponza builds disagree by 2.1×, so the relation is not established.
+- **Atlas coverage:** if each cascade traces one ray per occupied texel and the cm/tex figure is a texel's edge, the rays per cascade cover 198 m² in the Cornell box (its six 5.5 m walls are 181.5 m², plus the inner boxes), 8,000 m² in the pillar room (3,357 m² of box interior), 12,700 m² in Sponza on 2026-10-03 and 26,900 m² in Sponza on 2026-09-12. The Cornell box fits one ray per texel per cascade; the two Sponza builds disagree by 2.1×, so under these assumptions at most one of them traces one ray per occupied texel per cascade (derived).
 - **Interval reach:** with the inspector's 2-texel interval for cascade 0 and an assumed ×4 growth per cascade, cascade ends fall at 2, 10, 42, 170, 682 and 2730 texels. The scene diagonals on 2026-10-03 are 507 (pillar room), 560 (Cornell box), 325 (Sponza) and 359 (Intel Sponza) texels, so five cascades cross every scene and the 6-cascade scenes carry one more than this rule needs. The 2026-09-12 build's three cascades reach 42 texels against a 186-texel Sponza diagonal, so that build used another rule or a far-field fallback. The growth factor is not shown.
 - **Memory:** 722 to 780 MB of VRAM in scenes of 278 and 760 triangles points to a fixed allocation of several hundred MB independent of geometry (inference).
 
@@ -224,12 +224,14 @@ The evidence points to RC on a surface atlas: X3XfRM's surface-chart design, gen
 
 Other families fit worse. Screen probes contradict the resolution independence and the "not SSGI" claim. A dense world grid contradicts the cm-per-texel atlas and the leak claim. Sparse world probes like Split RC contradict the atlas, and the author sets the work apart from Split RC. World probes with a cell size were the 2026-08-29 build, which the author dropped.
 
-## Open questions
+## Not shown publicly
 
-- How is the atlas generated and packed? None of the visible libraries is a chart generator; xatlas is the common MIT-licensed one, one MIT entry is unreadable, and meshoptimizer could simplify meshes for it.
-- What do "Atlas: 128x128" and "0.0% lit" mean on the 2026-10-03 HUD, when the 2026-09-12 HUD showed "1024x1024" and the rays per cascade exceed 128² by 40 to 75 times?
-- What are the direction layout per probe, the probe size per cascade and the growth factors, and what do "Merge Cutoff" (0.35) and "Skip Near Range" control?
-- How do bounces work without history? The world-probe build had 4 bounces and a rebuild button; X3XfRM reads last frame's cascade 0 at each hit, one bounce per frame. Whether "0ms temporal latency" covers the bounces is not shown.
-- What does "Directional GI" store per texel for normal mapping: a dominant direction, SH or something else?
-- How do moving and skinned meshes enter the atlas and the BVH? IVga0oVt2EU is titled dynamic GI and its inspector edits transforms and materials, but the frames read do not show the atlas being rebuilt.
-- How does the 2026-09-12 build's three cascades reach the far field, and what is the unused optimization for huge scenes?
+The sources read up to 2026-10-19 leave these parts of the design unstated; the reconstruction above is the reading that fits what they do show.
+
+- **Atlas generation and packing.** None of the visible libraries is a chart generator; xatlas is the common MIT-licensed one, one MIT entry is unreadable, and meshoptimizer could simplify meshes for it.
+- **"Atlas: 128x128" and "0.0% lit" on the 2026-10-03 HUD.** The 2026-09-12 HUD showed "1024x1024", and the rays per cascade exceed 128² by 40 to 75 times. Every scene shows "0.0% lit", lit ones included, so these two fields do not describe the GI's storage in that build (inference).
+- **Directions and growth.** The direction layout per probe, the probe size per cascade and the growth factors are not shown, nor what "Merge Cutoff" (0.35) and "Skip Near Range" control.
+- **Bounces.** The world-probe build had 4 bounces and a rebuild button; X3XfRM reads last frame's cascade 0 at each hit, one bounce per frame. Whether "0ms temporal latency" covers the bounces is not shown, so the claim of no temporal accumulation is established for the first bounce of light only as far as the author's statement goes.
+- **"Directional GI".** What it stores per texel for normal mapping (a dominant direction, SH or something else) is not shown.
+- **Moving and skinned meshes.** IVga0oVt2EU is titled dynamic GI and its inspector edits transforms and materials, but the frames read do not show the atlas being rebuilt, and how moving and skinned meshes enter the atlas and the BVH is not shown.
+- **Far field.** The 2026-09-12 build's three cascades reach 42 texels against a 186-texel Sponza diagonal ([derived numbers](#derived-numbers)), so that build used another interval rule or a far-field fallback, and neither is shown. The unused optimization for huge scenes is described only by its effect: GI weakened with distance and outside the view, mirrors kept.

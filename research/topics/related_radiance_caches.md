@@ -182,7 +182,7 @@ JMS55's post on Bevy 0.17's hardware ray-traced lighting, 2025-09-20 ([post](htt
 - The blend keeps `min(n + 1, max)` samples in alpha and sets `mix(old, new, 1/n)`, in its own dispatch so cells that read each other do not race.
 - The cache "significantly improved quality" and halved the cost of initial GI samples.
 
-**Problems.** A cell's position and normal are fixed at creation, so a bad first sample stays. The cache seems to lose energy: ending paths at a random light instead of the cache was brighter despite more noise. Bright outlier cells flicker, and with no validation rays the recursive cache leaves trails behind moving lights.
+**Problems.** A cell's position and normal are fixed at creation, so a bad first sample stays; the author names this as the cause of artifacts not yet solved. Separately, the cache loses energy: tracing one more ray toward a random light instead of ending paths at the cache was brighter, despite more noise and no multi-bounce. The post gives no cause beyond "the voxelized nature of the world cache" (its hashed cells are what it calls voxels) and suggests reprojecting the last frame for multi-bounce on rays that hit on screen as a mitigation. Bright outlier cells flicker, and with no validation rays the recursive cache leaves trails behind moving lights.
 
 **ReSTIR settings.** Neighbours are rejected at a tangent-plane distance over view depth above 0.003 or a normal dot below 0.906 (25°). DI uses 32 light candidates by RIS, one visibility ray, temporal reuse without re-tracing visibility and one spatial sample in a 30 px disk; one spatial sample beat more, and subgroup or workgroup resampling caused tiling or broke the denoiser. GI traces one uniform hemisphere ray per pixel and reads the world cache at the hit; temporal reuse jitters the reprojected position a few pixels to break correlation. The Jacobian for reusing neighbours' samples is the hardest part: neighbours with a Jacobian above 2 are rejected, and it still overflows if left for minutes.
 
@@ -288,4 +288,3 @@ The table was rebuilt from the PDF's text order, and its speedups match the prin
 
 ## Open questions
 
-- How much of the energy loss Solari saw in its voxelized cache comes from fixed cell positions and normals, and does a world-space RC grid lose energy the same way?

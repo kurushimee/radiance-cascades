@@ -20,8 +20,8 @@ Solari is Bevy's hardware ray-traced lighting. It started in 2023 with Lumen-sty
 
 ## Known cache problems
 
-- A cell's position and normal are fixed when it is created, so a bad first sample stays.
-- The voxelized cache seems to lose energy: ending paths at a random light instead of the cache was brighter despite more noise.
+- A cell's position and normal are fixed when it is created, so a bad first sample stays. The post names this as the cause of artifacts the author has not solved.
+- The voxelized cache loses energy: tracing one more ray toward a random light instead of ending paths at the cache was brighter, despite more noise and no multi-bounce. The post gives no cause beyond "the voxelized nature of the world cache" and suggests reprojecting the last frame for multi-bounce on rays that hit on screen ("Future Work", "GI Quality").
 - Bright outlier cells flicker, and the recursive cache with no validation rays leaves trails behind moving lights.
 
 ## ReSTIR settings worth reusing

@@ -40,9 +40,9 @@ Done when every confident removal is applied, with the facts each removed questi
 
 Done when each `read`, `engine` and `public` row is answered or closed at the limit of public evidence.
 
-- [ ] `read` rows
-- [ ] `engine` rows
-- [ ] `public` rows
+- [x] `read` rows
+- [x] `engine` rows
+- [x] `public` rows
 - [ ] Committed
 
 ### 5. Derivations
@@ -100,7 +100,7 @@ Each `goes` row names what the research keeps in place of the question: the repo
 | Q027 | surfel probes spawned in one frame | 3d_surface_probes | goes: frontier; the derived 32-frame fill stays |
 | Q028 | surfel-size intervals against Coppen's error balance | 3d_surface_probes | derive with Q014: Coppen's radius grows with depth while its intervals do not |
 | Q029 | per-mesh surfel proxies for splitting | 3d_surface_probes | goes: design |
-| Q030 | on-surface charts with dynamic meshes | 3d_surface_probes | read: Tatzgern et al. |
+| Q030 | on-surface charts with dynamic meshes | 3d_surface_probes | read: Tatzgern et al.; answered: neither the slides nor the paper's notes cover moving or skinned meshes; recorded with an inference in `3d_surface_probes#on-surface-radiance-caches-tatzgern-et-al-2024` and the source note |
 | Q031 | hit-distance parent test with off-surface parents | 3d_surface_probes | derive: geometry of what the test detects; ranked 4 and an index line rest on it |
 | Q032 | generated atlas with moving meshes | 3d_surface_probes | goes: design |
 | Q033 | screen-space cascade −1 for atlas contact shadows | 3d_surface_probes | derive: disocclusion and flicker come from history and moving probes, which a per-pixel cascade −1 lacks |
@@ -135,20 +135,20 @@ Each `goes` row names what the research keeps in place of the question: the repo
 | Q062 | direct light split without double counting | core_theory | derive (with I14, R09) |
 | Q063 | several bounces in one frame | core_theory | goes: design; the energy share is Q094 |
 | Q064 | supersampling and the equal-error `t0` | core_theory | derive |
-| Q065 | `call_on_render_thread` from `_process` | godot_integration | engine: answered (`main.cpp`, `rendering_server_default.h`) |
-| Q066 | `Texture3DRD` as a global `sampler3D` | godot_integration | engine: answered (`texture_rd.cpp`, `material_storage.cpp`, `variant.cpp`) |
+| Q065 | `call_on_render_thread` from `_process` | godot_integration | engine: answered (`main.cpp`, `rendering_server_default.h`); answered in `godot_integration#running-the-compute-work`, `#single-frame-assessment`, `#engine-source-locations`; `docs/rendering_device.md#render-thread` |
+| Q066 | `Texture3DRD` as a global `sampler3D` | godot_integration | engine: answered (`texture_rd.cpp`, `material_storage.cpp`, `variant.cpp`); answered in `godot_integration#running-the-compute-work`, `#engine-source-locations`; `docs/rendering_device.md#texture3drd` |
 | Q067 | cheapest same-frame radiance at PRE_OPAQUE | godot_integration | goes: design |
 | Q068 | users who enable SSAO | godot_integration | goes: design; the SSAO gating found in the source is added |
 | Q069 | SDFGI and HDDAGI time split | godot_integration | goes: measure; the combined 2.43 and 0.93 ms stay |
-| Q070 | FogVolume shader reading a global texture | godot_integration | engine: answered (`fog.cpp`) |
+| Q070 | FogVolume shader reading a global texture | godot_integration | engine: answered (`fog.cpp`); answered in `godot_integration#volumetric-fog`, `#engine-source-locations` |
 | Q071 | gomezzz's error per level | godot_projects | goes: measure; the derived bin error stays |
 | Q072 | gomezzz's trace share | godot_projects | goes: measure |
 | Q073 | whether Phreakyx compiles | godot_projects | goes: measure; "untested design" stays |
 | Q074 | dense grid against sparse probes by scene size | godot_projects | goes: design |
 | Q075 | analytic primitives as a moving-object proxy | godot_projects | goes: frontier |
-| Q076 | what PoE2 ships | history_and_landscape | public |
+| Q076 | what PoE2 ships | history_and_landscape | public; closed at public evidence in `history_and_landscape#poe2-cost-figures` |
 | Q077 | Sannikov's sparse 3D internals | history_and_landscape | goes: answered by the world-space section (no tile interpolation, a visible seam, a hash map, no timings published) |
-| Q078 | Spatium single-frame and atlas-based | history_and_landscape | public (with Q146 to Q152) |
+| Q078 | Spatium single-frame and atlas-based | history_and_landscape | public (with Q146 to Q152); closed at public evidence: `history_and_landscape` landscape row, Blackline note `#not-shown-publicly` |
 | Q079 | Love and Deepspace's temporal parts | history_and_landscape | goes: design |
 | Q080 | no single-frame 3D world-space RC in the academic record | history_and_landscape | premise false: Split RC's preprint is one; the academic-work paragraph corrected |
 | Q081 | HRC extensions in 3D | holographic_rc | goes: frontier; "unsolved in 3D" stays as reported |
@@ -193,7 +193,7 @@ Each `goes` row names what the research keeps in place of the question: the repo
 | Q120 | Weber-law test for probe density | related_radiance_caches | goes: frontier |
 | Q121 | kajiya's origins without votes | related_radiance_caches | goes: frontier |
 | Q122 | cascade form of the ray-length bit | related_radiance_caches | goes: frontier |
-| Q123 | Solari's energy loss | related_radiance_caches | read: the post's attribution (its cache is hashed, not voxelized); the RC-grid half goes (frontier) |
+| Q123 | Solari's energy loss | related_radiance_caches | read: the post's attribution (its cache is hashed, not voxelized); the RC-grid half goes (frontier); answered: the post names no cause; `related_radiance_caches#bevy-solari` and the source note |
 | Q124 | cheapest second-bounce source | related_radiance_caches | goes: design |
 | Q125 | LSAO's stack with a bitmask | related_screen_space_gi | goes: frontier; Therrien's future work stays |
 | Q126 | slab thickness from a min/max pyramid | related_screen_space_gi | goes: frontier |
@@ -211,9 +211,9 @@ Each `goes` row names what the research keeps in place of the question: the repo
 | Q141 | probes activated along camera rays | volumetric_and_radiative_transfer | goes: frontier |
 | Q142 | single-frame multiple scattering | volumetric_and_radiative_transfer | goes: design |
 | Q143 | spectral cascade | volumetric_and_radiative_transfer | goes: frontier |
-| Q144 | DexRT's 3D block-map size | volumetric_and_radiative_transfer | read: DexRT code; else the derived mismatch is recorded |
+| Q144 | DexRT's 3D block-map size | volumetric_and_radiative_transfer | read: DexRT code; else the derived mismatch is recorded; answered from the code: 12,484 words; `volumetric_and_radiative_transfer#dexrt` and the source note |
 | Q145 | Rulkens's darker surfaces | volumetric_and_radiative_transfer | goes: answered by the source note's derivation (0.52 and 0.91 of exact) |
-| Q146 to Q152 | Spatium's atlas, HUD, layout, bounces, directional GI, moving meshes, far field | Blackline note | public |
+| Q146 to Q152 | Spatium's atlas, HUD, layout, bounces, directional GI, moving meshes, far field | Blackline note | public; closed at public evidence in the Blackline note `#not-shown-publicly` |
 | R01 | ranked 1: tracer throughput | single_frame_3d_rc | becomes a stated result with Q096 |
 | R02 | ranked 2: same-frame radiance at hits | single_frame_3d_rc | becomes a stated assessment; its hypothesis and evidence stay |
 | R03 | ranked 3: cascade 0 noise | single_frame_3d_rc | becomes a stated assessment |
@@ -234,19 +234,19 @@ Each `goes` row names what the research keeps in place of the question: the repo
 | I01 | circle-fix explanation "remains untested" | artifacts_and_fixes | with Q048 |
 | I02 | base 16: "No source tested whether that imbalance, or a bug, causes the artifacts" | artifacts_and_fixes | with Q001 |
 | I03 | "unexplained 6" | core_theory, sources/2023_rc_shadertoys.md | derive: `2π/6 = 1.047` cancels the gather's ×2π to within 5% |
-| I04 | INSIDE talk's coverage of depth-aware upsampling | 3d_screen_space_implementations, sources/2021_pixelmager_depth_aware_upscaling.md | read |
+| I04 | INSIDE talk's coverage of depth-aware upsampling | 3d_screen_space_implementations, sources/2021_pixelmager_depth_aware_upscaling.md | read; answered in `3d_screen_space_implementations` and the pixelmager note |
 | I05 | Gavras's untested light-count claim | 3d_screen_space_theses | derive: RC's cost is independent of light count by construction |
-| I06 | fixes at branch tips not checked | 3d_world_space_implementations_grids, sources/2026_rc_repository_survey.md | read |
-| I07 | `rb_ssao/final` with the pre-pass off | godot_integration, sources/2026_godot_indirect_diffuse_paths.md | engine: answered (`render_forward_clustered.cpp`, `scene_forward_clustered.glsl`) |
-| I08 | Phreakyx reduce path not checked | godot_projects, sources/2026_phreakyx_godot_rc_gdextension.md | read |
-| I09 | Half HRC authorship | holographic_rc_implementations | read, else restated as the public record |
-| I10 | GTAO formula not checked against the memo | supporting_techniques_structures_and_tracing | read |
+| I06 | fixes at branch tips not checked | 3d_world_space_implementations_grids, sources/2026_rc_repository_survey.md | read; answered: both fixes at all four tips; grids topic and the survey note |
+| I07 | `rb_ssao/final` with the pre-pass off | godot_integration, sources/2026_godot_indirect_diffuse_paths.md | engine: answered (`render_forward_clustered.cpp`, `scene_forward_clustered.glsl`); answered in `godot_integration#getting-gi-into-shading`, `#engine-source-locations` and the indirect-diffuse note |
+| I08 | Phreakyx reduce path not checked | godot_projects, sources/2026_phreakyx_godot_rc_gdextension.md | read; answered in `godot_projects` and the Phreakyx note |
+| I09 | Half HRC authorship | holographic_rc_implementations | read, else restated as the public record; answered: Yaazarai's; `holographic_rc_implementations#half-hrc`, `holographic_rc#half-hrc`, the reference-codes note |
+| I10 | GTAO formula not checked against the memo | supporting_techniques_structures_and_tracing | read; answered: the memo's Eq. 7; `supporting_techniques_structures_and_tracing` |
 | I11 | Dell'Ova's figures not checked against eq 4.2 | sources/2025_dellova_rc_performance_scaling_thesis.md | restate: the figure gives no sizes |
-| I12 | ascii-gi's bilinear-fix uniform not traced | sources/2026_merging_and_ringing.md | read |
+| I12 | ascii-gi's bilinear-fix uniform not traced | sources/2026_merging_and_ringing.md | read; answered in the merging notes |
 | I13 | mdxish pages not rendered | sources/2026_merging_and_ringing.md | restate as the note's provenance |
 | I14 | "Double counting is unresolved" | single_frame_3d_rc | with Q062 |
 | I15 | "What to average is disputed" | volumetric_and_radiative_transfer, sources/2026_volumetric_rc.md | the dispute record stays; the section's slab result ("density averaging is exact across slabs and over-occludes partial coverage") is linked from it |
-| I16 | "the relation is not established" | sources/2026_blackline_interactive_spatium_rc.md | public, with the Blackline rows |
+| I16 | "the relation is not established" | sources/2026_blackline_interactive_spatium_rc.md | public, with the Blackline rows; restated as a derived bound in the Blackline note `#derived-numbers` |
 | I17 | index lines that restate questions ("untested", "open", "unknown" trade-offs) | index/goals_*.md, index/open_questions.md | phase 6: restated from the answers or removed with their questions |
 
 Records that stay as they are: reported open problems and disputes ("disputed" for cubic interpolation with the bilinear fix, "Reports disagree" on HRC extension starts), "unclear in source" items, provenance qualifiers, and authors' own listed limitations.

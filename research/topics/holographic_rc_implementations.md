@@ -325,7 +325,7 @@ The seven indexing schemes are the line parameterizations of the light-field lit
 
 ## Half HRC
 
-The half-HRC shader linked in the community notes under Yaazarai's name lives in brucelevis/Holographic-Radiance-Cascades ("Extremely naive implementation using 1/2 HRC model", `Half-HRC/shaders/Shd_HolographicRC/Shd_HolographicRC.fsh`); the Yaazarai repository of that name does not exist ([reference codes](../sources/2025_hrc_and_2d_reference_implementations.md#half-hrc-brucelevis-copy)).
+The half-HRC shader linked in the community notes under Yaazarai's name lives in brucelevis/Holographic-Radiance-Cascades ("Extremely naive implementation using 1/2 HRC model", `Half-HRC/shaders/Shd_HolographicRC/Shd_HolographicRC.fsh`); the Yaazarai repository of that name no longer exists, but the copy, which is not a GitHub fork, holds three commits made under the Yaazarai account on 2025-04-24, and the Wayback Machine's capture of Yaazarai/Holographic-Radiance-Cascades from that day shows the same README, so the shader is Yaazarai's ([reference codes](../sources/2025_hrc_and_2d_reference_implementations.md#half-hrc-brucelevis-copy)).
 
 - Probes are 1 px apart, but ray ends are 2 px apart, so each ray merges with two next-level rays at ±1 px across, and each lookup averages two texels: 8 taps at 1/8 each. A comment says ray ends are 1 px apart, which contradicts the 2 px step.
 - Each frustum's cascades run top-down at 1920×1080 in 11 cascades of 2048² RGBA16F (`ceil(log2(1920))`). A hit returns the sRGB-decoded scene colour with alpha 0, and a miss merges. Rays are weighted by `1 − 0.5·|index − I/2|/(I/2)`, 1 at the centre ray and 0.5 at the edges.
@@ -339,7 +339,7 @@ Eleven 2048² RGBA16F cascades are 352 MiB for one frustum's set and four times 
 - **Two kinds of weight.** The codes that weight cones by angular width (paper, amitabha, lancimir, TypeGPU, folkjs, jason.today, pixi-GI, hbattal) agree up to a constant; the Shadertoys and the Unity port split each cone between its rays, and Half HRC and 4ctczl use no angular measure ([holographic RC](holographic_rc.md#merging-down)).
 - **Multi-frame schedules.** 4ctczl, tfKyRw and WfyyDm spread levels over frames because Shadertoy limits passes, not because the method needs it; their latency is a host artifact, as with the plain RC Shadertoys ([2D Shadertoys](2d_shadertoys.md)).
 - **Storage reuse.** TypeGPU's sequential quadrants with one shared pyramid are the memory-lean pattern; pixi-GI keeps `extent²·(cascades + 2)` texels and the paper's formula counts all four quadrants (derived above).
-- **Lineage.** entropylost wrote amitabha, nihil, hrcviz and hrcviz2; Yaazarai wrote Volumetric-HRC, whose README describes a half-probe option, and is credited with a Half HRC repository that does not exist, so that shader's authorship is unresolved (it survives in brucelevis's copy); youssef_afella wrote the Unity port and both later Shadertoys; Suslik's 4ctczl descends from 4ctXD8 ([history and landscape](history_and_landscape.md)).
+- **Lineage.** entropylost wrote amitabha, nihil, hrcviz and hrcviz2; Yaazarai wrote Volumetric-HRC, whose README says its shaders can be modified to cast half as many probes along each plane, and the Half HRC shader, whose own repository was deleted and which survives in brucelevis's copy of its commits; youssef_afella wrote the Unity port and both later Shadertoys; Suslik's 4ctczl descends from 4ctXD8 ([history and landscape](history_and_landscape.md)).
 
 ## Single-frame assessment
 

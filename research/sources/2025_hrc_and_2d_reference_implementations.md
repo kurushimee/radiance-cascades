@@ -36,7 +36,7 @@ Other HRC implementations they link: https://github.com/entropylost/nihil (CPU, 
 - Rays are built by extension from cascade 0 upward, not from cascade 3 as in the paper. The README says this reduces aliasing and gives more stable results through angular diffusion.
 - The README says the even-plane interpolation cannot be replaced by interpolating before merging. Emitters must be drawn into both the emission and the absorption textures.
 - RTX 3080 timings from the README: 256² about 1 ms, 512² 1–2 ms, 1024² 5–6 ms, 2048² 9–11 ms, 4096² 35–45 ms; 8192² runs out of memory. The README's header gives a "simple" 2048² volumetric scene at 11 to 12 ms on the same GPU.
-- The README also describes a half-probe option: cast only half as many probes along each plane and let rays interpolate between them when extending and merging, to "double performance where needed".
+- The README also says the shaders can be modified to cast only half as many probes along each plane and let rays interpolate between them when extending and merging, to "double performance where needed".
 - The same author's earlier plain-RC port of fad's Shadertoy (https://github.com/Yaazarai/RadianceCascades) stores radiance in RGBA8 gamma space, which bands visibly; the GM Shaders version later moved to RGBA16F.
 
 ## amida: merge variants compared
@@ -77,7 +77,7 @@ A CPU test (Rust, 512², 10 cascades) that treats each line of probes as a conti
 
 ## Half HRC (brucelevis copy)
 
-The half-HRC shader linked in the community notes under Yaazarai's name lives in brucelevis/Holographic-Radiance-Cascades ("Extremely naive implementation using 1/2 HRC model"); the Yaazarai repository of that name does not exist.
+The half-HRC shader linked in the community notes under Yaazarai's name lives in brucelevis/Holographic-Radiance-Cascades ("Extremely naive implementation using 1/2 HRC model"); the Yaazarai repository of that name no longer exists, but the copy, which is not a GitHub fork, holds three commits made under the Yaazarai account on 2025-04-24, and the Wayback Machine's capture of Yaazarai/Holographic-Radiance-Cascades from that day shows the same README, so the shader is Yaazarai's.
 
 - Probes are 1 px apart, but ray ends are 2 px apart, so each ray merges with two next-level rays at ±1 px across, and each lookup averages two texels: 8 taps at 1/8 each. A comment says ray ends are 1 px apart, which contradicts the 2 px step.
 - Each frustum's cascades run top-down at 1920×1080 in 11 cascades of 2048² RGBA16F (`ceil(log2(1920))`). A hit returns the sRGB-decoded scene color with alpha 0, and a miss merges. Rays are weighted by `1 − 0.5·|index − I/2|/(I/2)`, 1 at the center ray and 0.5 at the edges.

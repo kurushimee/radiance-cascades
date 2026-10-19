@@ -58,6 +58,6 @@ The README says the code "wasn't compiled here", the submodules and binaries are
 | `rc_composite.glsl:7, 34-36` | albedo read "dummy for now"; GI "today additive" | albedo binding never read; GI multiplied by the guessed albedo (the additive form is commented out at `:40`, and `apply_gi` is not on the active path) |
 | `rc_composite.glsl:30` | cap at 100% reflectance | luminance capped at 0.95 |
 | `rc_clip_inject.glsl:6-7` | no SDF march, visibility 1 | occupancy march `clip_vis` (`:77`) |
-| `rc_patch_reduce.glsl:3-6` | identical to the in-merge `r²` average | the merge's `r` is 1 or 2; the reduce path was not checked |
+| `rc_patch_reduce.glsl:5-10` | identical to the in-merge `r²` average; runs for the c1←c2 and c3←c4 folds | the merge's `r` is 1 or 2, and the merge no longer averages: for `r > 1` it reads the reduce's output, `(1/r²)·Σ` over the parent's `r × r` sub-directions (`:37-56`; merge `:89-97`). With the `{4, 4, 8, 8, 8}` table `r = 2` only for c1←c2, so the reduce runs once per frame for that fold alone (`src/CRadianceCascade.cpp:1812-1825`) |
 
 The headers of `rc_patch_lookup.glsl`, `rc_irradiance_atrous.glsl` and `rc_irradiance_upsample.glsl`, and the spacing and interval schedule in `ANALYSIS.md`, match the code.

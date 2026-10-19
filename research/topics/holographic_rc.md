@@ -250,7 +250,7 @@ How HRC compares with vanilla RC depends on cascade count and cascade 0 length, 
 
 ### Half HRC
 
-Half HRC drops every other probe row, which removes the checkerboard and simplifies the math, for about 2× speed. The community notes credit it to a Yaazarai repository that does not exist; the shader survives in a copy by brucelevis, described in the [implementations](holographic_rc_implementations.md#half-hrc).
+Half HRC drops every other probe row, which removes the checkerboard and simplifies the math, for about 2× speed. The community notes credit it to Yaazarai, whose repository of it was deleted; the shader survives in a copy by brucelevis that holds Yaazarai's commits, described in the [implementations](holographic_rc_implementations.md#half-hrc).
 
 ### Equal-angle, ring, radial and axis-aligned HRC
 
