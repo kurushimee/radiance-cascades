@@ -16,6 +16,8 @@ The talk is by Alexander Sannikov, a graphics programmer at Grinding Gear Games,
 ### Source notes
 
 - The captions are the English track named "en". The auto-generated track was not used.
+- The captions give no ray, segment or sample counts and no probe layers; the GI is a screen-space gather in which every pixel acts as a point light, with a 3 ms frame budget. The 10 ms near 44:05 is dynamic atlas building, not GI. "Variance" refers to variance shadow maps, and "cascades" in the shadow part are shadow levels of detail.
+- The ExileCon link `B-ODrtmtpzM` found elsewhere is a private video; the devtrackers list of ExileCon 2019 talks gives this renderer talk at `whyJzrVEgVc`, and no 2019 GDC talk on PoE's screen-space GI was found.
 - The video runs 54 minutes 38 seconds. Timestamps are caption minutes.
 
 ### Point light shadows (about 09:00 to 18:30)
@@ -53,13 +55,13 @@ The talk is by Alexander Sannikov, a graphics programmer at Grinding Gear Games,
 - In the traditional method, each point light needs its own shadow map, so the scene is rendered once per light. The speaker's example is ten lights, which means ten renders of every object.
 - This method gives each screen point a fixed number of shadow contributions. The speaker's example: with a hundred lights, each point is affected by two major lights.
 - The cost is capped. Performance stays steady whatever the number of objects or lights.
-- The speaker says a steady frame rate matters more than a high peak. He compares a game at 300 FPS that drops to 5 with a game that stays between 60 and 100 FPS.
+- The speaker says a steady frame rate matters more than a high peak. The speaker compares a game at 300 FPS that drops to 5 with a game that stays between 60 and 100 FPS.
 - The method uses data already on screen and renders no extra geometry.
 
 #### Limits
 
 - The speaker says the method depends on several specific properties of PoE and its engine. Removing any one of them would make the method not good enough.
-- He says the method would produce artifacts in general-purpose games such as 3D shooters.
+- The speaker says the method would produce artifacts in general-purpose games such as 3D shooters.
 - The method is built for the in-house engine.
 
 ### Screen-space global illumination (about 18:30 to 28:00)
@@ -127,7 +129,7 @@ The video is a recording of a talk by Alexander Sannikov on rendering in Path of
 - Each point casts light onto every other point, receives light from every other point, and can block light between them.
 - The speaker calls this many-to-many interaction notoriously hard to compute.
 - Path tracing is simple to write. The speaker says it takes minutes per frame.
-- The speaker says the industry methods he knew did not fit the game.
+- The speaker says the industry methods the speaker knew did not fit the game.
 
 ### Earlier screen-space GI in PoE (32:00)
 
@@ -147,8 +149,8 @@ The video is a recording of a talk by Alexander Sannikov on rendering in Path of
 ### 2D prototype (35:00)
 
 - The speaker built the idea in 2D first, because 3D was harder to build.
-- He says 2D GI is almost as hard as 3D GI.
-- He says the 2D idea worked on its first implementation.
+- The speaker says 2D GI is almost as hard as 3D GI.
+- The speaker says the 2D idea worked on its first implementation.
 - The 2D experiment is on the speaker's YouTube channel.
 
 ### Cascades in 2D (36:00)
@@ -164,13 +166,13 @@ The video is a recording of a talk by Alexander Sannikov on rendering in Path of
 
 ### Scaling with cascade count (38:00)
 
-- The speaker shows ray counts for increasing cascade counts: 64, a value the captions read as 120, and 256. He says the counts are powers of two.
+- The speaker shows ray counts for increasing cascade counts: 64, a value the captions read as 120, and 256. The speaker says the counts are powers of two.
 - The total cost of all cascades approaches a constant as cascades are added.
 - Each cascade after the first is cheaper than the one before it.
 - The speaker says a hundred cascades cost about the same as one cascade.
 - The number of rays grows exponentially with the number of cascades.
 - The total cost of an infinite number of cascades is bounded by a constant.
-- The speaker summarizes it as each cascade capturing twice more rays for what the captions call "twice less speed". He calls this an exploit.
+- The speaker summarizes it as each cascade capturing twice more rays for what the captions call "twice less speed". The speaker calls this an exploit.
 
 ### 3D version in PoE (40:00)
 
@@ -190,14 +192,14 @@ The video is a recording of a talk by Alexander Sannikov on rendering in Path of
 ### Emissive surfaces (41:45)
 
 - The speaker says light from emissive surfaces costs the same to compute as light from directly lit surfaces.
-- He says emissive test scenes are a typical way to test GI methods.
+- The speaker says emissive test scenes are a typical way to test GI methods.
 
 ### Screen space and world space (42:30)
 
 - The PoE build uses screen-space probes and screen-space information.
-- The speaker says the same cascade hierarchy can run in world space, and his posted demo does this.
+- The speaker says the same cascade hierarchy can run in world space, and the speaker's posted demo does this.
 - The world-space demo uses no screen-space data. It can light from sources behind the camera. PoE does not need that.
-- He says the world-space form may suit other games.
+- The speaker says the world-space form may suit other games.
 
 ### Specular GI (42:50)
 
@@ -210,7 +212,7 @@ The video is a recording of a talk by Alexander Sannikov on rendering in Path of
 
 - The in-game version is faster than the earlier screen-space method, according to the speaker.
 - Correct GI methods converge to the same image. The speaker therefore shows no side-by-side comparison. The question is how quickly each method produces that image.
-- The speaker says the method scales better than the earlier PoE method and better than anything else he has seen. No numbers are given.
+- The speaker says the method scales better than the earlier PoE method and better than anything else the speaker has seen. No numbers are given.
 
 ### Limits stated
 

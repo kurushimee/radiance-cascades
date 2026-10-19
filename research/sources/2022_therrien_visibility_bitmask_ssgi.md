@@ -206,6 +206,18 @@ The text says samples are taken on both sides of v. Algorithm 1 has one front an
 | GI weight (HBIL) | Angle difference between samples | Newly occluded sectors times cosines |
 | Cost | Reference | About 0.01 to 0.02 ms more in the AO benchmark |
 
+## Code post (2023)
+
+Therrien's post https://cdrinmatane.github.io/posts/ssaovb-code/ (2023-05-11) gives the shader code for the AO case and settles several points the paper leaves open.
+
+- Sectors: `SECTOR_COUNT 32`, one `uint` per slice. The AO integral is `1 − countbits(mask)/32` per direction, averaged over directions, and the post says it ignores the cosine weight.
+- Slices are aligned with the view vector `V` and rotated randomly in screen space, so they turn about `V`, not the normal, and the projected normal differs from slice to slice.
+- Front and back samples: `dpos = samplePosVS − positionVS`, `dback = dpos − V·thickness`, `θ_f = acos(dot(normalize(dpos), V))` and `θ_b = acos(dot(normalize(dback), V))`. `V` points from the pixel to the camera, so the back sample lies farther from the camera than the front one (inference from that definition), which answers the direction left open in [sample geometry](#sample-geometry).
+- Each angle is normalized as `saturate((sgn·(−θ) − N + π/2)/π)`, with `N` the angle from `V` to the projected normal and `sgn` the side of the slice: the `π/2` centers the slice's hemisphere on the projected normal and the division by `π` maps `[N − π/2, N + π/2]` to [0, 1] (inference from the formula). The width is then `ceil((max_f − min_f)·32)` with no `π/2`, so the extra `π/2` in the paper's width term ([bit assignment](#bit-assignment-restated-from-algorithm-1)) belongs to the start offset only (inference).
+- Sector update: `start = floor(min_f·32)`, `count = ceil((max_f − min_f)·32)`, `bits = count > 0 ? (0xFFFFFFFF >> (32 − count)) << start : 0`, `mask |= bits`. With `ceil`, a sample occludes every sector it touches; the post names `round` (half covered) and `floor` (fully covered) as alternatives, and the paper uses the half-coverage rule, which is the source of the floor and ceil mismatch noted under [hit criterion](#hit-criterion).
+- The post's loop steps at a fixed `rayStep`, the paper's Algorithm 1 at `r/(N_s + 1)`, and the paper spreads indirect-diffuse samples exponentially without giving the exponent (sec. 4.3).
+- The post gives no timings; the paper's tables above are on an RTX 2080.
+
 ## Limitations (from the source)
 
 - Single depth layer. Hidden surfaces are unknown, so background geometry can be estimated wrongly.
@@ -227,10 +239,11 @@ The text says samples are taken on both sides of v. Algorithm 1 has one front an
 - The method can be added to any horizon-based technique with a small cost.
 - It can also improve ambient light by weighting it with directional occlusion.
 - Future work: a per-pixel thickness heuristic.
-- Future work: caching similar to LSAO, to reduce bandwidth.
+- Future work: caching similar to LSAO, to reduce bandwidth ([LSAO notes](2013_timonen_line_sweep_ambient_obscurance.md)).
 - Future work: approximating low-frequency ambient irradiance at runtime.
 
 ## Links found
 
 - arXiv | https://arxiv.org/abs/2301.11376 | Paper.
+- Code post | https://cdrinmatane.github.io/posts/ssaovb-code/ | AO shader code ([notes](#code-post-2023)).
 - The Visual Computer | https://doi.org/10.1007/s00371-022-02703-y | Journal version.

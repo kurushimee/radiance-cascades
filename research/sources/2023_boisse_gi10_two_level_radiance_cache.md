@@ -37,3 +37,11 @@ Not RC, but the Split RC paper cites it with Lumen as a screen-space radiance ca
 
 - Per pixel, find a probe in four directions, weight by depth and normal, and fall back to equal weights (flagged for the denoiser) when all are rejected. Irradiance is the SH dotted with the cosine lobe. Screen-space horizon AO and short-range GI fill in detail smaller than the probe spacing through a bent-cone mask.
 - Totals at 1080p: 1.9 to 3.1 ms on an RX 6900 XT and similar on an RTX 3080, for scenes from 99k to 9M triangles. In a UE5 scene GI-1.0 took 2.4 ms against Lumen's 2.6 ms.
+
+## Capsaicin code
+
+- Screen probes are 8×8 hemi-octahedral with 64 rays each and 9 SH coefficients, spawned once per 16×16 spawn tile. Radiance reuse requires the directions to agree within `cos(0.02π)`, and cell values are quantized by 10⁴ for integer atomics.
+- The screen cell size uses the probe size, `tan(fov_y·8·max(1/h, h/w²))`, as in the paper; the world hash grid uses the same form with 32 in place of 8 (a 4× coarser footprint) and a minimum cell of 0.1. The hash grid stores 8×8 tiles with mips (8, 4, 2 and 1, so 85 cells per tile) in 65,536 tiles with 4-way buckets, decays untouched tiles after 50 frames, and blends counts with `lerp(old, new, 1/min(n_old + n_new, 16))`.
+- The probe filter has radius 3 with weights raised to the 8th power. World-space ReSTIR uses 2^18 cells of 16 entries and 8 samples. Multi-bounce paths are discarded with probability 0.7 and the survivors scaled by `1/(1 − 0.7)`.
+- A frame runs about 25 passes: purge the radiance cache, reproject, look up, spawn, patch and sample screen probes, populate cells, generate, compact and resample reservoirs, populate, update and resolve the cache, blend, reorder, filter, project and interpolate screen probes, reflections, then reproject, filter and resolve GI.
+- Direct lighting is on by default, though a comment says it is off.

@@ -265,4 +265,4 @@ Radiance Cascades material linked in the body:
 
 - Radiance Cascades (technique document on Google Drive) | https://drive.google.com/file/d/1L6v1_7HY2X-LV3Ofb6oyTIxgEaP4LOI6/view | the link the intro uses for the technique; its content is not described here and was not fetched.
 
-- Markdown version of this post | https://gist.github.com/jasonjmcghee/e78bc62874059d64ac9592b6b9e01bb2 | same post in Markdown, with the code in blocks.
+- Markdown version of this post | https://gist.github.com/jasonjmcghee/e78bc62874059d64ac9592b6b9e01bb2 | same post in Markdown, with the code in blocks. Its demo constants match the page (`rayCount` 8, a 32-ray constant, max steps 0 to 512 with default 128, `EPS = 0.001`, sky (0.02, 0.08, 0.2), sun (0.95, 0.95, 0.9), fill threshold `alpha > 0.1`, temporal mix 0.9 stopped after about 10 frames), but it is an earlier text: the sentences about 8 rays reaching at most 256 pixels and about the naive method needing "like 256 steps" appear only on the published page.

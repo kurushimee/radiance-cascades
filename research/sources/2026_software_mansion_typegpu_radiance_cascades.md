@@ -7,7 +7,7 @@
 | Kind | library (WebGPU) |
 | Link | https://github.com/software-mansion/TypeGPU/tree/main/packages/typegpu-radiance-cascades |
 
-@typegpu/radiance-cascades (version 0.12.1) computes 2D lighting for TypeGPU through two runners: an SDF runner that ray-marches a user signed distance function through a stack of cascade layers, and a holographic runner that solves light transport over a pixel grid with per-pixel emission and extinction. Both runners are created with `create`, recomputed with `run()`, and expose a texture (`output`) that the app samples in its own shader. All GPU code is TGSL (functions marked `'use gpu'`, compiled through unplugin-typegpu); the package contains no hand-written WGSL.
+@typegpu/radiance-cascades (version 0.12.1; 0.12.2 at commit 7af6a9e) computes 2D lighting for TypeGPU through two runners: an SDF runner that ray-marches a user signed distance function through a stack of cascade layers, and a holographic runner that solves light transport over a pixel grid with per-pixel emission and extinction. Both runners are created with `create`, recomputed with `run()`, and expose a texture (`output`) that the app samples in its own shader. All GPU code is TGSL (functions marked `'use gpu'`, compiled through unplugin-typegpu); the package contains no hand-written WGSL.
 
 ## Guide
 
@@ -94,6 +94,22 @@ SDF tracing controls (guide table, defaults from code):
 - The hit tolerance and minimum step are also limited by `sdfResolution` (see Issues).
 
 SDF custom tracing (guide): the `rayMarch` callback replaces the built-in tracer in both merge modes. It receives `(origin, direction, startT, endT, eps, minStep, bias)` and returns `RayMarchResult({ color, transmittance })`. `color` is accumulated linear RGB over the segment. `transmittance` is 1 for transparent, 0 for opaque, or between. Positions are `origin + direction * t`, with `t` in scene units. `maxRaySteps` and `stepSafety` only affect the built-in tracer.
+
+## Source files
+
+Line counts and locations at commit 7af6a9e (`packages/typegpu-radiance-cascades/`):
+
+| File | Lines | Contents |
+|---|---|---|
+| `src/index.ts` | 12 | exports `create`, the deprecated `createRadianceCascades`, the slots `sdfSlot`, `emissionSlot` and `rayMarchSlot`, `defaultRayMarch`, `RayMarchResult`, `maxRayStepsAccess`, `rayMarchStepSafetyAccess`, and the types `BaseStoredRayDim` and `MergeMode` |
+| `src/runner.ts` | 311 | SDF `create()`: option defaults (lines 118-124), the tracing constants (lines 139-142), the two ping-pong cascade textures, top-down cascade passes and the build pass; exposes `run`, `with`, `initSync`, `initAsync` and `destroy` |
+| `src/cascades.ts` | 434 | `getCascadeInfo` (43-107), `defaultRayMarch` (138-162; hit test at 152, step at 156, step cap at 145), segment trace (164-183), layer parameters (185-196), bind group (198-203), `traceHardwareMergeRay` (225-256), `bilinearWeight` (258-263), `traceBilinearFixMergeRay` (293-313), `rayDirection` (315-321), `cascadePassCompute` with the 2 × 2 pre-average (326-379), `buildRadianceFieldCompute` (394 on) |
+| `src/holographic/index.ts` | 448 | holographic `create()`, passes and pipelines |
+| `src/holographic/layout.ts` | 26 | level count, interval counts `planeCount·(2^l + 1)`, fluence count, byte size |
+| `src/holographic/transport.ts` | 73 | `Interval`, f16 packing, `over`, `average`, `integrate` |
+| `README.md` | 78 | quick start for both APIs; `sdfResolution` at lines 46 and 63-64 |
+
+`tests/cascades.test.ts` and `tests/holographic.test.ts` were not read.
 
 ## SDF runner
 
@@ -436,8 +452,10 @@ All three examples are in `apps/typegpu-docs/src/examples/rendering/`. Each has 
 
 - Holographic `run({ iterations: 0 })` records no solve passes. `output` keeps values from the previous run.
 - Holographic `tracedLevels` larger than the number of levels (`ceil(log2(W_q))`) traces every level directly. No upper bound is checked.
-- Holographic `byteSize` and the memory table use the same formula. The formula counts intervals as 8 bytes (scalar) or 12 bytes (rgb).
+- Holographic `byteSize` and the memory table use the same formula. The formula counts intervals as 8 bytes (scalar) or 12 bytes (rgb). The code's docstring calls it the "Logical size of the allocations owned by the executor" (`src/holographic/index.ts:82`), so it counts logical bytes; the guide's "exact allocation" says more than the code does.
+- Holographic `size` is not validated: `create` throws only for `tracedLevels` (`src/holographic/index.ts:101-106`), although the guide requires both dimensions to be at least 2 pixels.
 - SDF `output` alpha is always 1 (the build pass writes alpha 1). The per-pixel transmittance is not exposed.
+- `sdfResolution` puts a floor under the hit tolerance and the minimum step (`runner.ts:140-142`): `eps` cannot drop below one SDF texel (`1/min(Sw, Sh)`) and `minStep` below half a texel, while `cascadeProbesMin` comes from the output size (`runner.ts:139`). With `P = min(B)` and `S = min(Sw, Sh)`, both floors win when `S < 4P` and both probe terms win when `S > 4P`. A 512² output over a 512² SDF gets `eps = 1/512`, four times the probe term; over a 4096² SDF it gets `eps = 0.25/512`. Steps never shrink below half a texel, so features thinner than that can be stepped over.
 - SDF hardware merge samples the upper layer only when `exitT > endT`. The from-scratch example does not check this.
 - SDF default ray marcher uses `hitDist = sdf + bias`, so the bias shrinks obstacles (positive bias). With `erodeBiasProbes = 0`, obstacles are not shrunk.
 - A square lighting texture covering a non-square scene needs `renderAspect` set to the scene aspect (guide example: 2 for a 1024 x 512 scene).

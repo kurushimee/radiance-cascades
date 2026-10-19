@@ -13,7 +13,7 @@ The thesis measures what min/max probe placement buys over a single bilaterally 
 
 - AMD Capsaicin 1.1 on DirectX 12, HLSL compute with DXR ray queries, one thread per pixel. RTX 2070 (8 GB), 2048×1024, TAA off, timings averaged over 256 frames.
 - Scenes: a Cornell box with a ceiling light, and Sponza lit only by its sky. Reference images from a Monte Carlo path tracer; error measured with LIP (NVIDIA's FLIP tool) and SSIM.
-- Cascades run top-down. Cascade `i` uses tiles of `2^(i+1)` px, intervals `[4^i·scale, 4^(i+1)·scale]`, and 4 pre-averaged rays per texel; the top cascade reaches infinity and a miss there reads the environment. The merge is the usual `(r_n + t_n·r_f, t_n·t_f)` with binary transmittance. The value of `scale` and the direction mapping used for the results are not stated.
+- Cascades run top-down. Cascade `i` uses tiles of `2^(i+1)` px, intervals `[4^i·scale, 4^(i+1)·scale]`, and 4 pre-averaged rays per texel; the top cascade reaches infinity and a miss there reads the environment. The merge is the usual `(r_n + t_n·r_f, t_n·t_f)` with binary transmittance. A `sphere_map` function (Appendix A.1) switches between cos-θ, octahedral and equal-area octahedral mappings, and Fig. 3.2 shows the equal-area one as least skewed; the thesis does not say which produced the results, and equal-area is the likely one. `scale` is chosen with the cascade count so the merged intervals cover the scene, with no value given, and the thesis gives no scene units or sizes; the camera planes are 0.1 and 10000 and two depths count as similar within 2 linearized units. Each cascade overlaps slightly into the next one's range to limit leaks, and the Cornell capture is described as 5 cascades with C5 computed first, so the index range is ambiguous. Cascade 0 probes take 2×2 texels, and probe textures are 4096×2048, 2048×1024 and 1024×512 for one probe per pixel, per 2×2 and per 4×4 px.
 - Probes are placed from a min/max depth pyramid whose mip matches each cascade's tile size, and pushed off the surface by a depth bias: too much leaks, too little self-intersects.
 - The final gather averages each 2×2 tile of cascade 0.
 
@@ -32,6 +32,21 @@ The thesis measures what min/max probe placement buys over a single bilaterally 
 | Sponza, Min+Max | 158.85 ms | 43.02 ms | 13.34 ms |
 | Memory, Bilateral | 128 MB | 32 MB | 8 MB |
 | Memory, Min+Max | 256 MB | 64 MB | 16 MB |
+
+Image metrics (Table 4.5, read from the rendered page because the text layer garbles it), for one probe per pixel / per 2×2 / per 4×4:
+
+| Metric | Bilateral | Min+Max |
+|---|---|---|
+| Cornell LIP-HDR | 0.306 / 0.313 / 0.335 | 0.298 / 0.304 / 0.324 |
+| Cornell LIP-LDR | 0.155 / 0.157 / 0.171 | 0.15 / 0.15 / 0.161 |
+| Cornell SSIM, tone-mapped | 0.924 / 0.918 / 0.898 | 0.932 / 0.93 / 0.915 |
+| Cornell SSIM, HDR | 0.028 / 0.031 / 0.039 | 0.027 / 0.029 / 0.034 |
+| Sponza LIP-HDR | 0.661 / 0.670 / 0.687 | 0.663 / 0.676 / 0.701 |
+| Sponza LIP-LDR | 0.489 / 0.494 / 0.499 | 0.486 / 0.487 / 0.485 |
+| Sponza SSIM, tone-mapped | 0.535 / 0.526 / 0.516 | 0.536 / 0.529 / 0.519 |
+| Sponza SSIM, HDR | 0.115 / 0.117 / 0.119 | 0.114 / 0.114 / 0.113 |
+
+Memory assumes four 16-bit channels per texel without compression. Relative to Bilateral, Min+Max took 117 / 112 / 102 % of the time in the Cornell box and 116 / 116 / 114 % in Sponza (Table 4.1).
 
 - Min+Max cost 2 to 17% more time. It improved LIP-LDR error by 0.5 to 5.8% and tone-mapped SSIM by 0.2 to 1.9%, more in the Cornell box than in Sponza, and was slightly worse than Bilateral on Sponza's HDR error.
 - The visible difference is larger than the metrics: Min+Max removes the splotchy edge leaks and the worst flicker under motion, leaving softer seams between cascades.

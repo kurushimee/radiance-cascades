@@ -7,7 +7,7 @@
 | Kind | preprint |
 | Link | https://doi.org/10.5281/zenodo.21520422 |
 
-This is version 2 of the preprint (file reservoir-cascades-preprint-v2.pdf, 10 pages). The concept DOI for all versions is 10.5281/zenodo.21506521. The Zenodo record holds only this PDF, with no code files. The paper keeps the Radiance Cascades (RC) discretization, rewrites the level merge as a GRIS-style resampling step, and tests the result on three 2D scenes with a CPU oracle and a WebGPU build.
+This is version 2 of the preprint (file reservoir-cascades-preprint-v2.pdf, 10 pages). The concept DOI for all versions is 10.5281/zenodo.21506521. The Zenodo record holds only this PDF; the code is at https://github.com/ivanyou028/reservoir-cascades (MIT, read at 15b4557), described at the end of this note. The paper keeps the Radiance Cascades (RC) discretization, rewrites the level merge as a GRIS-style resampling step, and tests the result on three 2D scenes with a CPU oracle and a WebGPU build.
 
 ## Abstract (restated)
 
@@ -21,7 +21,7 @@ Reported results on canonical failure scenes, at an identical candidate-ray budg
 - Sub-bin emitters that vanilla RC loses are recovered at 93 to 101 percent of reference energy.
 - Dynamic lights adapt in about 3 frames.
 
-An equal-budget flat world-space reuse control isolates what the hierarchy contributes. Theory sections give orders and scalings under an explicit bounded-radiance hypothesis. Leading constants are labelled as measured calibrations. The paper also reports two failure modes and three negative results. A CPU oracle, whose degenerate mode reproduces vanilla RC bit-exactly, and a 120 fps WebGPU implementation are said to accompany the paper.
+An equal-budget flat world-space reuse control isolates what the hierarchy contributes. Theory sections give orders and scalings under an explicit bounded-radiance hypothesis. Leading constants are labelled as measured calibrations. The paper also reports two failure modes and three negative results. A CPU oracle, whose degenerate mode reproduces vanilla RC bit-exactly, and a 120 fps WebGPU implementation are said to accompany the paper; both are in the repository.
 
 ## 1 Introduction
 
@@ -116,7 +116,7 @@ For a child (p, b, n) whose candidate escaped its interval, the tail L_{>=n+1}(p
 - w_q = m_q * p_hat(c_q) * J_q * W_q, with p_hat(c) = lum(c) + lambda.
 - c_q and W_q are parent q's stored, already collapsed radiance and UCW.
 - J_q = r_q / r_p is the 2D reconnection Jacobian. Its kept point is y_q, and it is never hard-coded to 1. The source notes level 0 to 1 has the largest s/t.
-- lambda > 0 is a defensive floor. Its numeric value is not given in the text.
+- lambda > 0 is a defensive floor. The text gives no value; the code uses 0.05 (`core/restir.h:32`).
 - m_q is the bilinear weight beta_q, renormalized under validation.
 - The target is the luminance of p's own field. Reconnection re-anchors every parent sample to p, so all four techniques estimate the same quantity. beta_q is only a selection prior. A wrong beta costs variance, not bias.
 
@@ -124,7 +124,7 @@ The source gives the reconnection geometry as: r_p = |y - p|, r_q = |y - q|.
 
 ### Temporal reuse, re-evaluation, and revival
 
-- Reservoirs merge with their previous-frame state under a confidence cap: M_n = min(m0 * 2^n, M_max). The paper says far levels are temporally smoother ("temporal penumbra condition"). The numeric value of M_max is not given. m0 = 8 appears in Fig. 6.
+- Reservoirs merge with their previous-frame state under a confidence cap: M_n = min(m0 * 2^n, M_max). The paper says far levels are temporally smoother ("temporal penumbra condition"). The text gives no M_max; the code uses M_max = 64 and m0 = 8 (`core/restir.h:33-34`, `core/restir.cpp:559-561`), so the cap reaches 64 at level 3.
 - Each stored sample keeps an immutable as-resolved radiance c_ref and an emitter luminance e0 at its reconnection point.
 - Each frame the live value is re-evaluated as c = c_ref * lum_now(y) / e0.
 - Without re-evaluation, a luminance-proportional target keeps preferring stale bright samples. The paper measured zero response 48 frames after a light turned off.
@@ -133,8 +133,8 @@ The source gives the reconnection geometry as: r_p = |y - p|, r_q = |y - q|.
 
 ### Block-consistent interval jitter
 
-- The interval boundaries t_n are scaled by a log-uniform factor 4^(xi - 1/2), where xi is a random draw. The text does not state the range of xi, though a log-uniform factor from 4^(-1/2) to 4^(1/2) corresponds to xi uniform on [0, 1).
-- The scale is resampled every K frames. The text does not give a numeric K. The experiments use "boundary-jitter block 8".
+- The interval boundaries t_n are scaled by a log-uniform factor 4^(xi - 1/2), where xi is a random draw. The text does not state the range of xi; the code draws xi uniform on [0, 1) once per block (`core/restir.cpp:85-88`), so the level-0 split length lies in [t0/2, 2·t0).
+- The scale is resampled every K frames. The text does not give a numeric K; the code uses K = 8 (`core/restir.h:55`), matching the experiments' "boundary-jitter block 8". The WebGPU page defaults to 9999 frames, which leaves the split fixed in the browser.
 - Stored radiance bakes in the split, and mixing splits double-counts interval overlaps. Per-frame jitter was measured at 3x leak inflation.
 - Within a block the cascade is consistent. At block switches the temporal history is dropped (frame-indexed, unbiased).
 - The jitter converts the deterministic interval-boundary bands into variance that frame averaging removes. The fan-energy ratio moves from 0.91 to 1.003.
@@ -168,7 +168,7 @@ Setting candidates to bin centers, p_hat = 1, value-passing beta-weighted merges
 
 ## 5 Theory
 
-Full proofs are in supplemental theory notes that are not part of this record. The paper states the results and their dependencies.
+Full proofs are in supplemental theory notes, which are not in the Zenodo record but in the repository's `docs/theory/` (`variance.md`, `integrand-mismatch.md`, `lemma-3_2.md`, `gris-anchoring.md`). The paper states the results and their dependencies.
 
 Throughout, the scene has at most K silhouette arcs, emission is bounded by L_max (Assumption 1), and:
 
@@ -194,7 +194,7 @@ Lemma 3 (integrand mismatch; no Lipschitz term). Outside a penumbra set P' with 
 - The emitter texture never enters. Interpolation, by contrast, pays a Lipschitz term.
 - gamma = 1 for polygonal scenes. gamma = 1/2 for smooth convex obstacles, where grazing corridors force the weaker exponent.
 - The paper says eps_n is pointwise tight, since it constructs the extremal corridor. But that term contributes only O(eps_n) to the aggregate mismatch, because curvature spreads grazing directions. The supplement carries the proof.
-- K_t is not defined in the text. psi is used in the proof sketch but not defined in the text.
+- K_t and psi are not defined in the text. The supplement defines K_t as the number of transversal obstacle-boundary crossings of the circle of radius t_{n+1} (`lemma-3_2.md:433-434`), and psi_0 as a grazing-angle threshold: off the excluded set G(psi_0), |eta| <= eps_n * (2 + cot psi_0), with psi_0 = sqrt(eps_n) for smooth boundaries and any fixed psi_0 for flat ones (`integrand-mismatch.md:202-216`).
 
 Proposition 1 (coverage bias equals GRIS coverage violation). A single-bin lookup gives supp Y = Omega_b \ A, a strict subset of supp p_hat (GRIS Eq. 15). The merge is then unbiased for the wrong integral:
 
@@ -222,14 +222,14 @@ Lemma 4 (selection noise = lambda). Conditioned on the parents, E[X^2] <= mu * (
 - At lambda = 0, value-proportional RIS selection is zero-variance given its inputs. The source calls this the chromaticity bound at work.
 - The defensive floor adds at most lambda * (1 + C * eps_n) * mu variance per level.
 - The rare dark-selected-against-bright spike has probability proportional to lambda. So second moments stay small, even though almost-sure weight bounds compound with depth.
-- The symbols mu and Jbar are not defined in the main text.
+- The symbols mu and Jbar are not defined in the main text. The supplement defines mu_n = E_sel[X_n | {c_q}] = sum over q of m_q * J_q * c_q, and Jbar = sum over q of m_q * J_q <= 1 + C * eps_n (`variance.md:24-28`).
 
 Theorem 2 (depth-uniform variance non-amplification). Under arbitrary inter-parent correlation, the level-transfer factor is a* * (1 + C * eps_n)^2, with a* in [sum over q of beta_q^2, 1].
 
 - Correlation can slow convergence but cannot make it diverge.
 - Unrolling gives V_0 <= e^(6 * C * eps_0) * sum over n of iota_n. The cascade multiplies the summed per-level injections by a constant that does not depend on depth or scene scale.
 - The penumbra ratio that bounds every bias term also bounds variance compounding.
-- C and iota_n are not defined in the main text.
+- C and iota_n are not defined in the main text. In the supplement C is the absolute constant of Lemma J (J_q <= 1 + C * eps_n), and the per-level injection is written iota'_n = lambda * (1 + kappa_n) * mu_n + Var_cand,n + kappa_n * (1 + kappa_n) * Lbar^2: defensive selection noise, own-candidate noise and coefficient fluctuation (`variance.md:155-157`), with kappa = max channel / luminance <= 3.
 
 Temporal model. At stationarity, the reservoir weight follows an AR(1) recursion with coefficient cap / (1 + cap).
 
@@ -419,8 +419,8 @@ RC supplies the discretization that ReSTIR lacks. ReSTIR supplies the estimator 
 
 ## Source inconsistencies and unclear items
 
-- Bound on eps_n. Section 5 gives eps_n <= eps_0 * 2^(-n) with eps_0 = 3 * sqrt(2) * s0 / (2 * t0), about 0.53 at defaults. Section 1 and Theorem 1 give eps_n <= (4/3) * eps_0 * 2^(-n). At defaults, eps_1 = sqrt(2) * s_1 / t_1 = sqrt(2) * 2 / 4, about 0.707. That value equals (4/3) * 0.53 and exceeds 0.53. So the section 5 form does not hold at n = 0 with this eps_0. The 4/3 form is the one that matches the defaults. This check uses the source's own numbers; the paper does not state it.
-- Parameters not given numerically in the text: lambda, M_max, K (the jitter block interval), K_t, C, C_1, C_2, C_J, delta'_n, iota_n, mu, Jbar, psi, the pdf in the reservoir weight, and the gather weighting. Figure 8b's gamma is undefined.
+- Bound on eps_n. Section 5 gives eps_n <= eps_0 * 2^(-n) with eps_0 = 3 * sqrt(2) * s0 / (2 * t0), about 0.53 at defaults. Section 1 and Theorem 1 give eps_n <= (4/3) * eps_0 * 2^(-n). At defaults, eps_1 = sqrt(2) * s_1 / t_1 = sqrt(2) * 2 / 4, about 0.707. That value equals (4/3) * 0.53 and exceeds 0.53. So the section 5 form does not hold at n = 0 with this eps_0. The 4/3 form is the one that matches the defaults. This check uses the source's own numbers; the paper does not state it. The supplement states the 4/3 form (`lemma-3_2.md:36`).
+- Parameters not given numerically in the text: lambda, M_max, K (the jitter block interval), K_t, C, C_1, C_2, C_J, delta'_n, iota_n, mu, Jbar, psi, the pdf in the reservoir weight, and the gather weighting. The code and supplement give lambda, M_max and K and define K_t, C, iota, mu, Jbar and psi (above); C_1 (which depends on alpha_0), C_2, C_J and delta'_n stay order-only. Figure 8b's gamma is undefined.
 
 ## Links found
 
@@ -428,5 +428,14 @@ RC supplies the discretization that ReSTIR lacks. ReSTIR supplies the estimator 
 - Sannikov, Radiance cascades: A novel approach to calculating global illumination (2023) | github.com/Raikiri/RadianceCascadesPaper | Cited as the RC reference [13]; the link is given in the reference list. No repository for the paper's own code is given.
 - Osborne and Sannikov, Radiance cascades: A novel high-resolution formal solution for multidimensional non-LTE radiative transfer | arXiv:2408.14425 (https://arxiv.org/abs/2408.14425) | Formalized the merge operator and penumbra criterion [11]
 - Freeman et al., Holographic radiance cascades for 2D global illumination | arXiv:2505.02041 (https://arxiv.org/abs/2505.02041) | HRC, deterministic RC variant [4]
-- Majercik et al., Dynamic diffuse global illumination resampling | arXiv:2108.05263 (https://arxiv.org/abs/2108.05263) | DDGI resampling [10]
+- Majercik et al., Dynamic diffuse global illumination resampling | arXiv:2108.05263 (https://arxiv.org/abs/2108.05263) | DDGI resampling [10] ([notes](2021_majercik_ddgi_resampling.md))
 - Other references without links in the source: [1] Bitterli et al. 2020 (ReSTIR); [2] Boisse 2021 (world-space reuse); [3] Durand et al. 2005 (frequency analysis of light transport); [5] Hedstrom et al. 2026 (stochastic pairwise MIS); [6] Junkins et al. 2026 (compatibility-guided neighbor selection); [7] Kern et al. 2024 (ReSTIR FG); [8] Lin et al. 2022 (GRIS); [9] Liu et al. 2025 (reservoir splatting); [12] Ouyang et al. 2021 (ReSTIR GI); [14] Talbot et al. 2005 (importance resampling); [15] Wyman et al. 2023 (gentle introduction to ReSTIR, SIGGRAPH Courses)
+
+## Code
+
+https://github.com/ivanyou028/reservoir-cascades (MIT, read at 15b4557):
+
+- `core/` holds the estimator. `core/restir.h:6-18` describes two modes: Full (jittered candidates with merge-as-RIS in the proposal) and StochasticRC (the equal-ray value-passing baseline of Table 2). `core/vanilla.cpp` and `core/flat.cpp` are the vanilla RC and the flat world-space control.
+- `cpu-ref/` is the CPU oracle (defaults `--lambda 0.05`, `--mcap0 8`, `--bjitter-block 8`; its sweep covers xi in {0, 1/8, ..., 1}), `metrics/` the evaluation, `scenes/s1.json` to `s3.json` the three scenes, and `webgpu/` the browser build (lambda 0.05 and cap 64 in its parameter buffer, `#mcap` 8, jitter block 9999).
+- The jitter seed hashes the block index into a PCG32 (`hashCombine(seed, f/block + 0xB007)`). A separate xi, 0.5 for bin centers or uniform otherwise, is the angular offset inside a direction bin (`core/restir.cpp:102-110`).
+- The supplement's continuous form of the jitter uses a log-uniform density over [t/2, 2t] (`integrand-mismatch.md:123-128`).

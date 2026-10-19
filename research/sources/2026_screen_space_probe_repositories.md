@@ -18,7 +18,7 @@ This is the code behind [Dell'Ova's thesis](2025_dellova_rc_performance_scaling_
 - With pre-averaging on (the default), the ray generation shader traces 4 sub-rays per stored texel and averages them, so each texel side is `sqrt(rays/4)`.
 - The closest-hit shader returns only the emissive texture, so the result is one bounce from emitters. The last cascade's misses read the skybox.
 - Merge: per sub-ray, a 4-tap bilinear read of cascade `N+1`, `rgb = near.a·far.rgb`, averaged and added to the near value, in place. A depth-aware path with "bilinear 3D" weights from reconstructed world points exists but is off.
-- Final lighting reads the nearest cascade 0 probe (no interpolation) with cosine weights.
+- Final lighting reads the nearest cascade 0 probe (no interpolation), sums cosine-weighted directions and divides by the ray count with no 1/π, a quarter of Lambertian shading; the thesis's bilinear read of the coalesced buffer is a dead branch. Formats, groups and the other details are in the thesis note's "Answers from the code".
 
 ## Qirias/RC-SPWI
 

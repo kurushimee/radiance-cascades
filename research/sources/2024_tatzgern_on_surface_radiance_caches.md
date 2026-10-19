@@ -7,7 +7,7 @@
 | Venue | Proc. ACM Comput. Graph. Interact. Tech. 7(3), article 38, July 2024 (HPG) |
 | DOI | https://doi.org/10.1145/3675382 |
 
-Not RC. It stores hemispheres of radiance in texture space on the surfaces themselves, the same placement idea as the UV-space probes of [X3XfRM](2024_suslik_x3xfrm_surface_probe_rc.md), and shows what surface-bound caches gain and cost against screen probes and hash grids.
+Not RC. It stores hemispheres of radiance in texture space on the surfaces themselves, the same placement idea as the UV-space probes of [X3XfRM](2024_mathis_x3xfrm_surface_probe_rc.md), and shows what surface-bound caches gain and cost against screen probes and hash grids.
 
 ## Structure
 
@@ -60,3 +60,5 @@ RTX 3090 Ti, 1920×1080, Falcor, environment and emissive light only. In the ext
 - Foliage and fine geometry multiply allocations (Bistro is the one scene slower than GI-1.0).
 - 8×8 hemispheres lose highlights and mirror detail.
 - No transparency, translucency or volumes.
+
+The authors' HPG 2024 slides (https://highperformancegraphics.org/slides24/hpg24_oscgi.pdf) add that the predecessor (Weinrauch and Tatzgern 2023) stored only diffuse irradiance on surfaces and lost surface detail; that bad ray starts inside geometry caused artifacts until triangle IDs were decoupled at a higher resolution; that new primary entries are initialized from the adjacent mip level so mip transitions stay seamless; that glossy reflections from stochastic trilinear lookups are noisy; that one secondary entry can serve up to 20 readers; and that a single viewer needs 300 to 700 MB. The abstract claims a 5 to 10 % gain in speed and quality over the state of the art.

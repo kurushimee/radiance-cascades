@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| HDDAGI | https://github.com/godotengine/godot/pull/86267 (reduz), open since 2023-12, branch head 2024-07-11 |
+| HDDAGI | https://github.com/godotengine/godot/pull/86267 (reduz), open draft since 2023-12, branch head 2024-07-11; 77 files, +8145/−6151; it replaced #86007, closed unmerged |
 | Rebase | https://github.com/godotengine/godot/pull/119869 (OrangeeZ), open since 2026-05 |
 | Screen probes | https://github.com/godotengine/godot/pull/122999 (maidopi-usagi), draft since 2026-08 |
 | Code read | `gi.cpp`, `gi.h` and the `hddagi_*.glsl` shaders at the #86267 head; the screen-probe, SVGF, irradiance-cache and Hi-Z shaders at the #122999 head |
@@ -26,7 +26,7 @@ HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades tr
   - per-face albedo and emission at half resolution, and 6 axis-facing bits plus 26 normal-bin bits per cell.
 - Only empty cells next to a solid face are lit. They go in a process list of 16-byte entries: position (7 bits per axis), RGB565 albedo with an 8+8 octahedral normal, RGBE emission, and 8 four-bit probe occlusion weights. Capacity is `128·64·128·solid_cell_ratio` (default 0.5); extra entries are dropped.
 - Cascades follow the camera in steps of one 8-cell region and never copy data: addresses wrap with a mask, and only the newly uncovered slabs are revoxelized. A move of a whole cascade, or a dirty volume over half the cascade, rebuilds it. SDFGI regenerated its whole field on camera motion, which is where the claimed order-of-magnitude faster updates come from.
-- Voxelization runs in the forward scene shader, which writes solid bits with `imageStore` (per a reviewer; that file was not read).
+- Voxelization runs in the forward scene shader's `MODE_RENDER_SDF` block (`scene_forward_clustered.glsl:2224` at the #86267 head). It takes the geometric normal from `dFdx`/`dFdy` of the position, maps the fragment to a cell (`sdf_offset + local_pos·sdf_size`), and sets normal bits: bits 0 to 5 for the axis directions with `dot > 0.001`, bits 6 to 31 for the 26 bin directions with `dot > 0.7`. It ORs them atomically into the `r32ui` image `geom_normal_bits` (set 1, binding 27) and also writes albedo per axis sign (6 layers) and RGBE emission at half resolution (`igrid_pos >> 1`). The comments say "solid bits" and a "Compute solid bits" heading has no code under it: solidity is derived later, when `hddagi_preprocess.glsl` counts any nonzero normal word as solid and sets the region bits. The MoltenVK branch does a non-atomic load and store with `bit_ofs`, a name defined in neither the shader nor its include, so that branch would not compile.
 
 ## Hierarchical DDA
 
@@ -69,7 +69,7 @@ pos += mix(adv_t, adv_box, equal(ivec3(t), tv));
 ## Occlusion and leaks
 
 - Occlusion between cells and their 8 surrounding probes is found by propagating a wavefront from each probe corner across its 8³ block (22 steps), with solid-cell bias and back-face darkening, stored as 4-bit weights.
-- reduz's account of the remaining leaks: walls one voxel thick are sealed in the voxels, but a normal-based bias that moves lookups out of solid cells does not clear the outside probe's reach at corners. His proposed fixes were thicker walls, denser probes, or a depth- and normal-aware blur sized to one voxel on screen.
+- reduz's account of the remaining leaks: walls one voxel thick are sealed in the voxels, but a normal-based bias that moves lookups out of solid cells does not clear the outside probe's reach at corners. reduz's proposed fixes were thicker walls, denser probes, or a depth- and normal-aware blur sized to one voxel on screen.
 - In #122999 the leaks at the default 0.2 cell size were gone at 0.03 with 5 cascades, or with the cascades pushed 0.3 forward of the camera; the cause given is voxels jumping to the third cascade at short range.
 - Other reported problems: dark splotches that need an occlusion bias, artifacts on normal-mapped terrain and curved or overlapping geometry ("the main problem with DDGI", reduz), visible cascade shifts while moving, light popping, and blocky reflections.
 
@@ -96,4 +96,4 @@ The draft adds Lumen-style screen probes that trace through Hi-Z first and then 
 - **Detail trace:** before HDDA, a Hi-Z march (2×2 max-depth pyramid, 48, 32 or 16 iterations) out to 2 units for diffuse and 50 for specular. A hit reads the lit screen color, so visible dynamic objects occlude and bounce light. It costs extra on low-end GPUs; probe jitter alone handles corners without it.
 - **Irradiance cache:** first-order `[1, n]` moments per entry with a 16-sample history. It flickers and is left off.
 - **Problems:** noisy and laggy screen-probe reflections, unstable light in hard-to-sample spots, and pixelated dark areas near corners and thin plates from over-occluding coarse voxels.
-- Dynamic objects were prototyped in a fork with an object-level voxel cache at about 20% overhead; they flickered and leaked light from distant dynamic emitters.
+- Dynamic objects were prototyped in a fork with an object-level voxel cache at about 20% overhead; they flickered and leaked light from distant dynamic emitters. In maidopi-usagi's words (#122999, 2026-09-08), rigid mesh instances with an "object level cache" toggle keep their own voxel cache, traced between the screen trace and the global trace, with extra storage. Their `dynamic_gi_hw` branch (34 commits ahead of master) has the commits "Add object-local HDDAGI caches for rigid geometry" and "Improve rigid HDDAGI cache controls and lighting stability" and `hddagi_rigid*` files; that it is the measured prototype is inferred from names and dates. David-Zuloyan reports dynamic-object support on #119869 as "heavy", with no figure (fork branches `hddagi-4.7` and `pr-119869`).

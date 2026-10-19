@@ -1,10 +1,10 @@
 # Godot 2D radiance cascades repositories
 
-Four public Godot projects implement or attempt 2D RC. They matter here for how they connect compute shaders to Godot and for a few techniques: Suslik's merge variants and interval fades, and a scene mip pyramid that makes long intervals cheap.
+Seven public Godot projects implement or attempt 2D RC. They matter here for how they connect compute shaders to Godot and for a few techniques: Suslik's merge variants and interval fades, and a scene mip pyramid that makes long intervals cheap.
 
 | Repository | Godot | Last commit | State |
 |---|---|---|---|
-| https://github.com/Sohojoe/radiance-cascades-godot | 4.3 | 2024-08-04 | Working 2D RC, three variants (Apache 2.0) |
+| https://github.com/Sohojoe/radiance-cascades-godot | 4.3 | 2024-08-04 | Working 2D RC, four project folders plus a branch (Apache 2.0) |
 | https://github.com/thmasn/Godot-RadianceCascades | 4.2 | 2024-07-30 | Working port of Suslik's Shadertoy with canvas shaders |
 | https://github.com/knowdawg/ProcPixelTexturing | 4.7 | 2026-08-29 | Working RC inside a pixel-art sandbox addon |
 | https://github.com/TheCubeOfFire/radiance-cascades-godot | 4.3 | 2025-03-04 | 3D SDF box ray marcher; no RC code yet |
@@ -40,6 +40,13 @@ A port of Yaazarai's direction-first, pre-averaged layout (see [2024_yaazarai_gm
 - One dispatch per cascade from top to bottom, two ping-pong cascade textures. The merge reads one texel of cascade `i+1` at `clamp(probe·0.5 + 0.25, 1, size − 1)` with `imageLoad`, so it is nearest-neighbor, even though a comment says hardware interpolation.
 - Colors are linearized with `pow(c, 2.2)` on hit and re-encoded on cascade 0.
 - Memory at quality 0.5 and 1280×736: each RGBA32F cascade texture is 2560×1472, about 60 MB.
+
+The README calls this variant the most performant and cleanest. The repository's `main` branch holds three more Godot 4.3 project folders, and a second branch holds a fifth:
+
+- `jason-today-gi-pt1` is jason.today's part 1, a prequel to RC with no cascades: a jump flood distance field, then sphere tracing with a sun and noise (32 rays and 32 steps for the field march, 8 rays and 256 steps for the plain march, sun angle 4.2).
+- `shadertoy-port-suslik` is the port described below.
+- `try-mix-jason-and-shadertoy` (not listed in the README) feeds jason.today's distance field into fad's cascade and image passes, six cascades at 1024×1024 with `MERGE_FIX 4`. Its README says it "kinda works but performance is not great".
+- The `shadertoy-fad` branch ports fad's mtlBzX (`c_dRes` 16, 5 cascades); its last commit is a work in progress, "almost working with square view space".
 
 ## Ports of Suslik's Shadertoys
 

@@ -24,6 +24,10 @@ Four Unity projects and one Game Boy Advance port, all plain 2D RC except one HR
 
 Two texture-array slices hold vertical and horizontal plane stacks. Ray vectors are integer pixel steps `(2^L, 2^L − 4g)`, so rays end on upper probes. Each stripe mixes its two rays by angle. Even probes average two upper samples (at the probe and at the end of the doubled ray), odd probes take one. The top level does nothing and the sky is never called. The stripe index can exceed the stripe count when the width is not divisible by `2^L`.
 
+- Targets are screen-sized, not powers of two, and the volume defaults to 9 cascades. Each level dispatches both plane orientations; a level has `2^L` blocks with planes `2^L` px apart, two rays per block, and rays on even plane coordinates are twice as long. The march takes at most 32 steps on the distance field and hits below 1 px.
+- The jump flood runs `ceil(ln(max(W, H)))` passes, a natural logarithm: 8 passes at 1920 px, ending at a step of about 7.5 px instead of 1 px, so distances near seeds are approximate (a base-2 count would give 11).
+- Cone weights are `angle(r1, mid)/angle(r1, r2)` with `mid` normalized from unnormalized integer vectors, so both come out near 0.5 instead of following each cone's angular span. The final pass averages the vertical and horizontal results equally; the sky function and its uploaded color are never used.
+
 ## ZY4N
 
 - The camera image is the scene: RGB is emission and alpha is opacity. Rays march fixed steps with `rgb += T·c; T *= 1 − a`, no distance field.
@@ -40,4 +44,4 @@ Probes `2^(L+1)` texels wide with one direction per texel, intervals `[(4^L − 
 
 80×80 pixels, three levels with 4, 16 and 64 directions, intervals `[4^L − 1, 4^(L+1) − 1]` px, 16-bit texels of 8-bit light and 8-bit visibility, ray-box tests in 8.8 fixed point. It shows the method's structure with the bare minimum of state.
 
-Other 2D repositories found but not read: Hybrid46 (C# with Raylib, a port of the Youssef-Afella code), GiGGioSo, qJay44, tsukinousagi18, ReneeR33.
+Other 2D repositories: Hybrid46 (C# with Raylib, a port of the Youssef-Afella code), qJay44 and tsukinousagi18 are described in [2026_assorted_2d_rc_experiments.md](2026_assorted_2d_rc_experiments.md), and GiGGioSo in [2026_rc_repository_survey.md](2026_rc_repository_survey.md). ReneeR33's repository is 3D volume rendering, in [2026_gigi_and_volume_rc_repositories.md](2026_gigi_and_volume_rc_repositories.md).

@@ -560,7 +560,7 @@ Unclear in source:
 - Coppen, M. (2024). The Fundamental Observation of Radiance Cascades | https://m4xc.dev/articles/fundamental-rc/ | Source of the angular bound Δω < w/Δ.
 - MGCHEE, J. (2024). Building a Real-Time Global Illumination | https://jason.today/gi | 2D RC and JFA ray marching that the thesis follows.
 - Cigolle, Z. H., et al. (2014). A Survey of Efficient Representations for Independent Unit Vectors. JCGT 3(2) | http://jcgt.org/published/0003/02/01/ | Octahedral mapping reference.
-- Gjoel, M. (2021). Depth Aware Upscaling | https://gist.github.com/pixelmager/a4364ea18305ed5ca707d89ddc5f8743 | Bilateral depth-aware upscaling used in Algorithms 7 and 11.
+- Gjoel, M. (2021). Depth Aware Upscaling | https://gist.github.com/pixelmager/a4364ea18305ed5ca707d89ddc5f8743 | Bilateral depth-aware upscaling used in Algorithms 7 and 11. The gist is by GitHub user pixelmager and names no author ([notes](2021_pixelmager_depth_aware_upscaling.md)).
 - Sannikov, A. (2024). Novel Depth Aware Upscaling | https://www.shadertoy.com/view/4XXSWS | Bilinear 3D method used for cascade merging.
 - Alex and Xor (2024). GM Shaders Guest: Radiance Cascades 2 | https://mini.gmshaders.com/p/radiance-cascades2 | Pre-averaging proposal.
 - Dabrovic, M. (2002). Sponza Atrium | https://casual-effects.com/data/ | Test scene.

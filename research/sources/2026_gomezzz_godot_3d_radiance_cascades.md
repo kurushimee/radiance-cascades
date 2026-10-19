@@ -36,7 +36,9 @@ Repository root (downloaded, text):
 - `docs/implementation.md` (16675 bytes). Cascade layout, memory, BVH format, merge and resolve description, approximations, extension points.
 - `docs/validation.md` (26011 bytes). Dated verification and performance records, test counts, known warnings.
 
-Coverage: the addon files, README, docs, TODO, `project.godot`, `classic_example.gd` and `reactor_hall.gd` were read in full. `test_mesh.gd` was read in part. The other scripts, the other test files and the metro shaders were checked by function names and RC API grep, and the metro shaders by their opening lines only. Their roles above come from those checks and from the docs.
+Coverage: the addon files, README, docs, TODO, `project.godot`, `classic_example.gd` and `reactor_hall.gd` were read in full. `test_mesh.gd`, `metro_station.gd`'s RC setup and the eight metro shaders were read as well. The other scripts and test files were checked by function names and RC API grep; their roles above come from those checks and from the docs.
+- `tests/test_mesh.gd` checks GPU triangle traversal against Godot's CPU triangle intersection on four indexed cylinders and a non-indexed surface. It asserts more than 100 triangles and 12 BVH nodes, shader compilation, emission reaching the cascade radiance (max above 0.1), reference rays hitting geometry, triangle extraction keeping every face, a BVH that survives glTF export and import, 72,012 triangles in the full hall, and material restoration when the controller is removed (`:54-234`). It renders nothing and measures no lighting error.
+- The metro shaders (display, ember, flame, focus, postfx, reflection, steam, steam_volume) are effects only; none references RC.
 
 ## Godot integration
 
@@ -123,7 +125,7 @@ Each update runs the following inside one `compute_list_begin()` / `compute_list
    - Dispatch: `ceil(9216 * 6 / 64) = 864` groups in x.
    - Bindings: 0 scene SSBO (declared, not used by the body); 1 level-0 buffer (read); 2 output atlas (`rgba16f` image, write); 3 history atlas (`rgba16f` image, read); 4 and 5 mesh buffers; 6 sampler plus history.
    - Each thread is one (probe, face). Output is written into the atlas, then mixed with history using `temporal_blend`.
-   - The copy is recorded after `compute_list_end()`. The code adds no explicit barrier before it.
+   - The copy is recorded after `compute_list_end()`. The code adds no explicit barrier before it, and none is needed: the render graph orders separate lists and copies that touch the same resource, and `compute_list_add_barrier` is only required between dispatches inside one list, which the code does after every level ([docs/rendering_device.md](../../docs/rendering_device.md)).
 3. **History copy**: `rd.texture_copy(output, history, ...)` for the full 144 x 384 atlas. This is the feedback step for the next update.
 4. **Debug pass** (only when `debug_enabled`). `update_debug()` runs in the same render callback, after the copy. It lazily creates `debug.glslinc`, its 256 x 640 RGBA16F output, and its uniform set. Dispatch is 32 x 80 groups of 8 x 8 threads. It reads the five level buffers directly, with no CPU readback.
 

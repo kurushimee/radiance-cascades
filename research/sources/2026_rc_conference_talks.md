@@ -4,8 +4,8 @@ Three recorded talks besides [ExileCon 2023](2023_sannikov_exilecon_rendering_po
 
 | Talk | Speaker | Event | Link |
 |---|---|---|---|
-| The Evolution of Real-Time Global Illumination in Love and Deepspace | Tianlong Ruan (Infold Games) | GDC 2026, Arm partner summit | https://www.youtube.com/watch?v=H49TUZY1pL0, https://gdcvault.com/play/1035619/The-Evolution-of-Real-Time |
-| Student showcase, RC segment (about 38:00 to 46:00) | Max, a BUas student (the talk points to his RC fundamentals article, so likely Max Coppen) | Graphics Programming Conference 2024 | https://www.youtube.com/watch?v=MONs5wMy6Rw |
+| The Evolution of Real-Time Global Illumination in Love and Deepspace | Tianlong Ruan (Infold Games) | GDC 2026, Arm partner summit | https://www.youtube.com/watch?v=H49TUZY1pL0, https://gdcvault.com/play/1035619/The-Evolution-of-Real-Time, https://www.bilibili.com/video/BV1gAdBBcE9B (re-upload with machine-translated Chinese subtitles) |
+| Student showcase, RC segment (about 38:00 to 46:00) | Max, a BUas student (the talk points to the student's RC fundamentals article, so likely Max Coppen) | Graphics Programming Conference 2024 | https://www.youtube.com/watch?v=MONs5wMy6Rw |
 | Realtime Global Illumination in Enshrouded | Jacob, Keen Games | Graphics Programming Conference 2024 | https://www.youtube.com/watch?v=57F1ezwH7Mk |
 
 ## Love and Deepspace: surfel RC on mobile
@@ -68,5 +68,5 @@ Not RC, but a shipped world-space probe system with cascaded grids, SDF tracing 
 ## Other videos checked
 
 - Paul Stus, "Presentation of my Radiance Cascades project" (https://www.youtube.com/watch?v=ZJ5NmYEwlKQ, 2026-02): a 2D canvas project, about 78 fps without GI and 37 fps with it on unstated hardware.
-- Blackline Interactive, "Real-Time Radiance Cascades Global Illumination 3D" (https://www.youtube.com/watch?v=TTI1QoHlCHE) and "Radiance Cascades Global Illumination - without TAA, SSGI, DDGI..." (https://www.youtube.com/watch?v=-fBe0ZIu39Q), 2026-09 and 2026-10: custom-engine demos without captions or details.
+- Blackline Interactive, "Real-Time Radiance Cascades Global Illumination 3D" (https://www.youtube.com/watch?v=TTI1QoHlCHE) and "Radiance Cascades Global Illumination - without TAA, SSGI, DDGI..." (https://www.youtube.com/watch?v=-fBe0ZIu39Q), 2026-10-03 (17:32) and 2026-09-12 (20:00): custom-engine demos without captions. The descriptions call the work real-time GI on Sannikov's RC approach with the author's own 3D architecture, experimental and not game-ready, aiming for zero light leaks and stable performance on older GPUs, and claim no TAA, SSGI, DDGI, voxels, lightmaps or denoising, "0 ms temporal latency" with no temporal accumulation or ghosting, FXAA 3, native resolution with no upscaling, and near path-traced quality. Scenes are Sponza (also with 4K textures and about 5.7M triangles), Amazon Bistro and a Cornell box; hardware is a 2019 16-inch MacBook Pro with a Radeon Pro 5500M (8 GB, 50 W) at Full HD and 2K, on Metal, with C++ and OpenGL in the hashtags. The code is unreleased, and no timings in ms, probe layout or engine name are given. These are the author's claims; nothing shown verifies them.
 - Daniel Wright's SIGGRAPH 2021 radiance caching talk and SEED's surfel GI talk are not RC.

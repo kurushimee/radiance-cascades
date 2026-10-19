@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | Author | Mikhail Gerassimov (Kazakh-British Technical University, Almaty) |
-| Date | 2026, DiGRA CA 2026 proceedings (exact day unclear in source) |
+| Date | 2026-04-18, DiGRA CA 2026 proceedings (https://doi.org/10.26503/dl.v2026i2.2775) |
 | Kind | Conference paper |
 | Link | https://dl.digra.org/index.php/dl/article/view/2775 ; data https://github.com/Zertass-2-0/Radiance-Cascades-Compared-to-Unity-s-Standard-Global-Illumination-Methods |
 
@@ -63,6 +63,7 @@ The paper compares three real-time global illumination (GI) methods in Unity's U
 | RC | "Recently proposed" technique. The paper gives no algorithm steps, formulas, parameters, probe layout, cascade count, or data layout. Implementation not named. |
 
 - The paper does not describe the RC implementation at all. Unclear in source for every RC parameter.
+- The data repository (read at 52c7393, MIT) adds nothing here: it holds no RC code, package name or settings, and no SSGI or RTLM settings are given anywhere. The paper says only that GI solutions "are currently not freely available for URP environments" and that free, openly available methods were tested. The DiGRA landing page lists no data link; the repository URL is printed in the PDF.
 
 ## Results: performance
 
@@ -88,6 +89,7 @@ Steady-state values use frames with time_sec >= 5 s. Each cell is one run; each 
 | Stylized | SSGI | 144.1 | 144.1 | 13.2 | 6.94 | 0.61 |
 
 - NoGI is a no-GI baseline. It appears only in the charts and the CSVs. The paper's text never mentions it.
+- The CSVs (`gi_run_{NoGI,SSGI,RTLM,RC}_2026-02-19_*.csv` in each scene folder, with an xlsx summary and Unity analytics files) have the header `time_sec,ms_per_frame,fps,gi_mode` but write decimals with commas, so a row has more fields than the header and needs a locale-aware parse. Each RC run has about 288 rows.
 
 ## Visual artifacts (paper text)
 
@@ -138,6 +140,6 @@ Recommendations:
 - Future work, as stated: HDRP, custom GI implementations, more hardware tiers, controlled user studies, and hybrid GI pipelines combining several techniques.
 
 Related work the paper cites:
-- Lambru et al. 2021 reviewed GI techniques in game engines. The paper says that study predates current URP pipelines.
+- Lambru et al. 2021 reviewed GI techniques in game engines. The paper says that study predates current URP pipelines. The study is Lambru, Morar, Moldoveanu, Asavei and Moldoveanu, "Comparative Analysis of Real-Time Global Illumination Techniques in Current Game Engines", IEEE Access 9 (2021) 125158-125183, DOI 10.1109/ACCESS.2021.3109663; its abstract says it describes several classes of real-time GI used in current engines together with the authors' own implementations. It is open access and described in [2021_lambru_realtime_gi_game_engines_comparison.md](2021_lambru_realtime_gi_game_engines_comparison.md).
 - Kung 2025 compares RC with voxel cone tracing. The paper notes that voxel GI implementations are not freely available for URP.
 - Abou and Jensen 2025 covers screen-space GI with radiance cascades in 3D games. The paper uses it for SSGI behavior.

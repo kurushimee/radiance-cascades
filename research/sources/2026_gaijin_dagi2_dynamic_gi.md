@@ -113,6 +113,17 @@ Not RC. daGI2 is the dynamic GI of Gaijin's engine, and all of its C++ and shade
 
 ## daGI v1 in Enlisted (2019)
 
+The talk page names the speaker Anton Yudintsev and has no public slides (members-only on GDC Vault); the Enlisted write-up is the readable source, and its formulas are images. What it adds beyond the summary below:
+
+- The three irradiance levels cover 1/8, 1/4 and all of a camera-centered box with the same texel count, so texel size doubles per level, and all live in one volume atlas. Ambient cubes sit in three hardware-filtered volume textures because a lit pixel never needs both the positive and negative direction of an axis. Texture dimensions are not given.
+- The scene clipmap's nested grids share their texture size and hold only already-lit voxels, with colour and opacity.
+- Cells are picked stochastically with a probability set from how many cells passed in the previous frame. Queue A holds cells that intersect the scene (512 to 1024), A' the never-updated ones among them, processed first, and queue B (64 to 128) cells that touch no geometry, which still light dynamic and transparent objects. One compute pass fills the queues and an indirect dispatch relights them. New fine cells start from the coarser level; the coarsest starts in a "new" state lit by a few rays.
+- Tracing is Monte Carlo through the voxel grid, one thread group per cell and one thread per ray with a parallel reduction, accumulated over time with a weight from the cell's age; "thousands of rays" per scene, no per-cell count. Voxel cone tracing was rejected because it reports thin obstacles as partial occluders (Fig. 3).
+- New scene voxels can be filled from heightmaps, cascaded shadow maps, GPU-voxelized collision or low-LOD models, which mostly helps opacity and so bleeding; static scenes need no removal, and changed regions are invalidated.
+- Diffuse shading samples the finest available level, blended toward the next to hide seams. Glossy reflections and eye-ray hits come from the voxel scene with parallax correction (Lagarde and Zanuttini 2012); hardware ray tracing could improve the voxel casts while voxels keep supplying radiance.
+- Memory: irradiance 13.5 MB, scene 16.5 MB (33 MB at higher quality), temporal buffers under 1 MB, about 31 MB in all; the text gives 32 to 62 MB overall. Costs: movement 0.1 to 1 ms spread over 8 to 16 frames (about 0.1 ms), scene feedback about 0.02 ms, irradiance update 1.2 ms (async or optional), extra lighting at 1080p 0.3 ms.
+- Limits: bleeding where fill data or opacity is missing, over-dark ground under foliage, no glossy from the irradiance map, dynamic objects excluded from voxel updates, and a camera-centered extent.
+
 - The scene was a nested clipmap of lit voxels, filled from random G-buffer pixels each frame, as in daGI2. New voxels were seeded from heightmaps, shadows or collision to reduce bleeding.
 - Irradiance lived in 3 nested cascades of ambient cubes (6 directions in 3 textures, for hardware trilinear). Cells were picked at random by age after frustum and HZB culling, in two queues: 512 to 1024 cells touching geometry, zero-age ones first, and 64 to 128 in open air. Each cell was one thread group with one thread per ray, and new cells started from the coarser cascade.
 - "Convex offset filtering" moved samples off the border of the convex volume to stop leaks. Sparse foliage over-darkened the ground; the fixes were skipping its pixels or storing opacity.

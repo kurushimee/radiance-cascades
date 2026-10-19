@@ -23,7 +23,7 @@ Runs after post-processing reaches "before DOF", on the pre-DOF scene color, dep
 
 ## Unreal: world-space Split RC
 
-Follows [Split RC](2026_freeman_split_radiance_cascades.md) and the chandra code (a source comment names it). It plugs into Unreal's `RenderDiffuseIndirectLight` GI plugin delegate.
+Follows [Split RC](2026_freeman_split_radiance_cascades.md) and the chandra code, described in [2026_split_rc_implementations.md](2026_split_rc_implementations.md). A comment in the plugin's hash table calls chandra "the paper's implementation" and says its hashing stays stable with multiple bounces, while the plugin's simpler hash is "fine for now". It plugs into Unreal's `RenderDiffuseIndirectLight` GI plugin delegate.
 
 - Probe hash per cascade, 131072 cascade 0 slots, table 4× larger; 62-bit keys with 19 bits per axis and 4 LOD bits; probe size `BaseVoxelSize·2^level`, cascade `c` cell `>> c`.
 - LOD from Chebyshev distance with `LevelBaseDist`, blended across two levels like chandra.
@@ -42,3 +42,17 @@ Follows [Split RC](2026_freeman_split_radiance_cascades.md) and the chandra code
 - Merge blends the min and max halves of the upper cascade by where the lower probe's depth falls between the upper min and max. A fixed factor `0.25/2^L` scales the upper value, which the author describes as a `1/rayCount` term, not a derived one.
 - Cascade 0 is projected onto L1 spherical harmonics per probe at quarter resolution and upsampled bilaterally against the min/max depth.
 - The README and issues call the mode unstable under camera motion; the min/max probe pair is what made it the most stable of the three.
+- Details from the code: probe centers sit at `(i + 1)/(count + 1)` in UV, the min/max depth comes from mip `L + 2`, probes beyond linear depth 500 are skipped, and a ray marches `4·(end − start)` steps with a fixed 3.0 thickness (`linearDepth < rayDepth < linearDepth + 3`). The upper cascade is read bilaterally with a Chebyshev variance test on the smoothed depth (mip `L + 3`). The SH output is 1024×512. The intervals in use are `(0,1), (1,2), (2,4), …, (16,32)`, and a ×4 table is defined but unused. The README's open TODO is the depth-guided upsampling.
+
+All three modes share the merge `rgb += upper.rgb·a; a *= upper.a`, where a hit writes alpha 0 and a miss alpha 1; a shared table also defines ×4 intervals `(4^L − 1)/3` to `(4^(L+1) − 1)/3`. The README says the project tries "to generalize [RC] for 3D". No mode has timings.
+
+## Unity: 2D screen probes
+
+Every cascade is a 512×288 texture, with directions at `(i + 0.5)·2π/P²` growing ×4 per level and ray length scaled by the buffer size. A hit is a raw depth compare. Each texel pre-averages its 4 nearest angles, and spatial weights are 0.25 and 0.75. The merge skips texels whose alpha is below 0.5 and runs top-down. The combine pass interpolates probes bilinearly and multiplies by the G-buffer albedo with additive blending.
+
+## Unity: cube-map probes
+
+Five cascades in one 512×384 ARGBHalf atlas, each probe a 2×3 grid of cube faces. Probes sit on the depth-buffer surface at probe centers, pushed 0.01 along the view ray. Directions are `((i + 1)/(P + 1) − 0.5)·π/2` on both face axes, rotated by a per-face basis. The only dispatched trace marches in clip space against the depth buffer. The merge averages 2×2 upper directions and interpolates bilinearly.
+
+- A 128³ ARGB32 voxel volume over ±10 units around the camera is built every frame (albedo times `N·L` and shadow, plus emission, with the last write winning) and bound, but the voxel trace kernel is never dispatched, and the compute voxelizer returns before its dispatch. So the mode is screen-space only, despite the volume.
+- Found by reading: the right and top voxelization projections are gated on the device lacking geometry shaders, which the shader does not use; the combine pass picks the face from `normalWS.y` where `normalWS.z` looks intended; under the matrix convention used, three face bases appear to map to −X.

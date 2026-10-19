@@ -302,8 +302,8 @@ Derived: total bytes = diameter^3 * 192, and slice bytes = diameter^2 * 192.
 ## Links found
 
 - Paper (linked as "paper") | https://drive.google.com/file/d/1L6v1_7HY2X-LV3Ofb6oyTIxgEaP4LOI6/view?usp=sharing | Paper linked from the page. Not fetched.
-- Demo video (linked as "demo") | https://www.youtube.com/watch?v=xkJ6i2N32Pc | Video linked from the page. Not fetched.
-- Exilecon talk | https://www.youtube.com/watch?v=B-ODrtmtpzM | Talk linked from the page. Not fetched.
+- Demo video (linked as "demo") | https://www.youtube.com/watch?v=xkJ6i2N32Pc | Video linked from the page: "Radiance Cascades Rendered Directly" ([notes](2022_sannikov_youtube_rc_videos.md#radiance-cascades-rendered-directly-2023)).
+- Exilecon talk | https://www.youtube.com/watch?v=B-ODrtmtpzM | Talk linked from the page. The video is private; the public ExileCon 2019 renderer talk is https://youtu.be/whyJzrVEgVc ([notes](2019_sannikov_poe_gi_talks.md)).
 - Radiance Cascades, Shadertoy by fad | https://www.shadertoy.com/view/mtlBzX | 2D implementation. The page says it has temporal latency because of Shadertoy limits.
 - Radiance Cascades 2d Smooth WIP, Shadertoy by Suslik | https://www.shadertoy.com/view/mlSfRD | Fork of fad's work. The page calls it work in progress.
 - Radiance Cascades, GM Shader Tuts by Yaazarai | https://mini.gmshaders.com/p/radiance-cascades | Written introduction linked from the page.

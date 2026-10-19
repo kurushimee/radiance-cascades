@@ -1,6 +1,6 @@
 # Surface-probe 3D RC (Shadertoy X3XfRM) and a 2.5D screen-space attempt
 
-The Shadertoy "Radiance Cascades 3D" (X3XfRM, attributed to Suslik, November 2024) places probes on the scene's surfaces in UV space, so each surface is a 2D probe grid with hemisphere directions, and the problem keeps the surface memory scaling (`N·M0`). Shadertoy is behind a bot check, so these notes come from a Rust and wgpu port that keeps the original GLSL in `reference/shadertoy/`.
+The Shadertoy "Radiance Cascades 3D" (X3XfRM, by Mathis, 2024-11-02; the community wiki credits Suslik, but the Shadertoy page names Mathis) places probes on the scene's surfaces in UV space, so each surface is a 2D probe grid with hemisphere directions, and the problem keeps the surface memory scaling (`N·M0`). Shadertoy is behind a bot check, so these notes come from a Rust and wgpu port that keeps the original GLSL in `reference/shadertoy/`.
 
 | | |
 |---|---|
@@ -35,7 +35,7 @@ Each ray is cross-faded into its parent by hit distance instead of being composi
 
 - `l = 1 − clamp((t_hit − minDist) / maxInterval, 0, 1)` and `result = radiance·l + parent·(1 − l)`, with `minDist = maxInterval = 1.5·P/256` (cascade 0 starts at 0 with double the length). Rays that hit within the cascade's range keep their own value; rays that miss hand over smoothly to the parent.
 - The parent value blends four parent probes bilinearly. For each, the parent direction pointing at the child is chosen and its stored hit distance is read. The parent counts only if it missed or if the child lies closer than that hit distance plus 0.01 (scaled by `cos(π/2 − θ)`). Hidden parents get zero weight, and the sum is divided by `max(0.01, weight)`.
-- The original merges from the previous frame's parent cascade, because Shadertoy runs each buffer once per frame. Its header lists the resulting flicker and light lag, light leaking from naive bilinear fetches at the smallest probes, static probe positions and no complex BRDFs. The port merges top-down within one frame, which removes the lag.
+- The original merges from the previous frame's parent cascade, because Shadertoy runs each buffer once per frame. Its header lists the resulting flicker and light lag, light leaking from naive bilinear fetches at the smallest probes, static probe positions and no complex BRDFs. For the last two it suggests moving probes with the scene, as DDGI does, and importance-sampling both ray directions and probe positions from screen-space BRDF changes so that high-frequency detail is not blurred away. The port merges top-down within one frame, which removes the lag.
 
 ## Final gather
 

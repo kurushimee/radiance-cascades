@@ -393,6 +393,41 @@ Lightmap captures and lightmaps contribute through separate code paths (lines 18
 - `RenderingServer.voxel_gi_allocate_data` lets a script supply VoxelGI volume data. That data reaches the opaque shader through the same `rbgi` path (D.5).
 - CompositorEffect callbacks can read the opaque result at POST_OPAQUE and write color afterwards (section C, and the compositor tutorial). That is post-process composition, not lighting input.
 
+## E. Volumetric fog
+
+From one source read; the grid size formula, slice distribution, defaults, the call order of `process_gi` and `_update_volumetric_fog`, and the GI reads in the fog shader were rechecked at the tag. Files: servers/rendering/renderer_rd/environment/fog.cpp and fog.h, servers/rendering/renderer_rd/shaders/environment/volumetric_fog_process.glsl (here "glsl"), render_forward_clustered.cpp (RFC), scene/resources/environment.h.
+
+### E.1 Grid and formats
+
+- Project settings `rendering/environment/volumetric_fog/volume_size` = 64, `volume_depth` = 64, `use_filter` = 1 (servers/rendering/rendering_server.cpp:3798-3800).
+- The froxel grid is corrected for aspect: `ratio = w / ((w + h)/2)`, width `size·ratio`, height `size/ratio` (RFC:1331-1334). At 1920×1080 this is 81 × 50 × 64 froxels (derived).
+- `light_density_map`, `prev_light_density_map` and `fog_map` are RGBA16F 3D textures (fog.cpp:469-488). `density_map`, `light_map` and `emissive_map` are R32_UINT 3D atomic accumulators where image atomics exist, otherwise storage buffers of 4 bytes per voxel (fog.cpp:490-511). All are made with `texture_create`.
+- Slice depth is `length·((z + 0.5)/depth)^detail_spread` (glsl:224-228, 319; inverse on the CPU at fog.cpp:560). Defaults: `volumetric_fog_length` 64, `volumetric_fog_detail_spread` 2.0 (environment.h:209-210), so the middle slice sits at about 16.5 m (derived). The docs say a higher value "compresses the froxels closer to the camera" (docs, "Volumetric fog and fog volumes").
+
+### E.2 Passes
+
+1. FogVolume materials write density, albedo and emission into the R32 accumulators (fog.cpp:630-659, 666-790).
+2. The density pass, in 4×4×4 workgroups, computes per froxel the direct light, the ambient and GI terms, and the temporal reprojection, and writes `light_density_map` (glsl:11-14, 298-370).
+3. An optional copy into `prev_light_density_map` (fog.cpp:889-907, 1187-1192).
+4. An optional separable 7-tap Gaussian, x then y (glsl:864-878).
+5. The integrate pass, 8×8×1 over the screen, accumulates front to back along depth with Beer-Lambert and writes `fog_map` (glsl:826-860).
+
+### E.3 Temporal reprojection
+
+`volumetric_fog_temporal_reprojection_enabled` defaults to true and `_amount` to 0.9, range 0.5 to 0.99 (environment.h:214-215; environment.cpp:1576). It blends the per-froxel in-scattered light and density with last frame's `prev_light_density_map` through reprojection (glsl:329-358, final mix near 803-811), not the integrated `fog_map`. When reprojection succeeds, the froxel center is jittered by a 16-entry Halton table (`MAX_TEMPORAL_FRAMES` = 16, fog.h:303).
+
+### E.4 How GI and ambient enter fog
+
+- `volumetric_fog_gi_inject` defaults to 1.0 (environment.h:211); the docs say it scales GI in the fog albedo.
+- SDFGI: the shader reads the SDFGI UBO, `sdfgi_ambient_texture` (a `texture2DArray`) and, with `use_occlusion`, `sdfgi_occlusion_texture` (glsl:105-151; bindings fog.cpp:1041-1057). Per froxel it uses the first cascade containing the position, weights 8 probes trilinearly and adds `ambient·gi_inject` (glsl:730-797). The variant is chosen only when `gi_inject > 0.0001` and SDFGI is enabled and valid (fog.cpp:1031-1061). What gi.cpp writes into `ambient_texture` was not read.
+- VoxelGI: up to 8 instances, all mips composited front to back, scaled by `dynamic_range·gi_inject·exposure_normalization` (glsl:705-720); the instance count is zero unless `gi_inject > 0.001` (fog.cpp:1135).
+- Ambient: `volumetric_fog_ambient_inject` defaults to 0.0 (environment.h:212). Above zero the shader adds the sky or ambient color times `ambient_inject` (glsl:445-460), which the CPU multiplies by the ambient light energy (fog.cpp:1090).
+
+### E.5 Frame order and access
+
+- `_pre_opaque_render` calls `process_gi` (RFC:1607) and then `_update_volumetric_fog` (RFC:1680), before the opaque pass, so fog reads this frame's GI.
+- Fog lives in render-buffer custom data under `RB_SCOPE_FOG` (RFC:733-748, 1336-1356), and its textures are not registered under any context name. `VolumetricFog` binds no methods. No script-visible path reads or writes the fog volumes; scripts reach them only through FogVolume shaders, which write density, albedo and emission.
+
 ## Sources
 
 Engine source at tag 4.7.2-stable. The URL pattern is https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/<path>.

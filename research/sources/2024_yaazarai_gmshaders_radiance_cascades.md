@@ -256,7 +256,7 @@ Note: the post's version clamps before adding 0.25. The repository's base shader
 - probe_info from the texel's position.
 - Probe origin = (probe + 0.5) * linear.
 - preavg_index = index * 4 (the actual index of the first of 4 rays).
-- theta_scalar = TAU / (angular * 4).
+- theta_scalar = TAU / (pinfo.angular * 4.0); the `probe_info` constructor stores `angular * angular` in its `angular` field, so the step is TAU/4^(c+1).
 - Loop over 4 rays: index = preavg_index + i, theta = (index + 0.5) * theta_scalar, raymarch, merge with the actual index, accumulate with weight 0.25.
 
 ### Performance (post)
@@ -555,7 +555,7 @@ Per-texel cost: 16 raymarches and 16 nearest fetches, versus 4 and 4 for the bas
 
 - probe_info from the texel: angular = 2^c, linear = L0 * 2^c, size = E / angular, probe, index.
 - origin = (probe + 0.5) * linear.
-- preavg_index = index * 4; theta_scalar = TAU / (angular * 4).
+- preavg_index = index * 4; theta_scalar = TAU / (pinfo.angular * 4.0), where the `probe_info` constructor stores `angular * angular` in its `angular` field, so the step is TAU/4^(c+1).
 - Loop i = 0..3: index = preavg_index + i, theta = (index + 0.5) * theta_scalar, raymarch, merge, accumulate * 0.25.
 - For cascade 0 only: output = pow(rgb, 1/2.2).
 
@@ -576,6 +576,42 @@ Per-texel cost: 16 raymarches and 16 nearest fetches, versus 4 and 4 for the bas
 - Post vs base shader: the post clamps the N+1 probe index before adding 0.25. The base shader adds 0.25 before clamping.
 
 ---
+
+## Earlier post: 2D GI by random rays per pixel
+
+Source: "Guest: GI: Exploring 2D Global Illumination with @yaazarai", Xor, 2023-12-08, https://mini.gmshaders.com/p/yaazarai-gi. The anchor https://mini.gmshaders.com/i/139316845/jumpflood-and-raymarching is its section "Distance Field Generation (Jump Flood Algorithm)". Part One links this post as its prerequisite. It traces rays from every pixel each frame, with no probes or cascades.
+
+### Distance field
+
+- The scene is an image. Each non-empty pixel stores its own coordinate, and a jump flood spreads the nearest seed; each pixel checks a 3×3 set of seeds and keeps the nearest. The post gives no pass offsets or pass count.
+- The field value is the distance to the stored seed. Coordinates take 2 bytes each so the raymarch has enough precision; the post calls the resulting look of the field intentional.
+- The direction to the seed can serve as a normal map.
+
+### Raymarch and GI pass
+
+- Each ray: `dir = (cos θ, −sin θ)`; for each of `stepsPerRay` steps, `s = DF(p)`, `p += dir·s`, and if `s < EPSILON` the ray returns the per-channel max of `colour(p)` and `colour(p − dir/screen)`, the hit texel and the empty texel one pixel before it. A ray that runs out of steps returns black. The post suggests 32 to 64 steps.
+- Optional aspect correction: in landscape `p.x /= screen.y/screen.x`, in portrait `p.y /= screen.x/screen.y`.
+- Per pixel (skipped where `DF < EPSILON`, inside walls): `L` = the pixel's scene colour, `B = max(L.r, L.g, L.b)`, `θ0 = 2π·n` with `n` from blue noise, and for `k = 0..R−1` with `θ_k = θ0 + 2πk/R`, `L += h_k` and `B += max(h_k)`.
+- The output `(L/B)·(B/R)` is algebraically `L/R`, so the brightness normalization has no effect, and `B = 0` gives 0/0. The loop runs `ray < TAU` in steps of `TAU/R`, so float accumulation may give `R` or `R + 1` iterations (read from the text, not tested). `in_RaysPerPixel` has no default.
+- Inputs: `gm_BaseTexture` RGB holds light colours, `in_DistanceField.r` the encoded field, `in_BlueNoise.r` the noise in [0, 1], and `screen` the resolution. The output alpha is 1.
+
+### Bounces and noise
+
+- The previous frame's output is fed back as the next frame's scene light, so bounces build up over frames. The post gives no bounce count.
+- Static noise: `θ0 = 2π·n`. "3D-style" noise: `n' = fract(n + φ·t)` with the golden ratio and scene time. "2D-style" noise, the one recommended: `θ = mod(2π·n + t/(2π), 2π)`, written back to a texture as `θ/2π` each frame. Time units are not given.
+- The blue noise is Calinou's open-source texture set, shown at 512×512.
+
+### Limits and uses
+
+- Rays are unbounded, so a step cap is needed, and misses return black.
+- Non-square surfaces skew the field unless corrected.
+- Static noise bands, more rays cost GPU time, denoisers add banding, and noise hurts video encoding.
+- Light accumulates over frames. The method is 2D only and the post gives no timings.
+- Uses named: pseudo-wave propagation, falling-sand games such as Noita, AI traversal, and planet gravity from the field's normals. The post links a GMShadersGI repository and Samuel Bigos's Godot GI tutorial.
+
+### Voxels post
+
+https://mini.gmshaders.com/p/voxels (Xor, 2024-06-01) is paywalled. The public part has the opening note, the motivation (how Teardown and SEUS-style Minecraft shader mods light scenes) and a Teardown versus SEUS Renewed comparison image. The web.archive.org copy shows the same paywall. No method content is public.
 
 ## Cross-source comparison
 
@@ -600,16 +636,16 @@ Per-texel cost: 16 raymarches and 16 nearest fetches, versus 4 and 4 for the bas
 ## Links found
 
 - Radiance Cascades paper (Alexander Sannikov) | https://drive.google.com/file/d/1L6v1_7HY2X-LV3Ofb6oyTIxgEaP4LOI6/view | Original paper; the post cites its figure 8 for the constant-size layout.
-- Yaazarai radiosity tutorial (GM Shaders) | https://mini.gmshaders.com/p/yaazarai-gi | Earlier post on random per-pixel ray sampling, linked as the prerequisite.
-- GM Shaders voxels post | https://mini.gmshaders.com/p/voxels | Earlier raymarching post, linked for raymarch background.
-- GM Shaders JFA/SDF section | https://mini.gmshaders.com/i/139316845/jumpflood-and-raymarching | Section on jump flood and SDF generation.
+- Yaazarai radiosity tutorial (GM Shaders) | https://mini.gmshaders.com/p/yaazarai-gi | Earlier post on random per-pixel ray sampling, linked as the prerequisite ([notes](#earlier-post-2d-gi-by-random-rays-per-pixel)).
+- GM Shaders voxels post | https://mini.gmshaders.com/p/voxels | Earlier raymarching post, linked for raymarch background; paywalled ([notes](#voxels-post)).
+- GM Shaders JFA/SDF section | https://mini.gmshaders.com/i/139316845/jumpflood-and-raymarching | Section on jump flood and SDF generation, inside the 2D GI post ([notes](#distance-field)).
 - tmpvar Radiance Cascades playground | https://tmpvar.com/poc/radiance-cascades/ | Interactive demo of linear and angular resolution and interval scaling.
-- Alex's 2D quick ray tracing GLSL | https://github.com/Yaazarai/2D-QuickRayTracing-GLSL | Single-probe method; Part One's figure 6 is an image from it.
-- Alex's bilinear Shadertoy example | https://www.shadertoy.com/view/cslSW4 | Bilinear interpolation example for the merge.
+- Alex's 2D quick ray tracing GLSL | https://github.com/Yaazarai/2D-QuickRayTracing-GLSL | Single-probe method; Part One's figure 6 is an image from it. The repository (LGPL-2.1, with a 9-page write-up) places one probe at each light's center. A first pass traces `2πR` rays, one pixel apart at the light's radius `R`, in whole-pixel steps through a collision texture, and stores each ray's first hit distance over `R` in two 8-bit channels (`R = floor(255x)/255`, `G = fract(255x)`) in a square texture of side `2^ceil(log2 √(2πR))`. A second pass draws a quad per light and compares each pixel's distance with the nearest ray by angle, so shadows are hard and step at ray boundaries. Nothing is cached: every light is traced again each frame, about `O(R²)` samples per light. The size tables limit `R` to above 4 and at most 4096 px; the "65,535 px" maximum in the README is only a loop bound. Read from the code and not run: steps can skip walls thinner than a pixel along the ray, a solid texel at the exact center is ignored, and when `fract(2πR) ≥ 0.5` the rounded ray count leaves a final wedge just below 2π that reads as unobstructed.
+- Alex's bilinear Shadertoy example | https://www.shadertoy.com/view/cslSW4 | Bilinear interpolation example for the merge. The shader (FatalSleep, 2022-11-19) predates RC and blends four corner-aligned samples per 50 px cell ([code notes](2023_rc_shadertoys.md#cslsw4-fatalsleep-local-bilinear-interpolation)).
 - Fad's Shadertoy | https://www.shadertoy.com/view/mtlBzX | Base implementation the repository builds on; source of the skybox integral.
-- Sannikov gravity simulation (Shadertoy) | https://www.shadertoy.com/view/XcB3Ry | Listed as another use of RC.
-- Sannikov 3D screen-space GI video | https://www.youtube.com/watch?v=N6RP3r1M9g4 | Listed as another use of RC.
-- Mytino volumetrics (tweet) | https://x.com/MytinoGames/status/1777029143282295153 | Volumetrics through high-viscosity fluids.
+- Sannikov gravity simulation (Shadertoy) | https://www.shadertoy.com/view/XcB3Ry | Listed as another use of RC. Shadertoy lists it under Suslik, Sannikov's account ([code notes](2023_rc_shadertoys.md#xcb3ry-and-mfs3wm-suslik-cascades-for-gravity)).
+- Sannikov 3D screen-space GI video | https://www.youtube.com/watch?v=N6RP3r1M9g4 | Listed as another use of RC. The video is "Single shot global illumination with no denoiser" (2023), cascaded image-space GI in one frame in about 5 ms ([notes](2022_sannikov_youtube_rc_videos.md#single-shot-global-illumination-with-no-denoiser-2023)).
+- Mytino volumetrics (tweet) | https://x.com/MytinoGames/status/1777029143282295153 | Volumetrics through high-viscosity fluids. The April 2024 post shows a glowing slime simulation in Mytino's own engine; asked whether it is RC, Mytino answered that it is, or at least heavily based on it. No demo was planned.
 - Yaazarai RadianceCascades demonstration | https://github.com/Yaazarai/RadianceCascades | Demonstration repository the README points to.
 - GM Shaders repository | https://github.com/Yaazarai/GMShaders-Radiance-Cascades | Companion repository for both posts (described above).
 - Repository, optimized shader | https://github.com/Yaazarai/GMShaders-Radiance-Cascades/blob/main/RadianceCascades-Optimized/shaders/Shd_RadianceCascades/Shd_RadianceCascades.fsh | Base optimized shader.

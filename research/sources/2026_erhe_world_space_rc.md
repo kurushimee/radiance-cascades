@@ -16,7 +16,7 @@ erhe traces world-space RC with hardware ray queries, merges the cascades, and t
 | `probe_spacing_m` | 1.5 | cascade 0 target spacing `s0` |
 | `volume_padding_m` | 1.0 | growth of the content bounds before fitting |
 | `max_probes_cascade0` | 65536 | cascade 0 probe budget |
-| `max_cascades` | 8 | |
+| `max_cascades` | 8 | upper bound (at most 12); cascades stop earlier once the top one has at most 2 probes on its longest axis |
 | `cascade0_tile_texels` | 8 | octahedral tile side `q0` of cascade 0 |
 | `interval_scale` | 2.0 | `r0 = interval_scale·√3·s0`, so the first interval spans two cell diagonals |
 | `texels_per_frame` | 131072 | raw texels traced per frame |
@@ -67,6 +67,40 @@ The plan document compares the two on station scenes (hardware not committed):
 - Jittering ray directions within each texel improved the near field (floor probes 0.89–1.01 of the reference at `s0` = 0.5) but leaked through thin walls (2%), added noise (0.03–0.07 relative std against DDGI's 0.004) and slowed settling (80–230 updates at hysteresis 0.97). The default is no jitter.
 
 Planned work listed in the document: per-child connecting segments (32 rays per texel), cascade 0 probe relocation, and refitting only on change.
+
+## Stations and gates
+
+The test rooms are built by `scripts/creations/creation_24_gi_test_rooms.py` and measured by `scripts/gi_verify.py`; the thresholds and results are in the plan document (sections 7 and 10 and the phase 6 results).
+
+| Station | Setup | Measures |
+|---|---|---|
+| `leak_pair` | two 4 × 3 × 4 m rooms sharing a 0.1 m wall, point light in room A only | room B luminance relative to room A |
+| `probe_offset_sweep` | three copies of `leak_pair` with the shared wall at 0, 0.25 and 0.5 probe spacings from the nearest probe plane, plus a 0.6 m crawl space and a 0.3 m pillar centered on a probe | worst leak over the offsets |
+| `cornell` | 3 m cube room with red and green walls and a spot light | color bleed ratios |
+| `emissive_only` | closed room with emissive panels of 1.0, 0.25 and 0.05 m | floor luminance in front of each panel |
+| `corridor` | 1.5 × 2.5 × 24 m corridor, spot light on the far end wall | far-field floor profile |
+| `courtyard` | walled 8 × 8 m yard with an open top, sun and sky | |
+| `dynamic` | `cornell` with a scripted light move and door opening | updates to settle |
+
+- **Leak metric:** Rec. 709 luminance of the linear indirect irradiance (`sample_indirect_diffuse`), averaged over 8 field updates; `leak = max(floor ratio, wall ratio)` of room B over room A (`gi_verify.py:464-476`). Floors are sampled on a 5 × 5 grid inset 0.4 m from the walls, and walls with 0.3 m margins. A run counts as converged at 0.5% relative change per update, with a 180 s deadline.
+
+| Gate | Threshold | RC at defaults | DDGI | Result |
+|---|---|---|---|---|
+| 1 Disabled regression | ambient and DDGI outputs unchanged | | | |
+| 2 Leak | `leak_pair` ≤ 0.01; offset sweep worst ≤ 0.02 and ≤ DDGI's worst | 0.0017; offsets 0.0001, 0.0082, 0.0010 | 0.0008; 0.0020 | pass; fail |
+| 3 Placement | recorded only | | | |
+| 4 Bounce | red/green and green/red ≥ 1.2 in `cornell` | 2.07 and 2.07 | | pass |
+| 5 Small emitters | floor brighter than the room median at the 1.0 and 0.25 m panels (0.05 m recorded only) | 1.06; 0.53 | | pass; fail |
+| 6 Far field | no monotonic violations; max log second difference ≤ DDGI's | 0 violations; second difference undefined | | fail |
+| 7 Convergence | updates to settle ≤ half of DDGI's | light move 19, door 16 | 29, 258 | fail; pass |
+| 8 Noise | `cornell` back-wall std below DDGI's | 0 | 0.0043 | pass |
+| 9 Cost | update and full refresh ≤ about 1.5× DDGI on every station | update 1.15–1.57×, full refresh 0.79–1.54× | | pass, although the update maximum is above 1.5 |
+| 10 Vulkan validation | 0 errors | | | pass |
+| 11 OpenGL and Metal | builds with the GI source forced to ambient | | | |
+| 12 Accuracy | worst group mean relative error ≤ 0.25 (0.05 m floor excluded) and ≤ DDGI's | 0.91 at the 1.0 m emitter floor | 0.65 | fail |
+
+- The `leak_pair` value is the worst of three runs, measured 2026-09-28. In the offset sweep only the quarter-spacing wall leaks more than DDGI; the on-plane and midway walls stay at or below DDGI's 0.0020.
+- The runs used a headless Vulkan editor, back to back with DDGI on one machine. Absolute timings are kept outside the repository, and the RC documents name no GPU (other erhe documents mention an RTX 3080, a Radeon 890M and an RTX 5070 laptop, none tied to these runs).
 
 ## Other O3DE attempt
 

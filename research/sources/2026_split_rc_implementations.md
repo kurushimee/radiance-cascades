@@ -4,10 +4,10 @@ Two open implementations of [Split Radiance Cascades](2026_freeman_split_radianc
 
 | Repository | Language and API | Tracing | Last commit |
 |---|---|---|---|
-| https://github.com/entropylost/chandra (no license) | Rust GPU kernels on private crates (`keter`, `yesod`), CUDA | hardware ray tracing (`keter::rtx`), one BLAS per OBJ model | 2026-10 |
+| https://github.com/entropylost/chandra (no license) | Rust GPU kernels on the `keter` and `yesod` crates of https://github.com/entropylost/sefirot, CUDA | hardware ray tracing (`keter::rtx`), one BLAS per OBJ model | 2026-10 |
 | https://github.com/wroughtinator/split-radiance-cascades-webgpu | browser: JavaScript and WGSL on WebGPU; native: Rust on Sokol with one GLSL compute file (D3D11, Metal, GL 4.3, Vulkan) | software BVH (CPU-built binned SAH, 16 bins, leaves of 4, 64-entry GPU stack) | 2026-08 |
 
-chandra cannot build from its repository alone: the `keter`, `yesod` and `testbed` crates are sibling path dependencies that are not published, so the exact direction mapping (`SphericalEncoder`) and `project_line` are not visible.
+chandra's `Cargo.toml` (lines 20-21) takes `keter` and `yesod` as sibling path dependencies (`../sefirot/yesod`, `../sefirot/keter`): both are directories of the entropylost/sefirot monorepo (read at 590f48f), not repositories of their own, and the `testbed` crate was not located. So chandra builds only next to a sefirot checkout. The direction mapping and `project_line` from `yesod` are described under chandra below.
 
 ## chandra
 
@@ -33,7 +33,10 @@ chandra cannot build from its repository alone: the `keter`, `yesod` and `testbe
 
 - `L0 = sqrt(32/(4π)) ≈ 1.596`, chosen so the spacing between ray ends matches the probe spacing. Cascade 0 covers `[0, L0·s0]` and cascade `k` covers `(L0·s0·4^(k−1), L0·s0·4^k]`.
 - A ray hitting in cascade `k` deposits `(0, 0, 0, 1)` (transparent) into cascades below `k` and `(L, 0)` into `k`, at the base probe shifted to each cascade. Each deposit adds to `weighted_fluence` and `weights` and bumps the probe's `probe_quality`.
-- Directions come from the R2 sequence offset per frame (same offset for every pixel), flipped into the surface hemisphere.
+- Directions come from the R2 sequence offset per frame (same offset for every pixel), flipped into the surface hemisphere. Primary rays use `project_line(fract(r2(offset_index) + pcg3df(tick, 29, 968).xy))` and then `dir·sign(dot(dir, normal))` (`src/algorithm/trace.rs:179-182`); the hash depends only on the frame, which is why every pixel shares the offset. Secondary rays (line 239) use the same call without R2.
+- `SphericalEncoder` (`sefirot/yesod/src/direction.rs:41-59`) is the Lambert equal-area cylindrical map: `encode(d) = (atan2(d.y, d.x)/2π mod 1, d.z/2 + 1/2)` and `decode(u, v) = (cos h·s, sin h·s, c)` with `h = 2πu`, `c = 2v − 1`, `s = √(1 − c²)`. Azimuth is linear in `u` and height linear in `v`, so equal areas in `(u, v)` cover equal solid angles, which is why the `2·R_c × R_c` direction grid gives every cell the same solid angle. The encoder does not normalize its input. The same file holds octahedral, equirectangular (`θ = acos z`) and Clarberg encoders.
+- `project_line(uv) = decode(uv.x/2, uv.y)` (lines 77-81) covers only the `y ≥ 0` hemisphere, uniformly by solid angle; its comment calls the result a line on the unit sphere, and every line through the origin has one representative with `y ≥ 0`. The hemisphere flip then takes the end of each sampled line on the normal's side. Since exactly one of `±d` has `y ≥ 0`, the result is uniform over the normal's hemisphere (density `1/2π`), the same distribution wroughtinator gets by flipping a full-sphere sample (derived from the code, not stated in it).
+- Ray to cascade (`trace.rs:259-294`, `compute_deposit_ray`): a miss deposits into the last cascade, and a hit at distance `t` into `clamp(ceil(log_b(t/(L0·spacing(lod, 0)))), 0, last)`, where `b` is the length scale (the interval growth factor 4). The direction is stored through `SphericalEncoder::encode`.
 
 ### Merge and temporal reuse
 
@@ -63,6 +66,7 @@ chandra cannot build from its repository alone: the `keter`, `yesod` and `testbe
 | Fixed-point scale | 4096, radiance clamped to 16 before storing |
 | Internal resolution | at most 960×540 |
 
+- `IMPLEMENTATION.md` ("Cascade configuration") states the rule behind the table: spacing `ds(n, d) = ds0·2^(n+d)` for cascade `n` and LOD `d`, `32·4^n` directions on a `2Θ × Θ` equal-area grid with `Θ = 4·2^n`, and cutoff `1.6·ds0·2^d·4^n`, with `ds0` chosen per asset from its scale and detail. The 1.6 is chandra's `L0 = √(32/4π) ≈ 1.596` rounded.
 - Each hash slot is five `u32` words (signature, token, key low, key high, probe index), double buffered across frames. Probe metadata holds the center and flags.
 - Accumulators are five `u32` per direction (fixed-point R, G, B, β, and a count), so deposits use plain integer `atomicAdd`. Composed cones are four words per direction (radiance and β).
 - The irradiance atlas is RGBA16F 512×1024, one 8×8 tile per cascade 0 probe at `((probe & 63)·8, (probe >> 6)·8)`.
@@ -81,7 +85,7 @@ chandra cannot build from its repository alone: the `keter`, `yesod` and `testbe
 
 ### Tracing and deposit
 
-- Origin `surface + 0.003·normal`; direction `r2(index, jitter)` through the equal-area map, flipped if it points into the surface. Jitter is a Cranley-Patterson shift seeded by the frame counter.
+- Origin `surface + 0.003·normal`; direction `r2(index, jitter)` through the equal-area map, flipped if it points into the surface. Jitter is a Cranley-Patterson shift seeded by the frame counter. `r2(i, j) = fract(0.5 + i/g, 0.5 + i/g² + j)` with `g = 1.324717957244746`, the plastic number (`native/shaders/split_rc.glsl:72-75`); `decode_equal_area` (`split_rc.glsl:77-87`, `native/src/math.rs:20-37`) is the same Lambert cylindrical map as chandra's `SphericalEncoder`, and its encoder normalizes first.
 - Hit radiance is `direct + albedo/π · previous_irradiance(position, normal, lod + 2)`, where `previous_irradiance` reads last frame's coarse secondary probe at the nearest octahedral texel. That one lookup gives multi-bounce light that grows over frames.
 - Deposits use the cell of the ray origin at each cascade, not the probe center: transparent `(0, 0, 0, β = 1)` below the target cascade, `(L, β = 0)` at the target, nothing above.
 
@@ -107,4 +111,20 @@ The WGSL build shares the structure with these differences:
 - Albedo is sampled at mip level 2 at hit points, because mip 0 made sub-pixel detail flicker between frames.
 - The screen-space temporal block in the final pass is behind a constant `false`, so it never runs.
 - The documents disagree with the code in several places (base spacing formula, history weight 0.965, cascade −1 radius `15·ds0`); the code is what runs.
-- Live demo: https://wroughtinator.github.io/
+- Live demo: described below.
+
+## The live demo
+
+https://wroughtinator.github.io/ is the static production build of the browser version (repository wroughtinator/wroughtinator.github.io at 6698f7a; read from source, not run). It needs a WebGPU browser (Chrome or Edge 113+).
+
+- **Scenes** (`rc/scenes.js:267-281`, 13): color bleed laboratory, dynamic Sponza atrium (the 262k-triangle Crytek Sponza plus 48 moving rigid meshes), concave canyon heightfield, dense lantern forest, multi-level atrium, industrial pipe maze, sun temple, orbital sculpture field, daylight door room, megacity stress grid, Cornell box, grand concave heightmap, universal visibility laboratory. The page's static text says "ten real-time validation scenes", "01 / 10" and "Run 10-scene audit", but the runtime takes the label and the audit length from the scene list (`rc/engine.js:2972`, `6694-6701`), so both cover 13; the repository description also says 13.
+- **Views:** final composite, indirect only, direct only, surface normals, effective probe coverage, albedo.
+- **Controls:** indirect strength and sun animation sliders (0 to 2, default 1); toggles for the camera path, moving lights, "Stable history" (temporal stability) and the pass profiler, all on by default; orbit, zoom and WASD movement. The profiler reports GI grid, frame, geometry, ray split and merge, composite, and dynamic TLAS and upload.
+- `?quality=` selects a preset and `?autotest=dynamic-sponza` runs a dynamic-scene gate. Every preset traces one R2 ray per visible pixel (`raysPerSample` 1, the paper's Algorithm 3), so the pixel cap is also the ray budget per frame:
+
+| Preset (`engine.js:55-68`) | Pixel ratio | Max pixels (rays per frame) | Shadow map |
+|---|---|---|---|
+| Performance | 0.72 | 90,000 | 768 |
+| Balanced (default) | 0.9 | 160,000 | 1024 |
+| Quality | 1.0 | 420,000 | 1536 |
+| Ultra | 1.0 | 720,000 | 2048 |

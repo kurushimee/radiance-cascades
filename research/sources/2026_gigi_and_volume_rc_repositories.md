@@ -5,7 +5,7 @@
 | https://github.com/Kosmokleaner/GigiRadianceCascades | Kosmokleaner (Technique.json names Martin Mittring) | BSD-3-Clause | 2026-10 | 2D RC with the bilinear fix as an EA Gigi graph in HLSL |
 | https://github.com/ReneeR33/radiance-cascades-volume-rendering | Renée Rulkens | none | 2026-01 | 3D world-grid RC lighting CT volumes, OpenGL 4.4 compute |
 
-The second repository is the code behind Rulkens' TU/e thesis "Radiance Cascades for Medical Volume Data" (2025), whose PDF is behind a bot check. Neither repository has timings.
+The second repository is the code behind Rulkens' TU/e thesis "Radiance Cascades for Medical Volume Data" (2025), described in [2025_rulkens_rc_medical_volume_data_thesis.md](2025_rulkens_rc_medical_volume_data_thesis.md); the thesis times a full recalculation at 18 to 34 ms on a laptop RTX 4080, and neither repository has timings of its own.
 
 ## Gigi 2D RC
 

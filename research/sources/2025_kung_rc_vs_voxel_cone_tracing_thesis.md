@@ -6,7 +6,7 @@
 | Date | 2025-06 |
 | Kind | MSc thesis, Linköping University (LiTH-ISY-EX--25/5758--SE), with Beartwigs AB (the game Romestead) |
 | Link | https://www.diva-portal.org/smash/get/diva2:1967544/FULLTEXT01.pdf |
-| Comparison VCT | https://github.com/compix/VoxelConeTracingGI (MIT) |
+| Comparison VCT | https://github.com/compix/VoxelConeTracingGI (MIT); described at the end of this note |
 
 Screen-space 3D RC in a shipping game engine, compared with voxel cone tracing on Sponza. The implementation is naive and its timings are poor, so the value lies in its catalog of artifacts and their causes, not in its numbers. The author found a probe placement bug late, so results at sparse probe spacing are less reliable.
 
@@ -43,3 +43,9 @@ Screen-space 3D RC in a shipping game engine, compared with voxel cone tracing o
 | Light drifting toward the lower left at large SPS | probably a probe placement bug | fix placement |
 
 Every artifact but the small-light one grows with SPS. VCT only showed leaks, and those were stronger than RC's through thin objects.
+
+## The VCT baseline (compix/VoxelConeTracingGI)
+
+- Six clip regions of 128³ voxels, each twice the extent of the last, in one RGBA8 3D texture of `(130·6) × (6·130) × 130` texels with face-based anisotropic storage weighted by the squared direction components. Clip levels are revoxelized toroidally, one level per frame by priority.
+- Passes: scene geometry, voxelization, shadow map, radiance injection (MSAA by default, conservative rasterization optional), border wrap, GI, forward scene.
+- Diffuse uses 16 cones of 0.872665 rad (50°) aperture, stepping `max(diameter, voxel)·stepFactor` with a minimum of 0.2, out to 30 units, with occlusion decay 5; specular cones use aperture `max(roughness, 0.05)`. Settings: AO factor 2, indirect diffuse 15, specular 2, trace offset 1.

@@ -39,6 +39,8 @@ A 2D Vulkan compute version on a screen-space SDF (RGBA32F: color plus distance)
 
 The 2024-07-22 issue says interest in RC grew after the SimonDev video, links two Bevy implementations (see [2024_bevy_2d_rc_repositories.md](2024_bevy_2d_rc_repositories.md)) and bevy_ridiculous_ssgi, and repeats the view at the time that 3D RC works less well than 2D.
 
+bevy_ridiculous_ssgi (DGriffin91, "very experimental", deferred rendering only, WebGL2 capable) is a cascaded screen-space GI that never names radiance cascades. It marches the prepass depth, normal and color mips from probes every 4 px (`render_scale`), with 16 directions at cascade 0 doubling per level over 6 cascades. Cascade `n` reaches `2^n·cascade_0_dist·√(n + 1)` with an optional overlap into the previous interval, and its step count is the interval length over half the probe spacing, divided by `√(2^n)` or by `2^n` (faster, with more leaking). Each probe merges a 2×2 block of the coarser cascade weighted by depth and normal rejection (2.0 and 100.0 by default). Probe positions and directions are jittered with a noise period of 8 frames, and the options include rough specular, backside illumination and horizon occlusion. It sees only what is on screen and has no bounce.
+
 ## kornel.ski penumbra calculator
 
 An interactive table that sizes 2D cascades from the penumbra condition instead of fixed powers of 4. With `s` the base probe spacing, `P(c) = s·2^c`, light size `L`, and penumbra angle `a`:

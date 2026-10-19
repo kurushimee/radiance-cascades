@@ -90,5 +90,5 @@ Cost is roughly constant across scenes because LODs keep the probe count steady;
 ## Context from related work
 
 - Earlier 3D RC variants: a Shadertoy by Mathis (2024, probes in texture space so the problem stays 2D, https://www.shadertoy.com/view/X3XfRM), Surfel RC by Max Coppen (2025, https://github.com/mxcop/src-dgi, visible interpolation artifacts), and RC in the mobile game Love and Deepspace (Tianlong Ruan, GDC 2026) to boost standard irradiance probes.
-- 2D games shipping RC: Core Keeper and Kyora.
+- 2D games shipping RC: Core Keeper and Kyora. Neither game's own posts name the technique. Core Keeper's Steam notes describe a rewritten pipeline with reworked indirect light that spreads further and takes surface colour into account (0.5.2, 2023-02-08), AO that uses directional indirect light (0.7.0, 2023-10-04) and "a new indirect lighting solution that should be more accurate, faster and nicer looking" (1.0, 2024-08-27), with no technique, resolution or timing; the game is built in Unity. Kyora, Pugstorm's next game published by Chucklefish and not yet released, has dev blogs (2025-03 to 2026-07) that mention no GI technique. The attribution therefore rests on this paper.
 - Path space filtering (Binder et al. 2021) and SHaRC (NVIDIA 2024) use similar world-space hash maps of averaged rays.

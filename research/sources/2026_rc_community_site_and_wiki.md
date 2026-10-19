@@ -7,7 +7,7 @@
 | Kind | website |
 | Link | https://radiance-cascades.com/ (source: https://github.com/radiance-cascades/radiance-cascades.com) |
 
-The site is a static HTML page (public/index.html) with one interactive 2D radiance cascades demo (public/js/rc.js, 2,237 lines) and link lists to papers, talks, implementations and tools. A second HTML file (public/index2.html) is a draft resources page that nothing links to. The demo runs in WebGL2: the user paints a 2D scene, a jump flood pass builds a distance field, and a set of cascade passes merges probe rays from the top cascade down to the chosen layer.
+The site is a static HTML page (public/index.html) with one interactive 2D radiance cascades demo (public/js/rc.js, 2,237 lines) and link lists to papers, talks, implementations and tools. A second HTML file (public/index2.html) is a draft resources page that nothing links to: a styled header with the logo and GitHub and Discord icons, a "Resources" heading over two identical cards for the paper ("The paper that started it all"), and a WIP banner, with no script and no demo. The demo runs in WebGL2: the user paints a 2D scene, a jump flood pass builds a distance field, and a set of cascade passes merges probe rays from the top cascade down to the chosen layer.
 
 ## Demo: public/js/rc.js
 
@@ -186,7 +186,7 @@ B = 64, N = 3, modifierHack = 8:
 - Utilities:
   - Bilinear and forking fix by MytinoDev (shadertoy.com/view/4clcWn).
   - Kornel's calculator (kornel.ski/radiance) for optimal cascade interval lengths. Inputs: penumbra angle, minimum light size and probe spacing.
-  - "Parallel fix" by mxacop (shadertoy.com/view/XcfyDj). The wiki's parallax-fix page links the same Shadertoy.
+  - "Parallel fix" by mxacop (shadertoy.com/view/XcfyDj). The wiki's parallax-fix page links the same Shadertoy. The shader is mxcop's "RC Reproject Fix Diagram", a diagram that computes no radiance ([code notes](2023_rc_shadertoys.md#xcfydj-mxcop-reprojection-diagram)).
   - LegitScriptEditor, a WebGL shader editor by tmpvar and Alexander. Links to GitHub-hosted demos through the `?gh=` parameter.
   - HRC ray visualiser in Desmos by fad (desmos.com/calculator/1syt8xa8xl).
 
@@ -254,7 +254,7 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 
 ### sannikov-3d-demo ("Alexander Sannikov: 3D RC Implementation Demo")
 
-- Short video demo of RC in 3D (youtube.com/watch?v=N6RP3r1M9g4). The page says it is light on technical detail.
+- Short video demo of RC in 3D (youtube.com/watch?v=N6RP3r1M9g4). The page says it is light on technical detail. The video is screen-space (image-space) GI of a 3D scene computed in one frame, music only, with its facts in the description ([notes](2022_sannikov_youtube_rc_videos.md#single-shot-global-illumination-with-no-denoiser-2023)).
 
 ### simondev
 
@@ -300,7 +300,7 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 
 ### otavio-opengl ("Radiance Cascades For 2D GI")
 
-- Author: Otavio Peixoto. Custom OpenGL engine implementation. Shows the cascade hierarchy memory layout and merging.
+- Author: Otavio Peixoto. Custom OpenGL engine implementation. Shows the cascade hierarchy memory layout and merging. Code and page notes: [2024_peixoto_opengine_2d_rc.md](2024_peixoto_opengine_2d_rc.md).
 
 ### tlegoc-vulkan ("Radiance Cascade GI in Vulkan")
 
@@ -359,16 +359,16 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 ### shadertoys
 
 - fad's Shadertoy (September 2023, shadertoy.com/view/mtlBzX) is the first public implementation. Includes the skybox integral. Merging is temporal because of Shadertoy buffer limits.
-- Fork tree: fad (Sep 2023), then Quinchilion (Nov 2023), then Suslik (Apr 2024), then RC Experimental Testbed (Suslik, Apr 2024).
+- Fork tree: fad (Sep 2023), then Quinchilion (Nov 2023), then Suslik (Apr 2024), then RC Experimental Testbed (Suslik, Apr 2024). Shadertoy's fork links confirm the chain mtlBzX → clVcD3 → MctXRr → 4ctXD8 ([lineage](2023_rc_shadertoys.md#lineage)).
 - Notable Shadertoys:
   - RC V2 / bilinear fix (MytinoDev, 4clcWn).
   - Parallax fix (mxacop, XcfyDj).
   - RC / gear fix (kornelski, XffcD7).
-  - Holographic RC (Suslik). Linked as a Shadertoy tag search.
-  - Radiance Cascades 3D (Suslik, X3XfRM).
+  - Holographic RC (Suslik). Linked as a Shadertoy tag search; the shader is 4ctczl.
+  - Radiance Cascades 3D (Suslik, X3XfRM). The Shadertoy page credits Mathis.
   - Analytic Direct Illumination (Mathis, NttSW7). Sky integral formula.
-  - RC Diagram (Mytino). Linked as a tag search.
-  - RC - Screen Space Probes (Mathis). Linked as a tag search.
+  - RC Diagram (Mytino). Linked as a tag search; the shader is 4clcWn.
+  - RC - Screen Space Probes (Mathis). Linked as a tag search; the shader is lXByRh.
 
 ### unity-urp
 
@@ -447,7 +447,7 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 - Suslik's Shadertoy (November 2024, shadertoy.com/view/X3XfRM). A UV-space implementation with multi-bounce lighting and BRDF integration.
 - Works in the texture coordinate space of surfaces, not in screen or world space.
 - Merging is temporal because of Shadertoy limits. The page says this causes some lag and flicker, and that a proper implementation could likely avoid it.
-- The page calls it a proof of concept from "the original RC author", but attributes the Shadertoy to Suslik. The two statements are not reconciled on the page.
+- The page calls it a proof of concept from "the original RC author", but attributes the Shadertoy to Suslik. The two statements are not reconciled on the page. The Shadertoy page credits Mathis (created 2024-11-02); Suslik is Sannikov's account, so the page's two statements agree with each other and both disagree with Shadertoy.
 
 ## Tools
 
@@ -466,6 +466,9 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 - By tmpvar and Alexander Sannikov. radiance-cascades.github.io/LegitScriptEditor/.
 - WebGL shader editor for arbitrary multi-pass setups. No backend dependency.
 - Demos can be linked from GitHub with a `?gh=` parameter, for example `?gh=Raikiri/LegitCascades/Scaling.ls`.
+- **Implementation** (repository radiance-cascades/LegitScriptEditor, Vite, TypeScript and Monaco): LegitScript compiles to WebAssembly and emits WebGL2 (`#version 300 es`) shaders only. A script has `[declaration]`, `[include]` and `[blendmode]` sections and a `[rendergraph]` function `RenderGraphMain()`. A pass is a GLSL-like fragment function whose `out` parameters become color attachments and whose `sampler2D` parameters become samplers. Images come from `GetImage(size, format)` with rgba8, rgba16f or rgba32f (rgba32f is not filterable), and sliders and context values persist across frames.
+- **Frame:** the WebAssembly module runs `RenderGraphMain()` and returns the list of pass invocations in call order; each one is a full-screen triangle drawn into a framebuffer, in sequence, with no compute dispatches and no barriers. Allocated images persist from frame to frame, which is what lets scripts such as `Scaling.ls` read the previous frame's atlas. Image 0 is copied to the canvas with a `pow(x, 1/2.2)` encode. A pass recompiles only when its source changes, and a failed compile keeps the old program and maps the GLSL error line back to the script line.
+- **`?gh=` loader:** it fetches `raw.githubusercontent.com/<user>/<repo>/refs/heads/<ref>/<path>` once at startup, with `ref` defaulting to `master`. It never checks the response status, so a 404 page becomes the script; tags and commit hashes fail because the path always uses `refs/heads/`, although the README says they work; and the README's example parameter `&rev=master` is not the `ref` the code reads.
 
 ## Links found
 
@@ -476,7 +479,7 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 - https://github.com/Raikiri/RadianceCascadesPaper (original paper source, WIP)
 - https://drive.google.com/file/d/1L6v1_7HY2X-LV3Ofb6oyTIxgEaP4LOI6/view (original paper PDF)
 - https://www.youtube.com/watch?v=TrHHTQqmAaM (ExileCon 2023 talk)
-- https://www.youtube.com/watch?v=N6RP3r1M9g4 (Sannikov 3D RC demo video)
+- https://www.youtube.com/watch?v=N6RP3r1M9g4 (Sannikov 3D RC demo video; screen-space, see above)
 - https://youtu.be/3so7xdZHKxw (SimonDev video)
 - https://www.youtube.com/@simondev758 (SimonDev channel)
 - https://simondevyoutube.github.io/Shaders_RadianceCascades/ (SimonDev open-source JavaScript demo)
@@ -487,11 +490,11 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 - https://jason.today/gi (jason.today Part 1, foundations)
 - https://jason.today (Jason McGhee site)
 - https://m4xc.dev/articles/fundamental-rc/ (mxcop fundamentals)
-- https://news.ycombinator.com/item?id=41957008 (discussion of the mxcop article)
+- https://news.ycombinator.com/item?id=41957008 (discussion of the mxcop article; 117 points and 33 comments from 2024-10-26, summarized in [2026_rc_discussions.md](2026_rc_discussions.md#hacker-news-on-the-fundamentals-article-2024-10))
 - https://80.lv/articles/radiance-cascades-new-approach-to-calculating-global-illumination (80.lv news, November 2023)
 - https://thisweekinbevy.com/issue/2024-07-22-bevy-jam-5-radiance-cascades-and-calculators-in-many-ui-kits (This Week in Bevy, July 2024)
 - https://jms55.github.io/posts/2025-09-20-solari-bevy-0-17/ (JMS55, Solari and RC in 3D)
-- https://otaviopeixoto1.github.io/portfolio/2DRadianceCascades/ (Otavio Peixoto, OpenGL)
+- https://otaviopeixoto1.github.io/portfolio/2DRadianceCascades/ (Otavio Peixoto, OpenGL; [notes](2024_peixoto_opengine_2d_rc.md))
 - https://tlegoc.github.io/blogs/radiance-cascade/ (Théo Le Goc, Vulkan blog)
 - https://tmpvar.com/poc/radiance-cascades (tmpvar 2D playground, as linked from radiance-cascades.com)
 - https://tmpvar.com/poc/radiance-cascades/ (tmpvar 2D playground, as linked from the wiki)
@@ -499,7 +502,7 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 - https://tmpvar.com/articles/implementing-radiance-cascades/ (tmpvar implementation notes, October 2023)
 - https://radiance-cascades.com/ (community site)
 - https://radiance.wiki (community wiki)
-- https://github.com/radiance-cascades (site GitHub organisation)
+- https://github.com/radiance-cascades (site GitHub organisation; it holds two repositories, LegitScriptEditor and radiance-cascades.com)
 - https://github.com/radiance-cascades/radiance-cascades.com (site source repository)
 - https://github.com/OrionReed/radiance-wiki (wiki source repository)
 - https://github.com/Sohojoe/radiance-cascades-godot (Godot implementation)
@@ -522,10 +525,10 @@ A Quartz 4.5.2 wiki with 39 Markdown pages in content/: the home page, the contr
 - https://www.shadertoy.com/view/4clcWn (RC V2, bilinear fix, MytinoDev)
 - https://www.shadertoy.com/view/XcfyDj (parallax fix, mxacop)
 - https://www.shadertoy.com/view/XffcD7 (RC / gear fix, kornelski)
-- https://www.shadertoy.com/view/X3XfRM (UV-space RC 3D, Suslik)
+- https://www.shadertoy.com/view/X3XfRM (UV-space RC 3D, Suslik; the Shadertoy page credits Mathis)
 - https://www.shadertoy.com/view/NttSW7 (analytic direct illumination, sky integral formula, Mathis)
-- https://www.shadertoy.com/results?query=tag%3Dcascade (Shadertoy tag search, linked for Holographic RC, RC Diagram and RC Screen Space Probes)
-- https://www.desmos.com/calculator/1syt8xa8xl (HRC ray visualiser, fad)
+- https://www.shadertoy.com/results?query=tag%3Dcascade (Shadertoy tag search, linked for Holographic RC, RC Diagram and RC Screen Space Probes). On 2026-10-19 it returned 27 shaders. The RC ones are X3XfRM, mtlBzX, 4ctXD8, M3ycWt, mlSfRD, lXByRh, 4clcWn, 4ctczl, scy3Dd, 3cKczD, XffcD7, WfyyDm, tfKyRw, 33ycDm, lcfcR2, tf2XRc, NfVXRc, sfVSzd and w3XSz4, all described in [2023_rc_shadertoys.md](2023_rc_shadertoys.md). XXVfW3 carries the tag but has no cascades, and the rest only share the tag.
+- https://www.desmos.com/calculator/1syt8xa8xl (HRC ray visualiser, fad). The graph (2025-01-11) defines a recursive `g(p, d, i)` that, for levels up to `n = 4`, either splits a ray into two children with doubled direction `2d ± (0, 1/2)` or, when `p.x` is not a multiple of `2^(i+1)`, draws a segment from `p + k·d` to `p + d` and recurses from its end, so it draws the binary tree of HRC ray segments, with `k = −0.97` pulling each segment's start back along its direction.
 - https://kornel.ski/radiance (cascade interval length calculator)
 - https://radiance-cascades.github.io/LegitScriptEditor/ (LegitScriptEditor)
 - https://radiance-cascades.github.io/LegitScriptEditor/?gh=Raikiri/LegitCascades/Scaling.ls (basic RC on LegitScript)

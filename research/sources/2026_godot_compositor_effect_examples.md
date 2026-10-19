@@ -48,5 +48,45 @@ These are the public CompositorEffect projects that read depth or normals and wr
 - Several projects sample at `pixel/size` without the half-texel offset.
 - The SSRT settings UBO writes integers as floats and declares them `int` in GLSL; the author notes that `PackedInt32Array` did not convert as expected. Encode with `PackedByteArray.encode_s32` instead.
 - The HBAO project's matrix UBO names a field `inv_proj` but fills it with the plain projection, never refreshes it after the first resize, and creates an R32F pass from an RGBA8 framebuffer format.
-- The path tracer reassigns its uniform textures every frame, which rebuilds the uniform set every frame.
+- The path tracer reassigns its uniform textures every frame, which rebuilds the uniform set every frame (the helper's texture setter marks the set dirty on every assignment, even with the same RID).
 - Only one project handles more than one view correctly; the path tracer reads view 0 only.
+
+## The projects in detail
+
+### post_shader (official demo)
+
+Two effects at POST_TRANSPARENT. The grayscale effect compiles a fixed `.glsl` file once on the render thread. The template effect keeps user code in a `shader_code` export, marks the shader dirty under a mutex when it changes, substitutes the code at `#COMPUTE_CODE` and compiles it with `RDShaderSource`, reporting errors. The template binds the engine scene UBO (`SceneDataBlock { SceneData data; SceneData prev_data; }` from `godot/scene_data_inc.glsl`) at binding 0, the color layer as an `rgba16f` image at 1 and the depth layer through a nearest sampler at 2, with a 16-byte push constant (`raster_size`, view index, padding). Size comes from `get_internal_size()`, uniform sets from `UniformSetCacheRD`, and each view gets its own compute list with one dispatch. The sample code unprojects depth with the include's per-view `inv_projection_matrix_view[view]` and shows view-space position divided by 20.
+
+### Ambient occlusion (LoganKeenan55)
+
+Four AO shaders behind one GDScript effect at POST_TRANSPARENT, with the shipped scene set to GTAO (the script default is SSAO), radius 0.3 and three render modes (flat, AO only, composited). All shaders reconstruct view space from depth the same way. The AO target is R16F; a 4×4 RGBA8 noise texture holds random unit vectors as `v·0.5 + 0.5`. The AO pass and a 5×5 bilateral blur run in separate compute lists, relying on the device to order them, and the camera UBO and uniform sets are created and freed every frame.
+
+| Shader | Method | Constants | Comment's cost (RTX 2070) |
+|---|---|---|---|
+| SSAO | 16 hemisphere offsets on a TBN from the noise vector; a sample is occluded when the stored surface is in front of it, weighted by `smoothstep(0, 1, radius/|dz|)` and `N·D`; `ao = (1 − occlusion)²` | radius from the export | about 0.80 ms |
+| HBAO | after Scanberg's version of NVIDIA's HBAO: 8 directions rotated by noise, 6 steps, tracking the running horizon tangent and adding `(d²·(−1/R²) + 1)·(sin S − sin H)`; `ao = clamp(1 − 2·sum/8, 0, 1)` | intensity 2, tangent bias tan 30°, radius at most 50 px | about 1.45 ms |
+| SAO | 11 samples on a 7-turn screen spiral from a random angle; term `(r² − d²)³·max((h − bias)/(ε + d²), 0)`; `ao = max(0, 1 − 5·intensity·sum/(r⁶·samples))^1.5` | ε 0.01, intensity 0.3, bias `0.05·radius` | about 0.70 ms |
+| GTAO | after Activision's paper and Intel's XeGTAO: 8 slices, 8 steps per side, horizon cosines with a falloff over 0.4 of the radius, the slice arc integral, `ao = (visibility/slices)^1.5` | | none given |
+
+- **Noise not decoded:** SSAO, SAO and HBAO read the stored `[0, 1]` values as signed vectors, so SSAO's kernel rotation stays in one quadrant, SAO's start angle stays in `[0, π/2]`, and HBAO's "rotation" is not a rotation; only GTAO uses the values as `[0, 1)` offsets, which matches the encoding.
+- **Other issues found by reading:** the blur's fixed 0.01 threshold on raw nonlinear depth covers a different distance at every depth; flat mode still runs the AO pass; the AO texture is created before the zero-size check; background pixels at depth 0 are not skipped; and every view gets the first view's projection and the same normal texture. SSAO decodes the normal through `normal_roughness_compatibility`, SAO and GTAO with `·2 − 1` only, and HBAO binds the normal texture without reading it.
+
+### Sun shafts (godot-forest-demo)
+
+A controller node installs the effect into the WorldEnvironment's compositor at run time and each frame projects the sun (the light's `basis.z`, 10,000 units from the camera) to screen UV, hiding the effect when the sun is behind the camera. The shader reads `get_texture("render_buffers", "color")` through a linear sampler and writes `get_color_layer(view)`: from each pixel it marches 40 steps toward the sun over `density` of the way, adding `smoothstep(threshold, 1, luminance)·decay^i·weight`, then adds `shaft_color·sum·exposure·falloff` with `falloff = smoothstep(max_radius, 0, distance)`. That call has `edge0 > edge1`, which GLSL leaves undefined. Defaults: density 0.92, threshold 0.7, weight 0.028, decay 0.95, exposure 1.1, max radius 0.9 (the demo scene overrides them). In mono the source and destination are probably the same image, so the dispatch reads pixels that other workgroups are writing; a capture would settle it.
+
+### Aerial perspective (Godot-RealisticEnvironments)
+
+The only raster pass of the set: one full-screen triangle into the color layer at PRE_TRANSPARENT, with single-sample and MSAA variants (`sampler2DMS`, `texelFetch` with `gl_SampleID`, sample shading on). It reconstructs position from depth with a camera-relative inverse view-projection that keeps only the camera rotation, discards depth 0 (the sky under reversed z), and looks up a 32 × 128 × 64 RGBA16F camera volume whose distance slices are spaced by `√(d/max)`, so they are denser near the camera, out to 100 km. A 256² transmittance LUT and a 32² multiple-scattering LUT feed it. The blend writes in-scatter (with a Henyey–Greenstein lobe, g = 0.97 by default) as output 0 and transmittance as output 1. Haze density is `3.912/visibility`. The LUT compute passes are the only code in the set with explicit `compute_list_add_barrier` calls.
+
+### Path tracer (compositor-effect-library)
+
+128 samples per pixel per frame, up to 5 bounces, over four hard-coded spheres (three of radius 1.2 at x = −4, 0 and 4 with roughness 0, 0.2 and 0.6, and a ground sphere of radius 100 at y = −101) with no acceleration structure, no Fresnel, no light sampling and no accumulation. The environment, baked once to a 1080×540 panorama, is the only light. Depth and normals are bound but never read, so the spheres draw over Godot's geometry with no depth test, and only pixels whose samples hit a sphere are written.
+
+## Multiple views in other effects
+
+A code search for `get_view_count` and `get_view_projection` found these patterns (not exhaustive):
+
+- **Complete:** BastiaanOlij's RERadialSunRays loops over views "just in case we're doing stereo rendering", takes per-view slices of its own textures with `get_texture_slice(context, texture, view, 0, 1, 1)`, and uses `get_view_projection(view)` with `get_view_eye_offset(view)` added to the sun's screen position; the view matrix is one camera transform for every view.
+- **Per-view resources:** GodotRetro's base effect, an SMAA port, an SSIL-with-visibility-bitmask effect and a Gaussian-splatting compositor keep per-view textures or matrices.
+- **One camera for every view:** the AO and sun-shaft projects above, SunshineClouds2 (one `get_cam_projection()` for all views; its author writes that the engine's scene UBO returns the wrong camera with several cameras) and GDVoxelTerrain's atmosphere.

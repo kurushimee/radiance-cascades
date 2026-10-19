@@ -51,7 +51,7 @@ Defaults from SurfelCascadeParameters (cascade.cpp) unless noted.
 | Near and far planes | 0.1 and 1000 | From renderer.cpp. |
 | Radiance texture format | RGBA16 float, 2048 x 2048 | Same size for every cascade (see Cascade layout). |
 
-The cascade_t comment in cascade.slang says the struct is 36 bytes. The C++ struct has seven 4-byte fields (28 bytes). The source does not reconcile the two.
+The cascade_t comment in cascade.slang says the struct is 36 bytes. The Slang struct and the C++ `SurfelCascadeParameters` (cascade.h:17-29) have the same seven 4-byte fields in the same order, so both are 28 bytes and the comment is stale.
 
 ## Surfel storage
 
@@ -143,7 +143,7 @@ Functions are in shared/hash.slang.
 | 5 | 256 | 128 | 16384 | 0.128 | 2.1875 | [6.518987, 26.075947] |
 
 - Rays per frame if every probe is alive: 6 * 4,194,304 = 25,165,824 (one per texel).
-- Probe spacing: the source does not state a spacing value. Cascade density comes from the count quartering, the spawn chance 1/2^N, and the hash grid scale.
+- Probe spacing: no spacing is set directly. A surfel's world radius at depth `d` is `max(min_radius, radius·d·fov)` with both radii `0.002·2^(N+1)` (cascade.slang:70-75, spawn.slang:133-138), so `radius = 0.002·2^(N+1)·max(1, d·fov)`: linear in depth beyond `d = 1/fov` and doubling per cascade. `fov` is the vertical field of view in radians (π/2 by default, renderer.cpp:82), not `tan(fov/2)`. Density then comes from the count quartering, the spawn chance 1/2^N and the hash grid. The grid cell is `2^L/(4·grid_scale)` with `grid_scale = 70/2^N` and level `L = clamp(2 + floor(ln(dst²)·0.7213477), 0, max)` (hash.slang:31-45). Since `0.7213477 = 1/(2 ln 2)`, `L = 2 + floor(log₂ dst)`, so `2^L` lies in `(2·dst, 4·dst]` and cells grow linearly with distance, about `2^(L+N)/280` (derived).
 
 Radiance-cache layout detail: the cache texel of an interval belongs to a single probe, so gather writes whole blocks by probe.
 
@@ -155,16 +155,16 @@ Radiance-cache layout detail: the cache texel of an interval belongs to a single
 - Trace: the ray starts at probe position + direction * interval start, runs for (end - start), and is intersected with the scene BVH. The BVH is a binary tree with a 32-entry traversal stack. Triangles are tested with Moller-Trumbore. The traversal code credits tinybvh.
 - Result: visibility = 1 if no hit within the interval length, otherwise 0.
 - Radiance:
-  - No hit, cascade 5 only: sky color from sky.slang at an animated sun direction (time = frame * 0.01666).
+  - No hit, cascade 5 only: sky color from sky.slang at an animated sun direction (time = frame * 0.01666). The index 5 is hard-coded, not taken from `CASCADE_COUNT = 6`. `getSkyColor` (shared/sky.slang:29-57) blends day, dusk and night colors by sun height (`smoothstep(−0.1, 0.1, sunHeight)`), with a horizon term `pow(1 − max(rd.y, 0), 6 + night)`, sun and moon discs, and stars hashed from `rd.xz/(rd.y + 1)`. `getAnimatedSunDir(t) = normalize(cos a, sin a, cos a)` with `a = t·0.05·2·3.14` (:61-63), so the sky changes every frame.
   - No hit, other cascades: 0.
   - Hit on an emitter (any color component above 0): the emitter color.
   - Hit on a non-emitter: 0. Non-emissive surfaces are not shaded and do not re-emit.
 - The cosine term is fixed to 1.0 here. Composite applies it (see Composite).
 - Output: rad = merge = (radiance, visibility).
 - Options in the file, both off by default: JITTER (random position in the interval, blended over 8 frames) and TEMPORAL (trace one texel per 4x4 block per frame).
-- The file gather_tx4.slang is a variant using a 4x4 temporal pattern. No C++ code references it.
+- gather_tx4.slang (`TEMPORAL 1`, `TEMPORAL_WIDTH 4`, `JITTER 0`) traces one texel per 4 × 4 tile per frame, at `thread_id·4 + (frame & 3, (frame >> 2) & 3)`, so a full refresh takes 16 frames while the other 15 texels keep their old values. It never writes `surfel_merge` and applies the cosine in gather, which composite (line 136) applies again. The build compiles only `gather.slang` and `merge.slang` (`assets/CMakeLists.txt:40-42`) and the C++ loads `gather.slang.spv`, so the tx4 files are dead code.
 
-The radiance cache therefore holds only direct emitter and sky light. The source does not state whether a bounce term is intended.
+The radiance cache therefore holds only direct emitter and sky light. Nothing in the repository says whether a bounce term is intended. Non-emissive materials use the sentinel color −1 (examples/basic/main.cpp:159-174), so `any(material > 0)` fails for them, while `add_cube`'s default color (1, 1, 1) makes any default cube an emitter. The only albedo multiply is in composite (`g_albedo·(radiance_sum/weights_sum)·4π`, with `merge·(1/π)·cos θ` per surfel; composite.slang:137-145): one bounce of emitter and sky light, applied at the pixel. A `WHITE_FURNACE` switch writes a constant 0.5 at cascade 5 as a test.
 
 ## Merging (merge.slang)
 
@@ -207,8 +207,8 @@ Thread counts are from the shaders. Dispatch sizes are for cascade 0 at its defa
 | Merge (merge.slang) | 16x16 | 128 x 128 | dst and src grid, list, posr, norw, rad, merge | dst merge; src marker |
 | Composite (composite.slang) | 8x8 | ceil(W/8) x ceil(H/8) | albedo, normal-depth, cascade 0 grid, list, posr, norw, merge | albedo |
 | Recycle (recycle.slang) | 256 | ceil((1 + C)/256), per cascade | stack, grid, list, posr, norw | posr, norw, stack |
-| Direct draw (direct_draw.slang, debug) | 16x8 | ceil(W/16) x ceil(H/8) | not read in detail | not read in detail |
-| Heatmap (heatmap.slang, debug) | 16x16 | ceil(W/16) x ceil(H/16) | not read in detail | not read in detail |
+| Direct draw (direct_draw.slang, debug) | 16x8 | ceil(W/16) x ceil(H/8) | params, grid, list, posr, norw, renderview, normal-depth | albedo: where surfels cover the pixel, `Σ color·(−w)/Σ(−w)` over surfels with `w ≤ 0`; skips depth > 1000; declares an unused writable stack |
+| Heatmap (heatmap.slang, debug) | 16x16 | ceil(W/16) x ceil(H/16) | params, grid, normal-depth, renderview | albedo: the cell's surfel count times 1/16 through a color ramp |
 | Ground truth (ray-tracing/ground_truth.slang) | 8x8 | ceil(W/8) x ceil(H/8) | BVH, albedo, normal-depth | accumulator, albedo |
 
 ## Ground-truth pass (reference)
@@ -255,6 +255,8 @@ From the author's article:
 - A plain uniform grid was rejected for scaling. The trapezoidal grid used by GIBS was not implemented.
 - The 16x16 tile size may need changing for different surfel sizes.
 - The article lists "time since used" and "live count" as heuristic terms. The code does not use them.
+- The article's spawn snippet packs `(min(65535, uint(coverage·1000)) << 16) | local_index`, starts the group-shared value at 0xFFFFFFFF and takes `atomicMin`, so the least-covered pixel wins. The code takes `atomicMax` of a distance-based `cover`, which also picks the least-covered pixel. The snippet also starts `coverage` at 1e30 and then takes `max(coverage, point_coverage(...))`, which leaves it at 1e30 as written, and it never defines `point_coverage`.
+- The article gives no spawn threshold, recycling weights, grid capacity, base of the level logarithm or default radius. Stack allocation has no overflow check in the article's snippet; the code clamps the counter.
 
 From the source comments (TODO and WARN):
 
@@ -279,12 +281,12 @@ These are readings of the source. None was tested.
 
 - https://github.com/mxcop/src-dgi (repository)
 - https://m4xc.dev/articles/surfel-maintenance/ (article read)
-- https://m4xc.dev/articles/ (article index)
+- https://m4xc.dev/articles/ (article index; the index and the sitemap list three articles: Surfel Maintenance for Global Illumination, 2025-01-22, 2943 words; [Fundamentals of Radiance Cascades](2024_coppen_fundamentals_of_radiance_cascades.md), 2024-10-22; and Amanatides and Woo's fast voxel traversal, 2024-04-20, a C++20 walkthrough over a 32×32×32 grid in the unit box that steps on the axis with the smallest `tmax` and returns the entry time of the first non-empty voxel, or 1e30 on a miss or after 128 steps)
 - https://m4xc.dev/articles/fundamental-rc/ (covered by another agent)
 - https://github.com/Raikiri/RadianceCascadesPaper (cited in readme for radiance cascades)
-- https://www.ea.com/seed/news/siggraph21-global-illumination-surfels (EA SEED GIBS, cited in readme and article)
-- https://youtu.be/h1ocYFrtsM4 (GIBS talk, SIGGRAPH 2021, cited in article)
-- https://media.contentapi.ea.com/content/dam/ea/seed/presentations/2019-ray-tracing-gems-chapter-25-barre-brisebois-et-al.pdf (Ray Tracing Gems 2019 chapter, cited in article)
+- https://www.ea.com/seed/news/siggraph21-global-illumination-surfels (EA SEED GIBS, cited in readme and article; [notes](2021_seed_gibs_surfel_gi.md))
+- https://youtu.be/h1ocYFrtsM4 (GIBS talk, SIGGRAPH 2021, cited in article; [notes](2021_seed_gibs_surfel_gi.md))
+- https://media.contentapi.ea.com/content/dam/ea/seed/presentations/2019-ray-tracing-gems-chapter-25-barre-brisebois-et-al.pdf (Ray Tracing Gems chapter 25, PICA PICA's surfel GI; [notes](2021_seed_gibs_surfel_gi.md#ray-tracing-gems-chapter-25-hybrid-rendering-for-real-time-ray-tracing-2019)) (Ray Tracing Gems 2019 chapter, cited in article)
 - https://github.com/h3r2tic/kajiya (prefix sum source and surfel GI reference, cited in article and shader headers)
 - https://github.com/jbikker/tinybvh (BVH traversal credit in bvh.slang)
 - https://jcgt.org/published/0003/02/01/paper.pdf (octahedral mapping, cited in octahedral.slang)

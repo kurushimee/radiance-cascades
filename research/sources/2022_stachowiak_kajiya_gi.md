@@ -26,7 +26,7 @@ A research renderer's real-time GI: half-resolution ReSTIR GI for the first boun
 ## Indirect diffuse
 
 - One pixel per 2×2 tile traces a ray each frame from its G-buffer position, with a hemispherical (not cosine) distribution. A hit that is visible on screen reprojects last frame's irradiance; other hits are lit from the ray payload.
-- Results feed ReSTIR reservoirs at half resolution: temporal reuse with `M` clamped to 10, permutation sampling, then two spatial passes (radius 12 to 32 pixels with 8 samples, then 6 to 16 with 5), shrinking as reservoirs fill and in corners by SSAO. The last pass marches up to 6 half-resolution depth taps toward each neighbor's hit for a rough contact shadow.
+- Results feed ReSTIR reservoirs at half resolution: temporal reuse with `M` clamped to 10 (the code clamps `M` to 20 and the weight `W` to 10), permutation sampling, then two spatial passes (radius 12 to 32 pixels with 8 samples, then 6 to 16 with 5), shrinking as reservoirs fill and in corners by SSAO. The last pass marches up to 6 half-resolution depth taps toward each neighbor's hit for a rough contact shadow.
 - **Near and far split:** spatial reuse erodes small-scale bounce in corners, which are not a large source of variance anyway. The resolve takes near hits from the raw rays traced that frame and far hits from the reservoirs, blended by a threshold that grows with distance from the camera. This recovered the corner detail.
 - **Validation:** every third frame retraces all reservoir samples instead of generating new ones; a sample whose radiance changed has its `M` cut, and one that hits the same point has its radiance updated, allowed to grow at most 10× to avoid fireflies. Validation frames also trace short rays so the near field stays filled.
 - A 4-sample resolve to full resolution, a temporal filter with color box clamping, and TAA follow.
@@ -36,3 +36,10 @@ A research renderer's real-time GI: half-resolution ReSTIR GI for the first boun
 - Small bright emitters defeat ReSTIR's reuse, and the document suggests treating them as explicit lights, the same advice RC sources give for emitters smaller than cascade 0's spacing.
 - Newly disoccluded areas are noisy until reservoirs refill.
 - SSAO is used only as a guide for filter radii and bilateral weights, never to darken lighting.
+
+## Code values
+
+- The cache's base cell is 0.02 m across, doubling per clipmap, each clipmap centered at `floor(eye/d) − 16` cells. Entries live 4 frames per rank over 3 ranks before aging recycles them. An entry holds L1 SH with basis `(0.282095, 0.488603·dir)` and 16 octahedral texels (4×4), of which 4 update per frame with blend 0.25; traced reservoirs clamp `M` at 30.
+- Lookup takes one entry with a stochastic jitter capped at `min(distance/2, cell diameter)`, and position votes are accepted with probability `1/(n + 1)`.
+- The documented ray budget: per cache entry 4 G-buffer and 4 shadow rays for the main trace, 4 and 4 more for validation, and 16 accessibility rays; per pixel 1 sun shadow ray, 0.25 to 0.5 final-gather rays and 0.25 reflection rays.
+- ReSTIR GI validates every third frame with permutation sampling on. The spatial passes use 8 and then 5 samples, radii 32 to 12 and 16 to 6 pixels (8 in later passes), and clamp `M` at 500; the temporal resolve takes 5 samples, with permutation while `M_sum < 1.25·20`. Reservoirs are half-resolution `R32G32_UINT` with packed f16 `M` and `W`.

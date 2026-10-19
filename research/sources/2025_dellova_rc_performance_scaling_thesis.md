@@ -144,7 +144,7 @@ Derived from equations 4.4 to 4.6 (not stated in the thesis; Table 5.4 agrees):
 
 - Every cascade texture has the same width and height: width = pc0x * sqrt(rc0) / 2, height = pc0y * sqrt(rc0) / 2.
 - Probe counts are whole numbers. With integer division at each level (Table 5.4 uses floor), the high cascades come out slightly smaller in height.
-- One reading of the layout index math: texel (X, Y) in cascade i is probe (X mod pci_x, Y mod pci_y) in direction block (floor(X / pci_x), floor(Y / pci_y)). The thesis does not give the exact linear index.
+- One reading of the layout index math: texel (X, Y) in cascade i is probe (X mod pci_x, Y mod pci_y) in direction block (floor(X / pci_x), floor(Y / pci_y)). The thesis does not give the exact linear index; the code uses this direction-first index (see [2026_screen_space_probe_repositories.md](2026_screen_space_probe_repositories.md)).
 
 #### 4.1.5 Valid ray counts (eq 4.7)
 
@@ -167,7 +167,7 @@ The pipeline runs the passes below per frame, in order (Figure 4.4 shows example
 |---|---|---|---|---|
 | G-buffer and depth | MiniEngine raster pass | Scene | Albedo G-buffer, depth buffer | No (4.2.1) |
 | RC gather | One thread per cascade texel (4 rays), one dispatch per cascade | Depth buffer, camera matrices, scene (ray tracing), emissive textures | Cascade i texture (RGB radiance plus alpha) | Yes |
-| RC merge | One thread per texel of cascade i-1, for i from top down | Cascade i and cascade i-1 alpha | Cascade i-1 (the source does not say whether in place) | Yes |
+| RC merge | One thread per texel of cascade i-1, for i from top down | Cascade i and cascade i-1 alpha | Cascade i-1, in place (from the code) | Yes |
 | RC coalesce | One thread per cascade 0 probe | All direction texels of cascade 0 | Coalesce buffer (pc0 size) | Yes |
 | Deferred lighting | One thread per output pixel | Albedo G-buffer, coalesce buffer | Lit output | Yes (4.3.1) |
 
@@ -182,14 +182,14 @@ The pipeline runs the passes below per frame, in order (Figure 4.4 shows example
 - One ray tracing dispatch per cascade. One thread per texel of the cascade buffer. Each texel covers 4 probe-direction pairs (pre-averaging).
 - Per-thread steps:
   1. Compute the probe index, the base ray index, the probe spacing, and the distance interval from the 2D dispatch index.
-  2. Ray directions: the four ray indices of a 2x2 block of the direction grid (from [0, sqrt(rci)] squared) are mapped to [-1, 1] squared. An equal-area mapping then gives the unit vector. The source uses the equal-area sphere mapping in Pharr et al. [30] and does not give its formula.
+  2. Ray directions: the four ray indices of a 2x2 block of the direction grid (from [0, sqrt(rci)] squared) are mapped to [-1, 1] squared. An equal-area mapping then gives the unit vector. The source uses the equal-area sphere mapping in Pharr et al. [30] and does not give its formula; the code's formula is in "Answers from the code" below.
   3. Probe placement: probe positions are laid out over the depth buffer using the cascade's spacing, offset by half the spacing in each dimension. World position is rebuilt from the depth value with the inverse projection and inverse view matrices. That position is the ray origin.
   4. Radiance sampling: the thread traces 4 rays. Each ray covers the cascade's distance interval.
      - On a hit, the emissive texture of the hit surface gives RGB radiance.
-     - On a miss, radiance is black, except in the last cascade, which returns an analytic sky color for the ray direction. The thesis says this made no measurable performance difference.
+     - On a miss, radiance is black, except in the last cascade, which returns an analytic sky color for the ray direction. The thesis says this made no measurable performance difference. The code's latest commit samples an HDR skybox there instead (below).
      - Alpha: 1.0 for a miss, 0.0 for a hit.
   5. Average the 4 rays (RGB and alpha) together, whether they hit or missed. Write the result to the texel.
-- The thesis does not give the distance interval formula per cascade (see gaps).
+- The thesis does not give the distance interval formula per cascade; the code's is below.
 
 #### 4.2.3 RC merge pass
 
@@ -199,13 +199,13 @@ The pipeline runs the passes below per frame, in order (Figure 4.4 shows example
   1. Occlusion test: fetch the alpha of the lower cascade texel. If alpha is 0, all 4 pre-averaged rays hit a surface, and merging is skipped so no upper radiance passes through solid geometry.
   2. Directional averaging: each lower texel covers 4 rays, so 16 upper rays are merged into 4 lower rays. Four sets of neighboring upper directions are sampled and averaged. Pre-averaging means one sample per set instead of four.
   3. Spatial interpolation: bilinear sampling across the four nearest upper-cascade probes, so closer probes contribute more.
-- Not given: the blending weights, and what exactly is kept when the merge is skipped (the text implies the lower value stays).
+- Not given in the thesis: the blending weights, and what is kept when the merge is skipped. The code uses plain bilinear weights and keeps the lower value (below).
 
 #### 4.2.4 RC coalesce pass
 
 - One thread per cascade 0 probe.
 - Each thread sums the radiance from all directions of that probe into one irradiance value, and writes it to the coalesce buffer.
-- The thesis says "summing". The normalization (sum or average, and any division by the direction count) is not stated.
+- The thesis says "summing". The normalization is not stated; the code divides by the direction count, a plain average.
 
 #### 4.2.5 Deferred lighting pass
 
@@ -213,7 +213,7 @@ The pipeline runs the passes below per frame, in order (Figure 4.4 shows example
 - Cascade 0 probes sit on surfaces. Rays into surfaces carry no radiance because of the merge occlusion test. The result approximates light from the outward hemisphere.
 - Simplified diffuse term used: fr = 1.0 * albedo, and the cosine term (wi . n) is set to 1.0.
 - Result: outgoing diffuse = albedo * (coalesced irradiance). The thesis writes "albedo * integral of Li dwi", and approximates it with the coalesce value.
-- No 1/pi factor appears anywhere in the derivation. Whether the coalesce normalization absorbs it is not stated.
+- No 1/pi factor appears anywhere in the derivation, and none appears in the code.
 
 ### 4.3 Testing setup (pp. 24-29)
 
@@ -375,7 +375,7 @@ Table 5.5 (share of the 48 configurations below each threshold):
 - Probe spacing has the largest effect on frame time and VRAM.
 - Probe count should scale with the inverse square of spacing (the thesis cites equation 4.5). Spacing changes both width and height.
 - Kung [10] also found spacing dominant. Kung calls the parameter sample point spacing (SPS).
-- Dense probes are closer to the theory. One explanation offered: memory bandwidth limits at high load, with more memory stalls (citing Vasiou et al. [35]). This is a hypothesis; hardware counters were not measured.
+- Dense probes are closer to the theory. One explanation offered: memory bandwidth limits at high load, with more memory stalls (citing Vasiou et al. [35]). This is a hypothesis; hardware counters were not measured. Vasiou et al. find, in a simulator, that memory stalls and DRAM traffic follow ray incoherence rather than raw bandwidth ([notes](2018_vasiou_ray_tracing_performance.md)).
 
 #### 6.1.2 Ray count impact
 
@@ -556,7 +556,7 @@ Inconsistencies found in the thesis:
 5. Section 2.4 example "2x/4x" (2x rays) and Section 4.1 "4x/4x" (4x rays) use the same label for different ray scalings. The implementation uses 4x rays and 2x probe scaling per axis.
 6. The time measurement section lists diffuse lighting among the timed passes. The results call the total "summed RC passes". Whether the lighting pass is in the totals is unclear.
 
-Gaps (not stated in the thesis):
+Gaps (not stated in the thesis; the code answers all of them except the figure values and the measured comparison, in the next section):
 
 - Texture formats and bit depths of the cascade, coalesce, and G-buffer textures.
 - Thread group sizes for each dispatch.
@@ -571,11 +571,32 @@ Gaps (not stated in the thesis):
 - The emissive texture format and sampling method.
 - Any measured comparison with pre-averaging turned off.
 
+## Answers from the code
+
+From ClaikoCode/DX12RadianceCascades at commit 21024b5 (paths under `DX12RadianceCascades/`). The code is newer than the thesis, and two passes differ from the thesis text, as noted.
+
+| Gap | Code |
+|---|---|
+| Formats | cascades and coalesce buffer `R16G16B16A16_FLOAT`, cleared to (0, 0, 0, 0) (`src/RadianceCascadeManager3d.cpp:11, 74-100`); gather-filter masks `R8_UNORM` per cascade with a `uint32` reduction buffer (:16, 84, 103); depth copy `R32_FLOAT` and Hi-Z `R32G32_FLOAT` (`src/RadianceCascades.cpp:249-252`); albedo in MiniEngine's HDR color format `R11G11B10_FLOAT`, normals `R16G16B16A16_FLOAT` with alpha as the emissive flag (`MiniEngine/Core/BufferManager.cpp:85, 113-114`) |
+| Thread groups | merge and coalesce `[numthreads(8, 8, 1)]` over the texture with ceil division; ray generation is one DXR invocation per (probe, direction) texel (`RadianceCascades.cpp:1367-1372, 1425, 1563`) |
+| Intervals | start `|rayLength0·(1 − r^c)/(1 − r)|` and length `rayLength0·r^c`, with `r = rayScalingFactor = 4` (commented "needs to be a perfect square") and `rayLength0 = 5`, so `[0, 5], [5, 25], [25, 105], …`; `TMin = start`, `TMax = start + length` (`Assets/shaders/RCCommon3D.hlsli:86-89, 143-144`, `RCRaytraceRT.hlsl:109-110`) |
+| Equal-area map | `OctToFloat3EqualArea` (`RCCommon3D.hlsli:112-126`): `d = 1 − (|x| + |y|)`, `r = 1 − |d|`, `φ = ((|y| − |x|)/r + 1)·π/4`, `z = sign(d)·(1 − r²)`, and the horizontal part `sign·(cos φ, sin φ)·r·√(2 − r²)`: the Clarberg equal-area octahedral map ([notes](2008_clarberg_equal_area_sphere_mapping.md)). Directions are texel centers remapped to [−1, 1]² (`GetRCRayDir`, :149-159) |
+| Direction rotation | none: directions depend only on the ray index, with no jitter or per-probe rotation |
+| Merge | each pre-averaged texel reads its 4 upper sub-rays at the 4 bilinear upper probes with standard `frac` weights, carries each as `near.a·far` and averages over the sub-rays; `near + far` is written back into the same UAV, so the merge runs in place, top-down (`RCMerge3DCS.hlsl:40, 115-159`, `RadianceCascades.cpp:1408-1425`). A texel with alpha 0 returns early and keeps its own value, as do rays the gather filter dropped (never written, so still cleared). Alpha is not clamped and can exceed 1 after a merge; only the near alpha, which stays in [0, 1], scales radiance, so rgb is unaffected |
+| Coalesce | `rgb = Σ/rayCount` over all directions (the count divided by 4 first with pre-averaging), alpha 1: a plain average with no 1/π and no cosine (`RCCoalesce3DCS.hlsl:23-45`) |
+| Final lighting | differs from the thesis. The active path (`DeferredLightingPassPS.hlsl`, inside an `if (true)`) skips the coalesce buffer: it reads the cascade 0 probe at `int2(uv·probeCounts)` (nearest, no interpolation), sums each direction's radiance times `clamp(n·d, 0, 1)`, divides by the ray count and multiplies by albedo. The thesis's bilinear read of the coalesce buffer survives only in the dead `else` branch. Emissive pixels show their albedo directly, and a depth-aware branch is commented "Completely broken for now" |
+| Sky | differs from the thesis. Only top-cascade misses with the skybox enabled read an equirectangular HDR skybox (`u = atan2(z, x)/2π + 0.5`, `v = acos(y)/π`); other misses return black, and the procedural `SimpleSunsetSky` call is commented out (`RCRaytraceRT.hlsl:262-278`, `Common.hlsli:83-109, 187-194`) |
+| Emissive | glTF emissive textures load as sRGB block formats (BC7, BC3 or BC1 `_UNORM_SRGB`); the closest-hit shader samples mip 0 at the interpolated UV and returns `(emission, 0)`; the material's `emissiveFactor` is never read (`RCRaytraceRT.hlsl:241-258`, `MiniEngine/Model/TextureConvert.cpp:171-175`) |
+| Probe counts | `floor(width/spacing0)` per axis (a comment says rounding up would place probes off screen), cascade count `floor(log_2(min count))` capped at 8, and integer division by `2^c` per cascade (`RadianceCascadeManager3d.cpp:48-56, 180-188`); directions per side `(uint)sqrt(rays/4)`, which truncates non-square counts |
+| Pre-averaging off | implemented and switchable at run time ("Use Pre Average Intervals", on by default), but the ray payload array holds 4 entries, so a ray scaling factor above 4 would overflow (`RCRaytraceRT.hlsl:165, 187-195`) |
+
+Derived from the code: the active lighting returns `albedo·(1/N)·Σ L·max(0, n·d)`. Lambertian shading is `(albedo/π)·E` with `E ≈ (4π/N)·Σ L·max(0, n·d)`, so the code's value is a quarter of it: under a uniform sky of radiance `L` it gives `albedo·L/4` instead of `albedo·L`. The thesis's coalesce path, a plain direction average, gives `albedo·L` under the same sky only if no direction is blocked; with probes on surfaces, the directions into the surface hit it and return black, which halves the value.
+
 ## Links found
 
 - Freeman, Sannikov, Margel, "Holographic Radiance Cascades for 2D Global Illumination" (2025) | https://arxiv.org/abs/2505.02041 | HRC, 2D RC with reported render times on an RTX 3080 laptop GPU.
 - Osborne and Sannikov, "Radiance cascades: a novel high-resolution formal solution for multidimensional non-LTE radiative transfer" (RASTI, 2025) | https://academic.oup.com/rasti/article/doi/10.1093/rasti/rzae062/7929002 | RC for solar radiative transfer.
-- Sannikov, "2d Full Global Illumination #1 (proof of concept, no denoising, interactive fps)" (2022 video) | https://www.youtube.com/watch?v=eS0zd_8nfhk | First public RC demo.
+- Sannikov, "2d Full Global Illumination #1 (proof of concept, no denoising, interactive fps)" (2022 video) | https://www.youtube.com/watch?v=eS0zd_8nfhk | First public RC demo ([notes](2022_sannikov_youtube_rc_videos.md#2d-gi-1-and-2-2022)).
 - ExileCon 2023, "Rendering Path of Exile 2" (Path of Exile talk) | https://www.youtube.com/watch?v=TrHHTQqmAaM | Sannikov's talk on RC in Path of Exile 2.
 - Sannikov, "Radiance Cascades: A Novel Approach to Calculating Global Illumination [WIP]" (2024) | https://github.com/Raikiri/RadianceCascadesPaper/blob/main/out_latexmk2/RadianceCascades.pdf | Pre-print cited for the penumbra condition and for specular reflections.
 - Max (M ΛX), "Fundamentals of Radiance Cascades" (2024) | https://m4xc.dev/articles/fundamental-rc/ | 2D RC explanation used for the thesis's intuition.
@@ -583,6 +604,6 @@ Gaps (not stated in the thesis):
 - Xor and Alex, "Guest: Radiance Cascades 2" (2024) | https://mini.gmshaders.com/p/radiance-cascades2 | Follow-up 2D RC post.
 - Kung, "Comparing Radiance Cascades to Voxel Cone Tracing for Interactive Global Illumination in Dynamic Scenes" (Linkoping University, 2025) | https://www.diva-portal.org/smash/record.jsf?pid=diva2%3A1967544&dswid=-7797 | Closest prior 3D RC performance study (screen-space, DX11).
 
-- McGuire et al., "Real-time global illumination using precomputed light field probes" (I3D 2017) | https://dl.acm.org/doi/10.1145/3023368.3023378 | Light field probes.
-- Crassin et al., "Interactive Indirect Illumination Using Voxel Cone Tracing" (2011) | https://onlinelibrary.wiley.com/doi/10.1111/j.1467-8659.2011.02063.x | Voxel cone tracing GI.
+- McGuire et al., "Real-time global illumination using precomputed light field probes" (I3D 2017) | https://dl.acm.org/doi/10.1145/3023368.3023378 | Light field probes ([notes](2017_mcguire_light_field_probes.md)).
+- Crassin et al., "Interactive Indirect Illumination Using Voxel Cone Tracing" (2011) | https://onlinelibrary.wiley.com/doi/10.1111/j.1467-8659.2011.02063.x | Voxel cone tracing GI ([notes](2011_crassin_voxel_cone_tracing.md)).
 - Pharr, Jakob, Humphreys, "Physically Based Rendering" 4th ed., section 3.8 "Spherical Geometry" (MIT Press, 2023) | https://www.pbr-book.org | Equal-area sphere mapping.

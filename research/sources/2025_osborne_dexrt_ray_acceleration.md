@@ -47,3 +47,25 @@ The 3D solver uses blocks of 8³, a cascade 0 interval of 6 cells, 12 azimuth ra
 ## Results
 
 On a 512×768 prominence model with 880 wavelengths (RTX 4070), sparsity plus mips cut one iteration from 95 s to 11.8 s (8×), with the 99.9th percentile error under 0.5% and a peak of about 12% in a few cells. Mipmapping alone gave 3.5×; sparsity alone gave 1.5× on this half-empty model.
+
+## Paper details
+
+- Setup: DexRT v0.5.0 on an RTX 4070 with an i7-13700, CUDA 12.4 and NVIDIA HPC 24.5. The model is 2D, 512 × 768 cells of 7.5 km, with 880 wavelengths from 5+1-level H, 5+1-level Ca II and Ca III atoms. Cascade 0 has 16 rays, 4 azimuths times a 4-point Gauss-Radau rule in inclination. Iteration stops when the largest relative change of level populations drops below 10⁻³ (MALI with a diagonal operator). Blocks hotter than 250 kK are skipped, about half the model.
+- A 512³ model needs a block map of 669 words (5.4 kB). The paper gives no block size or packing for this figure, and it fits neither 8³ blocks (12,484 words) nor 16³ (1,561) at 21 blocks per word (derived).
+- Anisotropic data (sec. 3): a velocity grid keeps mip chains at a set of velocities per voxel, interpolated by the ray's projected velocity over 21 directional bins per quadrant (84 in all). The "Core and Voigt" variant splits emission and opacity into direction-independent mipmapped parts times a line profile evaluated per direction, with the Voigt profile from the HUM1WEI24 approximation (Humlíček region I plus a 24-term Weideman series), four mip chains per line and at most four overlapping lines.
+- Table 3, time per iteration and error against the dense classic solver:
+
+| Variant | s / iteration | Iterations | Max error % | 99.9th percentile % |
+|---|---|---|---|---|
+| DenseClassic (reference) | 95.0 | 86 | 0.0 | 0.0 |
+| DenseCav | 70.0 | 97 | 12.39 | 0.295 |
+| DenseCavMips | 20.2 | 97 | 12.35 | 0.445 |
+| SparseClassic | 62.9 | 87 | 1.20 | 0.031 |
+| SparseCav | 30.7 | 91 | 12.58 | 0.294 |
+| SparseVelInterp | 22.1 | 82 | 12.38 | 0.495 |
+| SparseCavMips | 11.8 | 101 | 12.31 | 0.445 |
+| SparseVelInterpMips | 10.0 | 91 | 12.36 | 0.889 |
+
+- The column order of Table 3 was rebuilt from the text extraction. The abstract's "under 0.5 %" refers to Core and Voigt with mips; velocity interpolation with mips is about 15 % faster per iteration but nearly doubles the 99.9th-percentile error (0.889 %). The peak errors near 12 % sit in a vanishing fraction of voxels.
+- For graphics RC, the paper suggests running the lower cascades locally per patch and giving the upper cascades a compacted mip structure that stores only the highest permitted level per block (sec. 6). It cites Crassin et al. 2011 ([voxel cone tracing](2011_crassin_voxel_cone_tracing.md)) and Han et al. 2007 as prefiltering for anisotropic data.
+- Data: https://doi.org/10.5281/zenodo.16759894.

@@ -59,8 +59,12 @@ Feeding the composited output back as the next frame's input adds bounces. Defau
 
 ## Cost
 
-- GI: about 2 ms at 4K on an RX 7900 XTX, 2.2 ms at 4K on an RTX 4080, 1.7 ms at 1080p on an RX 7600 XT. The slides do not say at which internal scale.
+- GI: about 2 ms at 4K on an RX 7900 XTX, 2.2 ms at 4K on an RTX 4080, 1.7 ms at 1080p on an RX 7600 XT. These figures share slide 54 of the GDC 2024 deck with the statement that the default quality setting works at half resolution internally, with 0.75× and native as options, so they are most likely at 0.5× (inference); the GI page adds that the specular pre-trace runs at quarter resolution. Slide 55 lists the GI's memory as about 110, 150 and 200 MB in columns for 0.5×, 0.75× and 1× scale, with the row label lost in extraction. Neither the GI page nor the deck compares Brixelizer GI with DXR GI; the deck presents it as a fallback for hardware without ray tracing and compares it with a path tracer in images only.
 - Memory: 128 MiB atlas, 1 MiB per cascade, 16 MB of internal buffers, plus scratch. The GI's fixed buffers (radiance cache 64 MiB, two SH buffers of 18 MiB, state 4 MiB) come to about 104 MiB before screen-sized data; the slides give the GI's total as roughly 110 to 500 MB depending on resolution and scale.
+
+## Overflow
+
+Nothing read documents what happens when bricks run out. Storage is fixed at initialization (`FFX_BRIXELIZER_MAX_BRICKS_X8 · sizeof(FfxUInt32x2) · 9` for persistent GI resources, an SDF atlas of about 128 MB, 1 MB per cascade); brick IDs range from 0 to `2^18 − 1`; per-update limits (`maxBricksPerUpdate`, `maxBricksPerBake`, `triangleSwapSize`, `maxReferences`) can be tuned; counters report attempted and successful brick allocations per frame and failed voxel allocations (`g_scratch_voxel_allocation_fail_counter`); and `FfxBrixelizerScanReferences` allocates bricks for referenced voxels with no overflow path described. The shader source was not found in the FidelityFX SDK tree on `main`.
 
 ## Problems
 

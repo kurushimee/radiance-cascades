@@ -84,7 +84,8 @@ The cascade count is capped near `log(P₀)`, and the constructed rays are only 
 ## Failure modes and tuning
 
 - Point lights that are too small and penumbras that are too sharp break the hypothesis.
-- The base parameters (cascade 0 probe spacing, angular step, and interval length `t₀`) decide quality and speed and need hand tuning; the paper gives no rule for them.
+- The base parameters (cascade 0 probe spacing, angular step, and interval length `t₀`) decide quality and speed and need hand tuning; the paper gives no rule for them. The LaTeX source (`rcpaper/RadianceCascades.tex`, commit 9d1fd29) says so directly: the work "only provides an asymptotic scaling analysis, completely omitting considerations behind choosing any actual initial values", which "dramatically affect both accuracy and performance" and take "some amount of fiddling" (line 673). Anything satisfying the scaling condition makes a valid cascade sequence, and storage falls directly as the spatial and angular steps grow (line 379); cascade 0's interval is an arbitrary parameter the others scale from (line 539). Radiant 2D raised angular resolution 4× per cascade instead of 2× (line 551).
+- For 3D the source gives scaling only: `P_i ~ (1/2^i)³` probes, `Q_i ~ (2^i)²` texels and `M_i ~ M_0/2^i`, so `Σ M_i = 2·M_0` (lines 431-435), and the hierarchy takes as much memory as its cascade 0 while that storage scales with the scene size cubed (line 614). It gives no MB figures or timings for 3D.
 - A cascade 0 interval that is too long leaves visible gaps between the interval segments of different cascades; shortening it until the segments connect gives a continuous result.
 - Quality degrades gracefully: missing resolution blurs shadows as if they came from area lights.
 
@@ -116,5 +117,5 @@ Details worth keeping:
 
 - Probe-based GI always picks some trade-off between many low-resolution probes and few high-resolution ones; finding the right point was the main motivation.
 - Ambient occlusion and environment maps are the near-field and far-field ends of one spectrum, and RC fills the levels in between. Lumen and GI-1.0 use four such levels (AO, screen probes, world radiance cache, environment).
-- The author's earlier PoE1 GI (2017, shipped 2018), "hierarchical screen-space variance-based GI", used horizon-based screen-space sectors, screen-space mipmaps, and a Chebyshev occlusion test on two depth moments. It resembles "Horizon-Based Indirect Lighting" by Benoît Mayaux (2018). PoE1 also used hierarchical screen-space shadow cascades that compute blurry penumbra parts at low resolution, which inspired RC.
+- The author's earlier PoE1 GI (2017, shipped 2018), "hierarchical screen-space variance-based GI", used horizon-based screen-space sectors, screen-space mipmaps, and a Chebyshev occlusion test on two depth moments. It resembles "Horizon-Based Indirect Lighting" by Benoît Mayaux (2018; [notes](2018_mayaux_horizon_based_indirect_lighting.md)), which was written for a different studio's game. PoE1 also used hierarchical screen-space shadow cascades that compute blurry penumbra parts at low resolution, which inspired RC.
 - Voxel cone tracing's idea of averaging radiance through mipmaps fed the first PoE GI.

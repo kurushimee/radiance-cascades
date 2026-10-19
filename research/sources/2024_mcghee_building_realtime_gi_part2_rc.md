@@ -503,6 +503,6 @@ Notes:
 
 - Radiance Cascades Paper | https://github.com/Raikiri/RadianceCascadesPaper | Paper repository, named in the acknowledgements.
 - Yaazarai's blog post | https://mini.gmshaders.com/p/radiance-cascades | Blog post with the biggest direct influence on this work, per the author.
-- Post as Markdown (gist) | https://gist.github.com/jasonjmcghee/0c72d185830685f67d3b8d9c7f330c3a | The article with canvases replaced by code.
+- Post as Markdown (gist) | https://gist.github.com/jasonjmcghee/0c72d185830685f67d3b8d9c7f330c3a | The article with canvases replaced by code. It is an earlier version: it lacks "Packing Direction in Pixels", "Nailing the Details" and "Generalizing to Many Cascades", the `intervalOverlap` slider and term, and the `alpha < 0.99` threshold, while its other values match (32-ray naive demo, base slider `4^value`, the 512-ray example on 1024²). The gist f71708c18ee3604e8249ccb824275fbc (`.4k-rc.md`) has all sections but still predates the overlap term, its 0.04 default, the 0.99 threshold and `SQRT_2 = 1.41`.
 - Part 1 | https://jason.today/gi | Raymarching, JFA, distance fields; see [2024_mcghee_building_realtime_gi_part1.md](2024_mcghee_building_realtime_gi_part1.md).
 - Shadertoy McSyWm | https://www.shadertoy.com/view/McSyWm | Example of why sRGB math should be done in linear space (section 3.3).
