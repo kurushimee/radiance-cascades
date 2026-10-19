@@ -7,7 +7,7 @@
 | Kind | Paper |
 | Link | https://github.com/Raikiri/RadianceCascadesPaper (`RadianceCascades.tex`, PDF in `out_latexmk2/RadianceCascades.pdf`) |
 
-The founding paper. It defines the penumbra condition, radiance intervals, the merge rule, the cascade scaling laws, and the memory math for flatland, 3D grids, and surfaces. It also describes four early implementations, including the one shipped in Path of Exile 2. The math is loose on purpose: the paper gives asymptotic scaling only and leaves all base parameters to tuning.
+The founding paper. It defines the penumbra condition, radiance intervals, the merge rule, the cascade scaling laws, and the memory math for flatland, 3D grids, and surfaces. It also describes five early implementations, including the one shipped in Path of Exile 2. The math is loose on purpose: the paper gives asymptotic scaling only and leaves all base parameters to tuning.
 
 ## Penumbra condition
 

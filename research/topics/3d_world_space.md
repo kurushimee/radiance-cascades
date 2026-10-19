@@ -99,7 +99,7 @@ So `l = 4`, which [core theory](core_theory.md#two-criteria-for-interval-scaling
 | CT volume RC (Rulkens's thesis code) | 192³ over a unit cube | 6 cube faces | ÷8, ×4 | ×2 | 5 | 627.8 MiB of cascades, about 1.5 GB allocated ([volumetric](volumetric_and_radiative_transfer.md#rc-for-ct-volumes-repository)) |
 | tauray RCPG | 128³, live probes only | 16 (octahedral 4×4) | ÷8, ×4 | angle table | 5+ | luminance only, about 325 MB ([sampling and guiding](rc_for_sampling_and_guiding.md)) |
 
-A short write-up of an honours project, "3D Radiance Cascades" (https://noamzeise.com/drafts/2025-05-10-dissertation.html, Common Lisp and OpenGL in the author's own framework, ambient light only), found a fixed 3D probe grid too slow for real time and probes in projection space that move with the camera hard to interpolate, so its final version keeps probes in view space, where world-space distances between probes are easy; its comparison with SSAO is screenshots only ([discussions](../sources/2026_rc_discussions.md)).
+A short write-up of an honours project, "3D Radiance Cascades" (https://noamzeise.com/drafts/2025-05-10-dissertation.html, Common Lisp and OpenGL in the author's own framework, ambient light only; not a dissertation draft despite the URL), which credits RC to Sannikov as GI without ray-tracing hardware, found a fixed 3D probe grid too slow for real time and probes in projection space that move with the camera hard to interpolate, so its final version keeps probes in view space, where world-space distances between probes are easy; its comparison with SSAO is screenshots only ([discussions](../sources/2026_rc_discussions.md)).
 
 Sources: [world-space implementations](3d_world_space_implementations.md) and [Godot projects](godot_projects.md); erhe's storage is computed from its defaults in that file.
 
@@ -176,6 +176,7 @@ Sources: [Split RC](../sources/2026_freeman_split_radiance_cascades.md#implement
 - A ray hitting at distance `t` with `t_{m−1} < t ≤ t_m` tells every cascade below `m` that its interval is transparent (`J = 0`, `β = 1`) and tells cascade `m` that it is opaque with the hit radiance (`J = L_hit`, `β = 0`).
 - Each contribution is atomically added to the nearest probe and nearest direction in that cascade, with a counter; the merge divides by the count and skips directions with a zero count.
 - Cascades above `m` get nothing. Extending the hit into them biases toward short rays.
+- Hits closer than `t_{n−1}` are ignored for cascade `n`, so a small occluder sitting on a probe does not shadow all of its upper rays.
 - Directions pointing into the surface are flipped (`ω ← ω·sign(ω·n)`), so probe directions facing into walls stay empty and are never read.
 - Uniform random directions fill higher cascades badly (the coupon collector's `O(b·log b)`), so rays use the R2 low-discrepancy sequence mapped through the equal-area map ([glossary](supporting_techniques.md)). Probes sharing a parent get contiguous R2 ranges through a hierarchical prefix sum, so every cascade's directions are covered evenly, and the whole sequence is jittered per frame.
 - Flat surfaces keep the ray count per cascade constant: 4× fewer probes, 4× more directions.
@@ -258,7 +259,7 @@ Irradiance from cones (cosine sampling per cone, SH against per-direction sums) 
 
 World-space cascades trace the scene itself, so the tracer sets most of the cost. The tracers and their internals are in [scene representation](scene_representation_and_tracing.md). What the RC builds found about pairing a tracer with cascades ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#tracing-without-hardware-rt)):
 
-- An optimized software ray-tracing kernel ran about 4× slower than hardware RT on Apple M3 and later. For Split RC rays on an AMD Radeon 8060S, the best software path (a segment DDA over a hash plus a quantized 8-wide BVH) averaged 231 µs against 66 µs for hardware ray tracing, about 3.5× ([discussions](../sources/2026_rc_discussions.md#implementer-notes)).
+- An optimized software ray-tracing kernel ran about 4× slower than hardware RT on Apple M3 and later. For Split RC rays on an AMD Radeon 8060S (owoDra/real-time-gi-lab #3), the best software path (a segment DDA over a hash plus a quantized 8-wide BVH) averaged 231 µs against 66 µs for hardware ray tracing, about 3.5× ([discussions](../sources/2026_rc_discussions.md#implementer-notes)).
 - Sparse voxel cone tracing with naive linear marching came close to hardware RT in one build and was about 1.8× slower in another; a DDA per occupied probe with hash lookups ran 2 to 4× slower than ray tracing. Nearest-probe marching was undersampled at 4 ms against hardware RT.
 - Each cascade needs a scene proxy filtered to its probe spacing, like texture mips: voxels as large as the gap between adjacent rays avoid blur and aliasing. Tracing mip `N` with cascade `N` gave blocky upscaling in an early build ([which mip](#marching-cost)). Cone tracing trades noise for blocky, aliased shadows, and replacing a cone with one ray adds aliasing, not sharpness.
 - Averaging 2×2×2 voxels makes thin walls half transparent at every mip, so directional (six-direction) opacity is needed ([volumetric](volumetric_and_radiative_transfer.md#marching-on-mips)).
@@ -329,13 +330,13 @@ Cost is roughly constant across scenes because LODs keep the probe count steady;
 | 2-means placement of upper probes | 0.18 ms, against 3.5 ms tracing |
 | Ray-splitting deposit | 6 ms, 4 ms of it in the last two cascades |
 | Ray splitting from 1 spp: write, then final interpolation with 32 cascade 0 directions | 7 ms + 11 ms |
-| Variance-guided retracing: 4 full-length rays per probe in high-variance cascade 0 directions, about 2.8M long rays against 4.5M RC rays | +1 ms on a 4 ms scene, RTX 2080 Ti ([video](https://www.youtube.com/watch?v=yTxFZp_RK5U); [core theory](core_theory.md#interpolation-and-band-limits)) |
+| Variance-guided retracing: 4 full-length rays per probe in high-variance cascade 0 directions, about 2.8M long rays against 4.5M RC rays | +1 ms on a 4 ms scene, RTX 2080 Ti, also reducing leaks ([video](https://www.youtube.com/watch?v=yTxFZp_RK5U); [core theory](core_theory.md#interpolation-and-band-limits)) |
 
 **Dense and clipmap world probes:**
 
 | Setup | Time | Source |
 |---|---|---|
-| RC in a 256³ voxel volume, scale 4, RTX 4090, 1080p, worst case | 1.98 ms (0.17 volume, 1.55 build, 0.26 query); voxel cone tracing 2.06 ms | [discussions](../sources/2026_rc_discussions.md#implementer-notes) |
+| RC in a 256³ voxel volume, scale 4, RTX 4090, 1080p, worst case (jtbirdsell/voxel2026 #4) | 1.98 ms (0.17 volume, 1.55 build, 0.26 query); voxel cone tracing 2.06 ms (0.17 volume, 1.88 gather) | [discussions](../sources/2026_rc_discussions.md#implementer-notes) |
 | EggyStudio world probes plus screen probes, laptop GPU, 800×450 | 0.59 to 1.00 ms | [implementations](3d_world_space_implementations.md#eggystudio3dengine) |
 | erhe against DDGI | 1.15 to 1.57× DDGI's update; 0.7 ms per million rays against about 6 | [implementations](3d_world_space_implementations.md#erhe) |
 | Dense 192³ CT grid, laptop RTX 4080 | 20 to 34 ms per full recalculation | [volumetric](volumetric_and_radiative_transfer.md#rc-for-ct-volumes-repository) |
@@ -366,17 +367,15 @@ World-space probes need no reprojection: new intervals blend into the stored one
 | Light on demand | hits mark a coarse dirty volume, and only marked regions are relit next frame | reduz's SDFGI plan ([Godot integration](godot_integration.md#the-sdfgi-plan)) |
 | Priority queue | a fixed number of probes retraced per frame, newly revealed first | Lumen's world cache ([related engine GI](related_engine_gi.md)) |
 | Probability with feedback | one clip per frame; retrace chance from age, cut outside the frustum and away from surfaces, held at 6.25% of the clip | daGI2 ([related engine GI](related_engine_gi.md)) |
-| Local resets | reset only probes within a changed light's old and new reach, except for the sun and sky | Trillion3D issue #1284 ([discussions](../sources/2026_rc_discussions.md#implementer-notes)) |
+| Local resets | a global epoch that resets every probe on any light change is wasteful; reset only probes within a changed light's old and new reach, except for the sun and sky | Trillion3D issue #1284 ([discussions](../sources/2026_rc_discussions.md#implementer-notes)) |
 
 Every open Split RC code blends over time even though the paper's table is single-frame: chandra, wroughtinator and the Unreal port all keep history, and none documents a single-frame mode (inference from the code notes). Temporal reuse in world space hides two different deficits that a single-frame design must meet another way: undersampling (few rays per direction cell, above) and update cost (budgets of texels or probes per frame). The first is a noise problem and the second a time problem (inference).
 
 ## Adoption and plans
 
-- **Blackline Interactive** posted two custom-engine 3D RC videos (https://www.youtube.com/watch?v=TTI1QoHlCHE, 2026-10-03, 17:32; https://www.youtube.com/watch?v=-fBe0ZIu39Q, 2026-09-12, 20:00) with no captions. The descriptions call the work real-time GI on Sannikov's RC approach with the author's own 3D architecture, experimental and not game-ready, aiming for zero light leaks and stable performance on older GPUs. They claim no TAA, SSGI, DDGI, voxels, lightmaps or denoising, "0 ms temporal latency" with no temporal accumulation or ghosting, FXAA 3, native resolution with no upscaling, and near path-traced quality. Scenes are Sponza (also with 4K textures and about 5.7M triangles), Amazon Bistro and a Cornell box, on a 2019 16-inch MacBook Pro with a Radeon Pro 5500M (8 GB, 50 W) at Full HD and 2K, on Metal, with C++ and OpenGL in the hashtags. The code is unreleased, and no timings in milliseconds, probe layout or engine name are given. These are the author's claims; nothing shown verifies them ([talks](../sources/2026_rc_conference_talks.md#other-videos-checked)).
+- **Blackline Interactive** shows a closed-source 3D RC with HUD timings on a Radeon Pro 5500M. Its first build used world probes rebuilt on demand; the later builds point to probes on a generated surface atlas, covered in [3D surface probes](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive) ([Blackline](../sources/2026_blackline_interactive_spatium_rc.md)).
 - **Trillion3D** (pasquelin, #1285): the camera-centred probe bounce (64 full-length rays per probe, SH2) had 18.6% mean error against a path-traced reference, target 10%, at 1.1 ms against a 0.8 ms budget, and Split RC was planned as the alternative ([discussions](../sources/2026_rc_discussions.md#implementer-notes)).
 - The 2D games Split RC names, Core Keeper and Kyora, and the projects that chose other methods are in [history](history_and_landscape.md).
-
-If Blackline's claims hold, a 50 W 2019 laptop GPU would run single-frame 3D RC in Sponza without hardware ray tracing, since the Radeon Pro 5500M has none. That would make it the strongest evidence for this project's goal, and it is unverifiable as published (inference).
 
 ## GPU building blocks
 
@@ -471,7 +470,7 @@ Sources: [GPU hash tables](../sources/2026_gpu_hash_tables_and_sorting.md).
 
 ## Single-frame assessment
 
-- **Split RC is the evidence.** It is the only world-space 3D RC with a published single-frame evaluation: 8.6 ms in Sponza and 11.5 ms in San Miguel on an RTX 3080 Laptop with hardware RT and fp32 storage, one diffuse bounce, no temporal reuse. Sannikov's sparse videos (60 to 100 fps, then 60 fps with hardware RT, all from scratch) and Blackline's claims point the same way without numbers.
+- **Split RC is the evidence.** It is the first full world-space 3D RC with a published evaluation and the only one with a published single-frame evaluation: 8.6 ms in Sponza and 11.5 ms in San Miguel on an RTX 3080 Laptop with hardware RT and fp32 storage, one diffuse bounce, no temporal reuse. Sannikov's sparse videos (60 to 100 fps, then 60 fps with hardware RT, all from scratch) point the same way without numbers, and Blackline's single-frame results without RT hardware come from a surface atlas, not a world grid ([surface probes](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive)).
 - **Its noise floor is the cascade 0 near field.** With one ray per pixel, each direction cell gets `s = A/16` rays per frame for an `A`-pixel probe: one ray at 4×4-pixel probes, so cascade 0's transmittance is binary per direction in a frame, while far light is averaged over `s·4^n` rays (derived). The single-frame levers are bigger probes (more `s`, less detail), more rays per pixel (which grew cost 11× for 3× rays in one build), and a cascade −1 for contact light.
 - **Without hardware ray queries the trace dominates.** Scaling by the measured 3.5 to 4× software penalty puts Sponza's trace at 4.5 to 5.2 ms and San Miguel's at 15.8 to 18.0 ms (derived), against a 1.3 to 4.5 ms deposit and merge budget. A compute tracer whose cost grows slowly with ray length (a BVH or a hierarchical DDA, [scene representation](scene_representation_and_tracing.md)) is a precondition for splitting under `RenderingDevice`; with a fixed-step marcher, per-probe tracing on filtered proxies is the consistent alternative (inference).
 - **The atomics have to be 32-bit.** Hash keys must fit 32-bit words or a multi-word slot (wroughtinator's five-word slots), and deposits must be fixed-point integer sums with a clamp, since Godot's driver has neither float nor 64-bit atomics ([RenderingDevice notes](../../docs/rendering_device.md)).

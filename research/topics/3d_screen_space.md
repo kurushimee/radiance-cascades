@@ -51,7 +51,7 @@ At 1080p the lowest setting's cascade 0 has about 120 × 68 probes and 32,400 di
 - Leaks were rare because probe rays connect well across cascades. A bilateral depth filter avoided edge artifacts, to be replaced by min/max depth interpolation.
 - It ran in real time but unoptimized, with a high base cost, single-bounce diffuse only and no tone mapping. Coppen had no 3D version of the 2D analytic sky integral.
 
-**GPC 2024.** A student showcase (likely Max Coppen) explained 2D RC and gave a first look at 3D SPWI in Vulkan compute. It compares branching: probe spacing ×2 with rays ×2 per cascade makes memory approach twice cascade 0, while rays ×4 keeps every cascade the same size. The 2D demo adds noise to the cascade interpolation for a painted look. It gives no numbers ([talks](../sources/2026_rc_conference_talks.md#gpc-2024-student-showcase)).
+**GPC 2024.** A student showcase (likely Max Coppen) explained 2D RC and gave a first look at 3D SPWI in Vulkan compute, the same split as Gavras's thesis. It compares branching: probe spacing ×2 with rays ×2 per cascade makes memory approach twice cascade 0, while rays ×4 keeps every cascade the same size. The 2D demo adds noise to the cascade interpolation for a painted look. It gives no numbers ([talks](../sources/2026_rc_conference_talks.md#gpc-2024-student-showcase)).
 
 ## Parameters across projects
 

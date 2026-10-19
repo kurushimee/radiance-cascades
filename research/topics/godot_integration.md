@@ -7,7 +7,7 @@ What Godot 4.7.2 (Forward+, Vulkan) gives an RC implementation, what it keeps pr
 - **Device and thread.** Use the main device, `RenderingServer.get_rendering_device()`, on the render thread: inside `CompositorEffect._render_callback()` or through `RenderingServer.call_on_render_thread()` ([render thread](../../docs/rendering_device.md#render-thread)). A local device from `create_local_rendering_device()` has its own resources, so its results reach the renderer only through a CPU readback, and a readback every frame stalls ([2D projects](godot_projects.md#2d-projects)).
 - **CompositorEffect** is the only way to read the frame's depth, normal, color and velocity buffers. Its callbacks run on the rendering thread, per viewport, with that viewport's camera, and are skipped for reflection-probe renders. Screen-space probes need it.
 - **`call_on_render_thread` from `_process`** suits a world-space volume that does not depend on the camera. gomezzz enqueues one update per frame this way and skips frames while the previous update is pending ([gomezzz](godot_projects.md#gomezzz-world-space-3d-rc)).
-- **One compute list per cascade chain.** Record the levels in one list with `compute_list_add_barrier()` between them ([barriers](../../docs/rendering_device.md#barriers-between-dispatches)). The render graph orders separate lists, and copies after a list, when they touch the same resource, which is why most compositor effects never call a barrier.
+- **One compute list per cascade chain.** Record the levels in one list with `compute_list_add_barrier()` between them ([barriers](../../docs/rendering_device.md#barriers-between-dispatches)). The render graph orders separate lists, and copies after a list, when they touch the same resource, which is why most compositor effects never call a barrier: since 4.3 the device inserts them.
 - **Uploads** go before `compute_list_begin()`; `buffer_update` inside a list fails ([uploads](../../docs/rendering_device.md#upload-before-the-compute-list)).
 - **Includes** nest one level, and only in imported `.glsl` files ([includes](../../docs/rendering_device.md#shader-includes)). Runtime compilation from source cannot include files, so gomezzz splices its includes by string replacement before `shader_compile_spirv_from_source`, and the official post_shader template substitutes user code at a marker. Both then need their source files in the export filter.
 - **Compile errors** do not stop the run; check `compile_error_compute` after every compile ([compile errors](../../docs/rendering_device.md#shader-compile-errors)).
@@ -26,17 +26,17 @@ The compositor effects in [Godot projects](godot_projects.md#compositor-effect-p
 
 ## Frame order and compositor hooks
 
-Forward+ renders a frame in this order. The order of PRE_OPAQUE callbacks, `_pre_opaque_render` with `process_gi`, the opaque pass and POST_OPAQUE callbacks was checked at the tag.
+Forward+ renders a frame in this order; line numbers refer to `servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp` at 4.7.2-stable. The order of PRE_OPAQUE callbacks, `_pre_opaque_render` with `process_gi`, the opaque pass and POST_OPAQUE callbacks was checked at the tag.
 
 1. `sdfgi_update` creates the SDFGI object when SDFGI is enabled, deletes it when disabled or reset, and otherwise calls its `update`. The caller was not in the files read.
 2. `_render_scene` calls `_update_sdfgi`, which voxelizes each pending region and relights static lights when they need it.
 3. For normal views, not reflection probes: `update_cascades`, `pre_process_gi` and `update_light`.
 4. The depth pre-pass, writing normal-roughness when SSAO, SSIL, SSR, SDFGI, a normal map or a compositor effect needs it, then its MSAA resolve. In this branch `_post_prepass_render` runs SDFGI's probe update (`sdfgi_integrate` MODE_PROCESS). The branch runs only with the pre-pass on; `rendering/driver/depth_prepass/enable` defaults to true, and its `disable_for_vendors` list is read only by the Compatibility backend.
-5. PRE_OPAQUE callbacks.
-6. `_pre_opaque_render`: shadows, `store_probes` (SDFGI's SH to octahedral maps), `process_gi` (writes `rbgi/ambient` and `rbgi/reflection`), last-frame buffer allocation, depth downsample, SSAO, SSIL, SSR, light clustering and volumetric fog, in that order.
-7. The render-pass uniform set is built, binding whatever exists at that moment under `rb_ssao/final`, `rbgi/ambient`, `rbgi/reflection`, `rb_ssil/final` and `rb_ssr`, or a default black texture.
-8. The opaque draw, POST_OPAQUE callbacks, the sky, POST_SKY, PRE_TRANSPARENT, the alpha pass, POST_TRANSPARENT.
-9. After the transparent pass the color buffer is copied into SSIL's last-frame texture, so SSIL always reads the previous frame's lit color.
+5. PRE_OPAQUE callbacks (line 2173).
+6. `_pre_opaque_render` (line 2182): shadows, `store_probes` (SDFGI's SH to octahedral maps), `process_gi` (writes `rbgi/ambient` and `rbgi/reflection`), last-frame buffer allocation, depth downsample, SSAO, SSIL, SSR, light clustering and volumetric fog, in that order.
+7. The render-pass uniform set is built (line 2200), binding whatever exists at that moment under `rb_ssao/final`, `rbgi/ambient`, `rbgi/reflection`, `rb_ssil/final` and `rb_ssr`, or a default black texture.
+8. The opaque draw (line 2221), POST_OPAQUE callbacks, the sky, POST_SKY, PRE_TRANSPARENT, the alpha pass, POST_TRANSPARENT.
+9. After the transparent pass the color buffer is copied into SSIL's last-frame texture (line 2452), so SSIL always reads the previous frame's lit color.
 
 | Value | Callback | Runs |
 |---|---|---|
@@ -63,7 +63,7 @@ The renderer checks each flag across all effects in the compositor. PRE_OPAQUE i
 - **Color:** `get_color_texture(msaa)` or `get_color_layer(view, msaa)`, RGBA16F, used as an `rgba16f` storage image. Forward+ has no albedo buffer.
 - **Depth:** `get_depth_texture(msaa)` or `get_depth_layer(view, msaa)`; set `access_resolved_depth` with MSAA. Depth is reversed: 1 at the near plane, 0 at the far plane and the sky.
 - **Velocity:** `get_velocity_texture(msaa)` or `get_velocity_layer(view, msaa)`, with `needs_motion_vectors`.
-- **Normal and roughness:** `get_texture("forward_clustered", "normal_roughness")`, RGBA8_UNORM, with `needs_normal_roughness`. It holds the view-space normal packed with CryEngine's best-fit normal encoding (`encode24`) and stored as `n·0.5 + 0.5`; decode with `normalize(rgb·2 − 1)`. The class reference's `normal_roughness_compatibility` returns the same normal re-packed into `[0, 1]`, which must be undone too. Alpha is roughness times 127/255, flipped to `1 − value` for dynamic instances, so `a > 0.5` marks pixels of moving objects.
+- **Normal and roughness:** `get_texture("forward_clustered", "normal_roughness")`, RGBA8_UNORM, with `needs_normal_roughness`. It holds the view-space normal packed with CryEngine's best-fit normal encoding (`encode24`) and stored as `n·0.5 + 0.5`; decode with `normalize(rgb·2 − 1)`. The class reference's `normal_roughness_compatibility` returns the same normal re-packed into `[0, 1]`, which must be undone too. Alpha is roughness times 127/255, flipped to `1 − value` for dynamic instances, so `a > 0.5` marks pixels of moving objects, a free signal for rejecting history on moving geometry.
 - **Separate specular:** `get_texture("forward_clustered", "specular")`, only with `needs_separate_specular`.
 - **Sizes:** `get_internal_size()` is the 3D render size before upscaling; `get_target_size()`, `get_view_count()`, `get_render_target()` and `get_texture_samples()` give the rest.
 - **Missing names:** `get_texture` on a missing name logs an error and returns an invalid RID, so check `has_texture` first.
@@ -127,7 +127,7 @@ The terms that land where diffuse GI belongs, multiplied by albedo, AO and `1 �
 | Material `IRRADIANCE` | yes, per material | Mixed in before AO, albedo and `1 − metallic`, so the composite is correct. Every opaque material must be a `ShaderMaterial` that writes it; it can read a screen-sized texture through a global uniform at `SCREEN_UV` |
 | Material `EMISSION` | yes, with care | Skips AO and the metallic factor unless the shader applies them; gomezzz writes `albedo·irradiance·(1 − metallic)` |
 | `rbgi/ambient` written at PRE_OPAQUE | no | The opaque shader reads it only when SDFGI or VoxelGI is active, and `process_gi` then overwrites it after PRE_OPAQUE |
-| `rb_ssil/final` written at PRE_OPAQUE | no | Read only when the environment enables SSIL, and then `using_ssil` is true whatever the pre-pass setting, so the built-in SSIL overwrites it. If an effect creates the texture first, the engine reuses it without checking its format |
+| `rb_ssil/final` written at PRE_OPAQUE | no | Read only when the environment enables SSIL, and then `using_ssil` is true whatever the pre-pass setting (`render_forward_clustered.cpp:1839`), so the built-in SSIL overwrites it. If an effect creates the texture first, the engine reuses it without checking its format (`effects/ss_effects.cpp:706-708`) |
 | Compute on the color buffer after the opaque pass | partly | Adds light after shading, but with no albedo buffer the GI cannot be multiplied by albedo |
 
 The gating behind the `rbgi` row: the buffer blend runs only for instances with `USE_GI_BUFFERS` and with `sc_use_forward_gi` off. `USE_GI_BUFFERS` is set only when opaque GI is in use, which needs an enabled SDFGI environment with a debug mode other than unshaded, or at least one VoxelGI instance. Opaque surfaces start with `uses_forward_gi = 0`, and alpha surfaces with GI set it to 1. `process_gi` writes every pixel it dispatches, no callback runs between it and the opaque draw, and with neither SDFGI nor VoxelGI active the opaque shader does not read the buffers, so the `rbgi` textures cannot carry custom GI into the opaque pass. The opaque pass binds `rbgi/ambient` and `rbgi/reflection` at bindings 28 and 29 (default black when missing, absent for reflection probes), SDFGI's probe map and occlusion texture at 30 and 31, and the VoxelGI buffer at 32. SSAO runs only with the pre-pass on, but its shader flag comes from the environment alone, so with the pre-pass off and SSAO on the shader reads whatever `rb_ssao/final` holds (untested).
@@ -137,7 +137,7 @@ The gating behind the `rbgi` row: the buffer blend runs only for instances with 
 The path that composes correctly:
 
 1. Write a screen-sized RGBA16F irradiance texture in a PRE_OPAQUE callback (screen-space probes), or a probe atlas from any callback (world-space probes).
-2. Wrap it in a `Texture2DRD` and assign it to a global `sampler2D` shader parameter. The material storage resolves the `Texture2DRD` to its RD texture, which must be 2D, depth 1, single-layer, created with `TEXTURE_USAGE_SAMPLING_BIT` ([Texture2DRD](../../docs/rendering_device.md#texture2drd)), and in a format that maps to an `Image` format. Changing the global value re-queues every material that uses it.
+2. Wrap it in a `Texture2DRD` and assign it to a global `sampler2D` shader parameter. The material storage (`storage_rd/material_storage.cpp`) resolves the Variant to its RID and then to the RD texture (`texture_storage.cpp:2246-2256`); `Texture2DRD` accepts it only if it is 2D, depth 1, single-layer, created with `TEXTURE_USAGE_SAMPLING_BIT` ([Texture2DRD](../../docs/rendering_device.md#texture2drd)), and in a format that maps to an `Image` format (`texture_storage.cpp:2163-2215`). Changing the global value re-queues every material that uses it.
 3. In every opaque `ShaderMaterial`, sample it at `SCREEN_UV`, or at the world position and normal for a probe atlas, and write `IRRADIANCE = vec4(value, 1.0)`.
 
 `IRRADIANCE` replaces the environment ambient, which is a constant color or the most blurred mip of the sky radiance map, both approximating cosine-weighted average radiance. So the value to write is `E/π`, which for equal-solid-angle bins is `Σ L·cos/Σ cos` ([normalization](3d_screen_space.md#final-gather)), not irradiance `E`. With `IRRADIANCE.a = 1` the environment ambient is gone, so the RC sky term has to supply sky light. SSAO still multiplies the result on top of the occlusion RC already contains, SSIL adds to it when enabled, and reflection probes with an ambient mode mix in after it. A texture read at `SCREEN_UV` describes the opaque surface at that pixel, so transparent materials need a world-space lookup.
@@ -266,7 +266,7 @@ Accepted losses: no high-frequency GI (screen-space effects fill it in), dynamic
 
 **Dynamic objects (planned).**
 - Each moving object gets its own distance field from a jump flood, built on demand. Writing all objects into every cell costs cells × objects, so cascades split into 8³ macro regions of 16³ cells, each with a bit list of overlapping objects built by one compute thread per cell with atomic OR, and a 64-byte empty-cell mask so the DDA skips empty space.
-- They are lit through a card atlas: six axis views per object (albedo, normal, emission, depth) at about one pixel per voxel, lit in compute with shadows from the static cascades, and read where a card's depth meets a cell.
+- They are lit through a card atlas: six axis views per object (albedo, normal, emission, depth) at about one pixel per voxel, lit in compute with shadows from the static cascades, and plotted into the cell where a card's depth meets it.
 - Static hits stay cached, and a dynamic ray retraces only up to its cached static hit, reading dynamic light if something intercepts it first.
 - The author of HDDAGI's 2026 screen-probe draft names this plan, and Lumen's per-object surface caching, as a possible route for moving geometry instead of frequent revoxelization; no work on it had started.
 
@@ -282,7 +282,7 @@ HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades tr
 
 **Status.**
 - #86267 was reviewed in 2024. clayjohn measured a small overall gain and a large drop in probe cost, and the rendering meeting agreed to rename it `dynamic_gi`. The thread was locked in 2024-12, with the timeline depending on reduz's time. A null dereference in `process_gi` (reading `hddagi` members when only VoxelGI exists) and leaked RIDs were still in the head.
-- High-density probes and dynamic objects were left for after merging; only static meshes are voxelized.
+- High-density probes and dynamic objects were left for after merging; only static meshes are voxelized, so dynamic objects receive GI but add nothing.
 - #119869's open problems: wrong probe occlusion on D3D12, compute-pipeline error spam on RADV and macOS, brightness jumps at 50% and 70% cascade height, and 13 leaked "HDDAGI Voxel Disocclusion" textures.
 - No maintainer has stated a merge decision. Calinou suggested an optional screen-space GI pass as the best fix for leaks.
 - If it lands, it still writes the engine's private GI buffers, so it changes none of the entry points above.
@@ -294,10 +294,10 @@ HDDAGI (hierarchical DDA GI) is reduz's replacement for SDFGI: voxel cascades tr
 - The sky is never injected; probe rays that miss read the sky cubemap at mip 2, or the clear color.
 
 **Probes.**
-- One probe per 8 cells, so a default cascade has 17 × 9 × 17 = 2,601 probes. Each is a 5×5 octahedral tile (7×7 with a border), one thread and one ray per texel, 25 rays per update, jittered per frame. A full update of four cascades is 260,100 rays (derived).
+- One probe per 8 cells, so a default cascade has 17 × 9 × 17 = 2,601 probes. Each is a 5×5 octahedral tile (7×7 with a 1-texel border), one thread and one ray per texel, 25 rays per update, jittered per frame. A full update of four cascades is 260,100 rays (derived).
 - Rays start at the probe, pushed forward by `probe_bias`. Each result is splatted bilinearly into up to 4 octahedral texels with 14-bit fixed-point integer atomics.
 - A hit cache stores the hit cell, cascade and axis per texel and history slot, so unchanged hits are reused. An entry is dropped when its region's version changes or the cascade moved along its axis.
-- History is a moving average over `frames_to_converge` slots. In #119869 the default is 6, 150 rays per probe in history (derived); Calinou found 32 (800 rays) removes most flicker and suggested 18 to 24.
+- History is a moving average over `frames_to_converge` slots, a project setting. In #119869 the default is 6, 150 rays per probe in history (derived); Calinou found 32 (800 rays) removes most flicker and suggested 18 to 24.
 - Diffuse is a fixed weighted sum of neighbouring octahedral texels; specular reads the averaged texel.
 - Probes near geometry update when their region is visible; probes in revoxelized regions within 1, 2, 4 or 8 frames; others every `inactive_update_frames`, staggered by the parity of their world position.
 - Newly uncovered probes are seeded from the next coarser cascade with occlusion-weighted trilinear weights; the top cascade starts at zero.
@@ -326,7 +326,137 @@ The draft adds Lumen-style screen probes that trace through Hi-Z first and then 
 - **Detail trace:** before the voxel DDA, a Hi-Z march (2×2 max-depth pyramid, 48, 32 or 16 iterations) out to 2 units for diffuse and 50 for specular. A hit reads the lit screen color, so visible dynamic objects occlude and bounce light. It costs extra on low-end GPUs, and probe jitter alone handles corners without it.
 - **Irradiance cache:** first-order `[1, n]` moments per entry with a 16-sample history. It flickers and is left off.
 - **Problems:** noisy and laggy screen-probe reflections, unstable light in hard-to-sample spots, and pixelated dark areas near corners and thin plates from over-occluding coarse voxels.
-- **Dynamic objects** were prototyped in a fork with an object-level voxel cache at about 20% overhead; they flickered and leaked light from distant dynamic emitters. In maidopi-usagi's words (2026-09-08), rigid mesh instances with an "object level cache" toggle keep their own voxel cache, traced between the screen trace and the global trace, with extra storage. Their `dynamic_gi_hw` branch (34 commits ahead of master) has commits adding object-local caches for rigid geometry and `hddagi_rigid*` files; that it is the measured prototype is inferred from names and dates. David-Zuloyan reports dynamic objects on #119869 as "heavy", with no figure (fork branches `hddagi-4.7` and `pr-119869`).
+- **Dynamic objects** were prototyped in a fork with an object-level voxel cache at about 20% overhead; they flickered and leaked light from distant dynamic emitters. In maidopi-usagi's words (2026-09-08), rigid mesh instances with an "object level cache" toggle keep their own voxel cache, traced between the screen trace and the global trace, with extra storage. Their `dynamic_gi_hw` branch (34 commits ahead of master) has the commits "Add object-local HDDAGI caches for rigid geometry" and "Improve rigid HDDAGI cache controls and lighting stability" and `hddagi_rigid*` files; that it is the measured prototype is inferred from names and dates. David-Zuloyan reports dynamic objects on #119869 as "heavy", with no figure (fork branches `hddagi-4.7` and `pr-119869`).
+
+## Engine source locations
+
+Line numbers are at tag 4.7.2-stable and, apart from the checked call order, come from one read ([internals](../sources/2026_godot_gi_internals.md)). `gi.cpp`, `gi.h`, `fog.cpp`, `fog.h` and `sky.cpp` are in `servers/rendering/renderer_rd/environment/`; `gi.glsl`, the `sdfgi_*.glsl` shaders and `volumetric_fog_process.glsl` in `servers/rendering/renderer_rd/shaders/environment/`; `render_forward_clustered.h`, `render_forward_clustered.cpp` and `scene_shader_forward_clustered.cpp` in `servers/rendering/renderer_rd/forward_clustered/`; `scene_forward_clustered.glsl` in `servers/rendering/renderer_rd/shaders/forward_clustered/` and `scene_forward_gi_inc.glsl` one level up; `render_scene_buffers_rd.h`, `render_scene_buffers_rd.cpp` and `render_scene_data_rd.cpp` in `servers/rendering/renderer_rd/storage_rd/`; `render_data.h`, `render_data.cpp`, `render_scene_data.h` and `render_scene_data.cpp` in `servers/rendering/storage/`; `renderer_scene_render_rd.cpp` and `renderer_scene_render_rd.h` in `servers/rendering/renderer_rd/`; `ss_effects.h` and `smaa.h` in `servers/rendering/renderer_rd/effects/`; `render_forward_mobile.h` in `servers/rendering/renderer_rd/forward_mobile/`; `rendering_server_enums.h`, `rendering_server.h`, `rendering_server.cpp` and `shader_compiler.cpp` in `servers/rendering/`; `environment.h`, `environment.cpp`, `compositor.h` and `compositor.cpp` in `scene/resources/`; the class references (`CompositorEffect.xml`, `RenderSceneBuffersRD.xml`, `RenderSceneData.xml`, `RenderData.xml`, `Environment.xml`) in `doc/classes/`. Each file is at https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/<path>. The docs pages read are, under https://docs.godotengine.org/en/latest/tutorials/, `3d/global_illumination/using_sdfgi.html` ("Setting up SDFGI", "Environment SDFGI properties", "SDFGI interaction with lights and objects", "Adjusting SDFGI performance and quality", "SDFGI caveats"), `rendering/compositor.html` ("The Compositor", "Compositor effects") and `shaders/shader_reference/spatial_shader.html` ("Fragment built-ins"); the class reference sources are at https://github.com/godotengine/godot/tree/master/doc/classes, read as their 4.7.2 tag copies.
+
+**SDFGI settings, geometry, textures and voxelization.**
+
+| Item | Location |
+|---|---|
+| `sdfgi_enabled` | `environment.h:153` |
+| `sdfgi_cascades` | `environment.h:154`, `environment.cpp:1422` |
+| `sdfgi_min_cell_size` | `environment.h:155`, `environment.cpp:1423` |
+| `sdfgi_y_scale` | `environment.h:156`, `environment.cpp:1428`, `rendering_server_enums.h:702-705` |
+| `sdfgi_use_occlusion`, `sdfgi_bounce_feedback`, `sdfgi_read_sky_light`, `sdfgi_energy`, `sdfgi_normal_bias`, `sdfgi_probe_bias` | `environment.h:157` to `162`, in that order |
+| Project settings `probe_ray_count`, `frames_to_converge`, `frames_to_update_lights`, read by the GI constructor | `gi.cpp:3515-3517` |
+| Ray count options, default 16 | `gi.cpp:1322`, `gi.h:708` |
+| Frames to converge options, default 30 | `render_forward_clustered.cpp:4053-4054`, `gi.h:709` |
+| Frames to update light options, default 4 | `gi.h:710`, `gi.cpp:1291-1295` |
+| `get_sdfgi_max_distance()`, `get_sdfgi_cascade0_distance()`; the class reference (`Environment.xml`) lists the same defaults | `environment.cpp:511-526` |
+| At most 8 cascades; 128 cells per axis; `PROBE_DIVISOR` | `gi.h:561`; `gi.h:562, 646`; `gi.h:563` |
+| 8 cells between probes; 17 probes per axis and the per-cascade count | `gi.cpp:566`; `gi.cpp:427`, `gi.h:665` |
+| Octahedral tile; 16 SH rows per probe | `gi.h:567`, `gi.cpp:516-517`; `gi.h:568`, `gi.cpp:494` |
+| 128 dynamic and 1024 static light slots | `gi.h:565`; `gi.h:566` |
+| Solid cell fraction 0.25 (`solid_cell_count` = 128³ × 0.25) | `gi.h:712`, `gi.cpp:428-429` |
+| Y multiplier; cell size `min_cell_size·2^i`; extent `position ± 64` cells | `gi.cpp:423-424`; `gi.cpp:431, 563, 573`; `gi.cpp:1520` |
+| `y_mult` applied before indexing | `gi.cpp:565, 1207-1209`, `gi.glsl:290` |
+| `SDFGI::Cascade` and its 128³ textures | `gi.h:571-622`; created at `gi.cpp:547-590` |
+| `sdf_tex`; `light_data` / `light_tex` | `gi.cpp:433-439, 550`; `gi.cpp:478-481, 552-561` |
+| `light_aniso_0_tex`; `light_aniso_1_tex` | `gi.cpp:483-484, 554`; `gi.cpp:485-486, 555` |
+| `lightprobe_history_tex`; `lightprobe_average_tex` | `gi.cpp:491-502, 577-579`; `gi.cpp:504-506, 581-583` |
+| `solid_cell_buffer` (`solid_cell_count` entries); `solid_cell_dispatch_buffer_*`; `lights_buffer`, a storage buffer of Light entries | `gi.cpp:587`; `588-589`; `590` |
+| `lightprobe_data` / `lightprobe_texture`, with the specular read at layer offset `max_cascades` | `gi.cpp:511-525`, `gi.glsl:265` |
+| `occlusion_data` / `occlusion_texture`; `ambient_texture` | `gi.cpp:471-476, 540-545`; `gi.cpp:527-535`, `gi.h:654` |
+| `lightprobe_history_scroll` (R16G16B16A16_SINT); `lightprobe_average_scroll` (R32G32B32A32_SINT) | `gi.cpp:508`; `gi.cpp:509` |
+| Shared render-time textures `render_albedo`; `render_emission` and `render_emission_aniso`; `render_occlusion[8]`; `render_geom_facing`; `render_sdf[2]`; `render_sdf_half[2]` | `gi.cpp:441-469`: 441-444; 447-448; 452-454; 457; 459-461; 463-468 |
+| Albedo voxel bit layout | `scene_forward_clustered.glsl:2912-2915` |
+| SDF texel encoding and its `texel·255 − 1` decode | `sdfgi_preprocess.glsl:958-968`; `sdfgi_integrate.glsl:227` |
+| Occlusion as eight 4-bit values; light as RGBE 9-9-9-5 | `sdfgi_preprocess.glsl:973-980`; `gi.cpp:478-481`, `sdfgi_direct_light.glsl:462` |
+| `_update_sdfgi` running `render_region` per region | `render_forward_clustered.cpp:1255-1281`, `gi.cpp:2061-2082` |
+| `render_region` calling `_render_sdfgi`; its three axis passes | `render_forward_clustered.cpp:3099-3180`; `3133-3176` |
+| `PASS_MODE_SDF`; `MODE_RENDER_SDF` writes (albedo, `imageAtomicOr` facing bits, emission) | `render_forward_clustered.cpp:398, 479-482`; `scene_forward_clustered.glsl:2906-2960` |
+| `SDFGI::update`, every frame | `gi.cpp:1192-1247`, called from `render_forward_clustered.cpp:4068` |
+| `drag_margin` of 4 cells; the dirty slab | `gi.cpp:1199, 1212-1222`; `gi.cpp:1215, 1220` |
+| Whole cascade dirty on a shift of 128 cells or more, or over half the safe volume | `gi.cpp:1226-1230`; `gi.cpp:1240-1244` |
+| `get_pending_region_data` | `gi.cpp:1458-1512` |
+| Voxel scroll (MODE_SCROLL); probe scroll | `gi.cpp:2119-2126`, `sdfgi_preprocess.glsl:173-200`; `gi.cpp:2177-2205` |
+
+**Frame order and shader modes.**
+
+| Item | Location |
+|---|---|
+| `sdfgi_update` | `render_forward_clustered.cpp:4026-4070`, `gi.cpp:414, 1192` |
+| Pending-region queries | `render_forward_clustered.cpp:4072-4122`, `gi.cpp:1458-1512` |
+| `_render_scene` calling `_update_sdfgi`, `render_region`, `render_static_lights` | `render_forward_clustered.cpp:1734` (body 1255-1281), `gi.cpp:2061-2420, 2422-2609` |
+| `update_cascades`, `pre_process_gi`, `update_light` | `render_forward_clustered.cpp:1748-1759`, `gi.cpp:1514, 1825, 1249` |
+| `_post_prepass_render` calling `update_probes` (MODE_PROCESS) | `renderer_scene_render_rd.cpp:1348-1357`, `gi.cpp:1311-1411`, `render_forward_clustered.cpp:2112-2113, 2119-2132` |
+| `_pre_opaque_render`, `store_probes`, `process_gi` | `render_forward_clustered.cpp:2182` (body 1517), `1532-1534`, `gi.cpp:1414-1455`, `render_forward_clustered.cpp:1580, 1606-1607`, `gi.cpp:3968-4276` |
+| Opaque pass through POST_TRANSPARENT | `render_forward_clustered.cpp:2188-2458` |
+| `sdfgi_preprocess.glsl` modes (define in `gi.cpp`; shader line) | SCROLL 3634; 173-200. SCROLL_OCCLUSION 3635; 203. INITIALIZE_JUMP_FLOOD and _HALF 3636-3637; 227, 245. JUMPFLOOD and _OPTIMIZED 3638-3639; 275, 351. UPSCALE_JUMP_FLOOD 3640; 446. OCCLUSION 3641; 484. STORE 3642; 948-981 |
+| `sdfgi_direct_light.glsl` modes | PROCESS_STATIC 3656; entry 31, SDF march 313, light store 447-470, anisotropic store 559-561. PROCESS_DYNAMIC 3657; 216, bounce from the probe texture at binding 11, store 497-509 |
+| `sdfgi_integrate.glsl` modes | PROCESS 3674; 164, Vogel rays 180-265, sky 277, SH store 324. STORE 3675; 350-433. SCROLL 3676; 475. SCROLL_STORE 3677; 600 |
+| `sdfgi_debug.glsl`; `sdfgi_debug_probes.glsl` | `gi.cpp:3609-3612`, ray march 72-183; `gi.cpp:3783-3786` |
+| `gi.glsl` modes; `sdfgi_process`; VoxelGI; buffer writes | `gi.h:807-813`, `gi.cpp:3721-3725`; `gi.glsl:288`; `615-670`; `717-727` |
+| Comments that disagree with the code | `gi.cpp:435` ("Always 64x64", against 128 at `gi.h:646`); `gi.h:580` ("half size", against `gi.cpp:441-448, 478-486`); `gi.h:663` (`num_cascades = 6`, overwritten at `gi.cpp:419`); `gi.cpp:1204-1205` (`probe_half_size` zeroed); `gi.h:590-595` (`SolidCell` unused) |
+
+**Script access and compositor hooks.**
+
+| Item | Location |
+|---|---|
+| `RenderSceneBuffersRD` script bindings (texture access at lines 52 and 56-60, creation 53-55, `clear_context` 61, named buffers 64-69, sizes and counts 72-82); custom data in C++ only | `render_scene_buffers_rd.cpp:51-83`; `render_scene_buffers_rd.h:231-233` |
+| Custom-data users (SDFGI, `rbgi`, fog, forward-clustered) | `gi.h:453-476, 556`, `render_forward_clustered.cpp:279-286, 3392-3395, 3711-3712` |
+| `get_texture` on a missing name; `has_texture` | `render_scene_buffers_rd.cpp:391-397`; `286-290` |
+| "render_buffers" scope; its names; their uses | `render_scene_buffers_rd.h:44`; `h:48-64`; `render_scene_buffers_rd.cpp:186-206, 534-535, 724, 731-736`, `renderer_scene_render_rd.cpp:345, 418` |
+| "VRS" scope and texture | `render_scene_buffers_rd.h:45, 47`; `render_scene_buffers_rd.cpp:206` |
+| "forward_clustered" scope; its names | `render_forward_clustered.h:49`; `h:51-56`; registered at `render_forward_clustered.cpp:51-84` |
+| "rbgi" and "sdfgi" scopes | `gi.h:52`, with `RB_TEX_AMBIENT` and `RB_TEX_REFLECTION` at `gi.h:55-56`; `gi.h:53`, custom data at `gi.cpp:404-412, 522, 540, 550` |
+| "Fog" scope | `fog.h:42`; custom data at `render_forward_clustered.cpp:3711-3712` |
+| "rb_ssao", "rb_ssil", "rb_ssr"; "final", "ssr", "mip_level" | `ss_effects.h:52-54`; `h:57, 67, 68`; read at `render_forward_clustered.cpp:2585-2592, 3641, 3727, 3740-3759` |
+| Uncatalogued "rb_sslf", "rb_ssds", "rb_smaa", "mobile", "sky_buffers" | `ss_effects.h:50-51`, `smaa.h:39`, `render_forward_mobile.h:38`, `sky.cpp:49` |
+| SDFGI volumes as raw RIDs | `gi.cpp:404-412, 522, 540, 550, 577-583`, `gi.h:628-655` |
+| `rbgi/ambient` and `rbgi/reflection`: written by `process_gi`, RGBA16F with sampling and storage usage, SDFGI and VoxelGI combined | `gi.cpp:3987-3997`, `gi.h:55-56`; `gi.cpp:3992-3996`; `gi.glsl:717-727`; called at `render_forward_clustered.cpp:1607` |
+| Cleared on a half-resolution change; reallocated on a context clear | `gi.cpp:3978-3984`; `gi.cpp:3984` |
+| Callback enums; default POST_TRANSPARENT | `rendering_server_enums.h:629-635`, `compositor.h:43-49`; `compositor.h:55` |
+| PRE_OPAQUE, POST_OPAQUE, POST_SKY, PRE_TRANSPARENT, POST_TRANSPARENT | `render_forward_clustered.cpp:2162-2173, 2182`; `2257-2270`; `2296-2332`; `2366-2408`; `2425-2458`; documented at `CompositorEffect.xml:77-79, 80-82, 83-85, 86-88, 89-91` |
+| `_process_compositor_effects`, returning early for reflection probes | `renderer_scene_render_rd.cpp:298-318`, `301-307` |
+| Flag values; property setters | `rendering_server_enums.h:621-625`; `compositor.cpp` |
+| ACCESS_RESOLVED_COLOR (1) | `compositor.cpp:131`, `render_forward_clustered.cpp:2102-2104, 2257-2259, 2394-2396` |
+| ACCESS_RESOLVED_DEPTH (2) | `compositor.cpp:144`, `render_forward_clustered.cpp:2106-2108, 2263-2265, 2400-2402` |
+| NEEDS_MOTION_VECTORS (4); NEEDS_ROUGHNESS (8) | `compositor.cpp:157`, `render_forward_clustered.cpp:1729, 1810-1821`; `compositor.cpp:170`, `1730, 1933` |
+| NEEDS_SEPARATE_SPECULAR (16), hidden in the editor unless POST_SKY | `compositor.cpp:183`, `render_forward_clustered.cpp:1731, 1967-1968, 2345-2346`; `compositor.cpp:87-90` |
+| Flags checked across all effects | `renderer_scene_render_rd.cpp:257-279` |
+| RenderData in the callback; `get_render_scene_buffers()`; `get_render_scene_data()` | `CompositorEffect.xml:23-30`, `RenderData.xml:25-36`; `RenderData.xml:25-30`, `render_data.cpp:36`; `render_data.h:45`, `render_data.cpp:37`, `RenderData.xml:31-36` |
+| `get_color_texture`, `get_depth_texture`, `get_velocity_texture` | `render_scene_buffers_rd.cpp:64-65, 66-67, 68-69`; velocity documented at `CompositorEffect.xml:45-51` |
+| `normal_roughness`; `specular` | `CompositorEffect.xml:53-59, 60-70`, `render_forward_clustered.h:53`; `render_forward_clustered.h:51`, `render_forward_clustered.cpp:188, 242` |
+| `get_internal_size()`; `get_view_count()` on the buffers (the compositor tutorial's compute example loops over views) | `render_scene_buffers_rd.cpp:74`; `73` |
+| Scene-data methods `get_cam_transform`, `get_cam_projection` (the combined multiview projection, per `RenderSceneData.xml`), `get_view_count`, `get_view_eye_offset`, `get_view_projection` | bound at `render_scene_data.cpp:36-43`; declared at `render_scene_data.h:42, 43, 45, 46, 47`; implemented at `render_scene_data_rd.cpp:42-48, 50-52, 54-58, 60-67` |
+
+**Injection into opaque shading.**
+
+| Item | Location |
+|---|---|
+| Bindings 28 and 29 (`rbgi/ambient`, `rbgi/reflection`); 30 and 31 (SDFGI probe map, occlusion); 32 (VoxelGI) | `render_forward_clustered.cpp:3649-3660`; `3666-3686`; `3696-3703` |
+| `ambient_light` start and sky ambient; `scene_data.ambient_light_color_energy` | `scene_forward_clustered.glsl:1742, 1749-1756`; `1742` |
+| GI buffer blend for ambient; for specular | `scene_forward_clustered.glsl:2016-2023`; `2016-2024` |
+| Lightmap captures; lightmaps | `scene_forward_clustered.glsl:1804-1819`; `1860-1869` |
+| Gate on `USE_GI_BUFFERS` with `sc_use_forward_gi` off; `USE_GI_BUFFERS` from `p_using_opaque_gi` | `scene_forward_clustered.glsl:1982`; `render_forward_clustered.cpp:1034-1035` |
+| `_fill_render_list`; `using_sdfgi`; `using_voxelgi` | `render_forward_clustered.cpp:1913`; `1875-1877`; `1871-1872` |
+| `uses_forward_gi` 0 for opaque, 1 for alpha | `render_forward_clustered.cpp:1102`; `1152` |
+| `process_gi` overwriting every dispatched pixel; its `render_gi` gate | `gi.glsl:717-727`; `render_forward_clustered.cpp:1580, 1606-1607` |
+| PRE_OPAQUE before `process_gi`; nothing between `process_gi` and the opaque draw; POST_OPAQUE after it | `render_forward_clustered.cpp:2173, 2182`; `2182, 2224`; `2270` |
+| IRRADIANCE and RADIANCE renamed to `custom_irradiance` and `custom_radiance`; the `CUSTOM_*_USED` defines | `scene_shader_forward_clustered.cpp:776-777`; `scene_shader_forward_clustered.cpp:853-855`, `shader_compiler.cpp:915-918, 1049-1052` |
+| Their blend into specular; into ambient | `scene_forward_clustered.glsl:1735-1737`; `1760-1761` |
+| `RenderingServer.voxel_gi_allocate_data`: declaration, script binding, inputs, size checks | `rendering_server.h:389`; `rendering_server.cpp:2670`; `gi.cpp:67-70`; `gi.cpp:91-96` |
+| `voxel_gi_compute`; the VoxelGI path of `gi.glsl` | `scene_forward_gi_inc.glsl:51-105`; `gi.glsl:615-670` |
+
+**Volumetric fog.**
+
+| Item | Location |
+|---|---|
+| `volume_size`, `volume_depth`, `use_filter` project settings | `rendering_server.cpp:3798-3800` |
+| Aspect correction | `render_forward_clustered.cpp:1331-1334` |
+| RGBA16F volumes; R32_UINT accumulators, all made with `texture_create` | `fog.cpp:469-488`; `fog.cpp:490-511` |
+| Slice depth; its CPU inverse; `volumetric_fog_length` and `volumetric_fog_detail_spread` defaults | `volumetric_fog_process.glsl:224-228, 319`; `fog.cpp:560`; `environment.h:209-210` |
+| FogVolume writes; the density pass | `fog.cpp:630-659, 666-790`; `volumetric_fog_process.glsl:11-14, 298-370` |
+| Optional copy; separable 7-tap Gaussian, x then y; integrate pass | `fog.cpp:889-907, 1187-1192`; `volumetric_fog_process.glsl:864-878`; `826-860` |
+| Temporal reprojection defaults; its blend; `MAX_TEMPORAL_FRAMES` = 16 | `environment.h:214-215`, `environment.cpp:1576`; `volumetric_fog_process.glsl:329-358`, final mix near 803-811; `fog.h:303` |
+| `volumetric_fog_gi_inject`; `volumetric_fog_ambient_inject` | `environment.h:211`; `environment.h:212`, shader 445-460, ambient energy at `fog.cpp:1090` |
+| SDFGI in fog: the UBO, `sdfgi_ambient_texture`, `sdfgi_occlusion_texture`; per froxel `ambient·gi_inject` added; the variant chosen only when `gi_inject > 0.0001` | `volumetric_fog_process.glsl:105-151`, bindings at `fog.cpp:1041-1057`; `730-797`; `fog.cpp:1031-1061` |
+| VoxelGI in fog; instance count zero unless `gi_inject > 0.001` | `volumetric_fog_process.glsl:705-720`; `fog.cpp:1135` |
+| `process_gi`, then `_update_volumetric_fog`; `RB_SCOPE_FOG` custom data | `render_forward_clustered.cpp:1607, 1680`; `733-748, 1336-1356` |
 
 ## Connections
 

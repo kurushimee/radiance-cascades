@@ -50,7 +50,7 @@ The README rows do not scale together. From 1024² to 2048² the midpoints grow 
 
 ## TypeGPU holographic runner
 
-Software Mansion's `@typegpu/radiance-cascades` package has an SDF runner, described in [2D implementations](2d_implementations.md#typegpu-software-mansion), and a holographic runner, "Four-sector HRC, using the interval and fluence recurrences of Freeman et al. (2025)" ([TypeGPU](../sources/2026_software_mansion_typegpu_radiance_cascades.md#holographic-runner)).
+Software Mansion's `@typegpu/radiance-cascades` package has an SDF runner, described in [2D implementations](2d_implementations.md#typegpu-software-mansion), and a holographic runner, "Four-sector HRC, using the interval and fluence recurrences of Freeman et al. (2025)", the guide's cited source for both recurrences ([TypeGPU](../sources/2026_software_mansion_typegpu_radiance_cascades.md#holographic-runner)).
 
 ### Options and outputs
 
@@ -59,7 +59,7 @@ Software Mansion's `@typegpu/radiance-cascades` package has an SDF runner, descr
 | Option | Required | Default | Meaning |
 |---|---|---|---|
 | `root` | yes | | `TgpuRoot` |
-| `size` | yes | | `{ width, height }`, not validated |
+| `size` | yes | | `{ width, height }` of the material grid and the lighting, not validated; memory grows as `O(N² log N)` |
 | `medium(pixel: v2u)` | yes | | returns `{ emission: v3f, extinction }`, with `extinction` a `number` for scalar transmission and a `v3f` for rgb |
 | `transmission` | no | `'scalar'` | `'scalar'` or `'rgb'` |
 | `source(pixel: v2u, incident: v3f)` | no | none | extra emission (`v3f`) per pixel |
@@ -134,7 +134,7 @@ For level `L`, `s = 2^L`, `C = ceil(W_q/s)` columns and `Cu = ceil(W_q/(2s))` up
 ### Integrate and source passes
 
 - **Integrate**, per pixel `p` (`id = p.y·W + p.x`): `opacity(q) = exp(−extinction(q))`, per channel for rgb; `S(p)` is the sum of the four sector layers. Neighbours +X, +Y, −X, −Y are used when inside the grid and `|opacity(p) − opacity(n)| < 0.1` in every channel; `value = 4·S(p) + Σ S(n)` over used neighbours, `weight = 4 + count`, and `output(p) = (value/weight, 1)`. With `source`, `feedback[id] = pack(value/weight, 0)`. The medium's extinction is read through `hrcMedium` both for traced cells and for this test.
-- **Source** runs once per iteration before the sweeps: on iteration 0 with `incident = 0`, later with `incident = unpack(feedback[id])`, the previous integrate output. It writes `feedback[id] = pack(source(pixel, incident), 0)`, which traced cells read as extra emission at `feedback[world.y·W + world.x]` ("evaluated once per pixel before each solve"). The integrate pass then overwrites the same buffer with the lighting output for the next iteration.
+- **Source** (`updateSource`) runs once per iteration before the sweeps: on iteration 0 with `incident = 0`, later with `incident = unpack(feedback[id])`, the previous integrate output. It writes `feedback[id] = pack(source(pixel, incident), 0)`, which traced cells read as extra emission at `feedback[world.y·W + world.x]` ("evaluated once per pixel before each solve"). The integrate pass then overwrites the same buffer with the lighting output for the next iteration.
 - Each sector layer holds the angle-weighted contributions of its quarter-circle divided by 2π, so their sum is the angular mean, which is then averaged with neighbours of similar opacity.
 
 ### Behaviour read from the code
@@ -146,7 +146,7 @@ For level `L`, `s = 2^L`, `C = ceil(W_q/s)` columns and `Cu = ceil(W_q/(2s))` up
 
 ### Examples
 
-- **global-illumination** ("Holographic Global Illumination: Explore color bleeding and successive diffuse bounces through a connected gallery. Drag to move the light."). The scene is 512 units: an enclosing wall `12 − sdBox2d(p − 256, (216, 216))` and twelve boxes and disks with grey, blue, green, red and orange albedo, combined by minimum distance with the albedo of the nearest shape; `normalAt(p, radius)` takes central differences of the SDF. The grid is 256×256 (`cellSize` 2 units), with three `rgba16float` textures: `base` (lamp emission, surface coverage), `emission` (the medium's emission) and `medium` (extinction). The rasterize pass sets coverage `saturate(0.5 − sceneDistance/cellSize)` and lamp coverage from a box SDF at `lampPosition` (half size `(2, 15)`, minus 3), writes `base = (lamp·64·cellSize, surface)` and extinction `max(surface, lamp)·16·cellSize`, and the runner reads `emission.rgb` and `medium.r` with scalar transmission. The bounce pass, for pixels with `distance > −1.5·cellSize` and `base.a > 0`, writes `base.rgb + reflected(p, surface, normal)·extinction` to `emission` and re-solves. `reflected` pushes the boundary point out along the normal in three iterations, samples the four sector layers at `boundary + normal·1.5` cells, weights each sector by the sine difference of its lobe clipped to ±π/2 around the normal angle, and multiplies by `2·albedo`. `updateLighting` runs rasterize, `lighting.run({ pass })`, then `bounces` times bounce and run, all in one compute pass and only when the lamp moves or the bounce count changes. Display shows walls as `reflected(...)/π`, adds `lamp·4`, tone maps `colour/(0.5 + max(rgb))`, converts to sRGB and masks a rounded gallery frame `sdBox2d(p − 256, 220) − 12`.
+- **global-illumination** ("Holographic Global Illumination: Explore color bleeding and successive diffuse bounces through a connected gallery. Drag to move the light."). The scene (`scene.ts`, `sceneSize = 512`) is 512 units: an enclosing wall `12 − sdBox2d(p − 256, (216, 216))` and twelve boxes and disks with grey, blue, green, red and orange albedo, combined by minimum distance with the albedo of the nearest shape; `normalAt(p, radius)` takes central differences of the SDF. The grid is 256×256 (`cellSize` 2 units), with three `rgba16float` textures, all storage and sampled: `base` (lamp emission, surface coverage), `emission` (the medium's emission) and `medium` (extinction). The rasterize pass sets coverage `saturate(0.5 − sceneDistance/cellSize)` and lamp coverage from a box SDF at `lampPosition` (half size `(2, 15)`, minus 3), writes `base = (lamp·64·cellSize, surface)` to both `base` and `emission` and extinction `max(surface, lamp)·16·cellSize`, and the runner reads `emission.rgb` and `medium.r` with scalar transmission. The bounce pass, for pixels with `distance > −1.5·cellSize` and `base.a > 0`, writes `base.rgb + reflected(p, surface, normal)·extinction` to `emission` with alpha `base.a` and re-solves. `reflected` pushes the boundary point out along the normal in three iterations, samples the four sector layers at `boundary + normal·1.5` cells in UV, weights each sector by the sine difference of its lobe clipped to ±π/2 around the normal angle, and multiplies by `2·albedo`. `updateLighting` runs rasterize, `lighting.run({ pass })`, then `bounces` times bounce and run, all in one compute pass and only when `lightingDirty` is set, on a lamp move or a bounce-count change. Display shows walls as `reflected(...)/π`, adds `lamp·4`, tone maps `colour/(0.5 + max(rgb))`, converts to sRGB and masks a rounded gallery frame `sdBox2d(p − 256, 220) − 12`.
 - **radiance-cascades-drawing** ("Holographic Radiance Cascades (with drawing): Draw emitters and occluders in a pixel scene lit by holographic radiance cascades"): emission `rgb·16`, extinction `alpha·16`, so painted pixels are opaque (extinction 16) and show radiance equal to their colour, emission over extinction.
 
 The gallery example computes its bounces within one frame by re-solving, and only when the light moves; it is the one HRC code that gets multi-bounce without frame latency, at one full solve per bounce (inference).
@@ -168,7 +168,7 @@ The temporal filter reduces frame-to-frame change by under half at keep 0.85, so
 
 ## lancimir
 
-lancimir/holographic-cascades, code from a lancimir studios game in progress, with no licence ([survey](../sources/2026_rc_repository_survey.md#lancimirholographic-cascades-cpu-and-gpu-hrc)).
+lancimir/holographic-cascades, code from a lancimir studios game in progress, with no licence; the survey lists it as a CPU holographic RC following the paper's equations ([survey](../sources/2026_rc_repository_survey.md#lancimirholographic-cascades-cpu-and-gpu-hrc)).
 
 - **CPU.** A 256² grid (`N = 9`) of transmission and radiance. Cascade `n` has planes every `2^n` cells and `2^n + 1` rays per probe with directions `(2^n, 2k − 2^n)`, stored at `(x/2^n)·(2^n + 1) + k`, with angular weights as `atan2` differences. A forward pass for `n = 1..N − 1` builds rays (an even ray merges two child rays, an odd ray averages two chain orders), then a backward pass for `n = N − 2..0` builds fluence (even planes average two cones) from a zero top level, so there is no sky. Four quarter-turned frustums run under OpenMP and are summed with weight 0.25, then blurred with a cross of centre 1/2 and neighbours 1/8.
 - **CPU timings (file header, i7-14700K).** clang `-O3` without `-fopenmp` takes 210 ms at 512², 40 ms at 256² and 16 ms at 128²; MSVC `/O2` takes 280, 57 and 16 ms. Without `-fopenmp` the pragmas do nothing, so these are probably single-threaded.
@@ -236,7 +236,7 @@ The origin slide over the cell with 16 sub-steps integrates each interval over i
 
 ### tfKyRw (youssef_afella)
 
-"Holographic Radiance Cascades 2D" (2025-12-01), one frustum with the paper's geometry.
+"Holographic Radiance Cascades 2D" (2025-12-01, https://www.shadertoy.com/view/tfKyRw), one frustum with the paper's geometry ([code notes](../sources/2023_rc_shadertoys.md#tfkyrw-youssef_afella-one-frustum-with-paper-geometry)).
 
 - Eleven levels (0 to 10) for one 90° frustum facing +x. Level `n` has planes `2^n` px apart with one probe per pixel row, and rays `(2^n, 2k − 2^n)` for `k = 0..2^n`: the paper's `2^n + 1` rays spanning slopes −1 to 1 (Common:62-63, 103-107). Each texel is one cone between neighbouring rays, so every level is a full-viewport texture.
 - Cone weights come from angles: with `mid` the average of the two rays, `w1 = angle(ray1, mid)/angle(ray1, ray2)` and `w2 = 1 − w1` (Common:82-94). Level 0 gives 0.5 and 0.5; level 1 cone 0 gives about 0.41 and 0.59. Each ray is weighted by the angular width of its half of the cone.
@@ -246,7 +246,7 @@ The origin slide over the cell with 16 sub-steps integrates each interval over i
 
 ### WfyyDm (youssef_afella)
 
-"HRC 2D GI" (2025-12-03) recreates the paper's figure, and its comment calls tfKyRw a simpler version of it. It shares tfKyRw's cone weights, doubled even-plane rays, two-sample even-plane average, buffer ring and sRGB encode, and like it has no extension step.
+"HRC 2D GI" (2025-12-03, https://www.shadertoy.com/view/WfyyDm, [code notes](../sources/2023_rc_shadertoys.md#wfyydm-youssef_afella-four-frustums-in-one-buffer)) recreates the paper's figure, and its comment calls tfKyRw a simpler version of it. It shares tfKyRw's cone weights, doubled even-plane rays, two-sample even-plane average, buffer ring and sRGB encode, and like it has no extension step.
 
 - Four 90° frustums (toward −x, +x, −y and +y) at half resolution, stored as the four quadrants of each buffer; the author says full resolution would need about 40 dispatches (Common:8, 229-233).
 - Ten levels. Level `n` has planes `2^n` px apart with one probe per lateral pixel row and `2^n` cones per probe, each cone between rays `(L, 2k − L)` and `(L, 2k + 2 − L)` with `L = 2^n`, spanning ±45° (Common:112-158). Odd-plane rays reach the next parent plane (length `L` to `√2·L`) and read one nearest parent texel; even-plane rays are twice as long and average two parent samples (Common:169-211). Ray `i` of cone `c` reads parent cone `2c + i`.

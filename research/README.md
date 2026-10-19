@@ -56,9 +56,9 @@ Start with the conclusions, then read the rest in this order.
 These summarize [single_frame_3d_rc.md](topics/single_frame_3d_rc.md), which gives the evidence for each.
 
 - **RC needs no history.** It is deterministic and its cost does not depend on light count. The temporal reuse in public code comes from host limits, cost spreading, bounce feedback and hiding aliasing, each with a same-frame replacement at a known price.
-- **Single-frame 3D RC is proven in two settings.** Path of Exile 2 ships screen-space RC at about 1 to 3 ms with no temporal reuse, and Split RC runs sparse world-space RC in 8.6 to 11.5 ms with hardware ray tracing. Neither setting is Godot's, where compute shaders cannot issue ray queries.
+- **Single-frame 3D RC is proven in two settings.** Path of Exile 2 ships screen-space RC at about 1 to 3 ms with no temporal reuse, and Split RC runs sparse world-space RC in 8.6 to 11.5 ms with hardware ray tracing. Neither setting is Godot's, where compute shaders cannot issue ray queries. A third, closed-source instance, Blackline Interactive's Spatium, shows 11 to 18 ms of GI in Sponza on a 2019 laptop GPU without RT hardware through what appears to be a generated surface atlas, observed on video HUDs only.
 - **The tracer decides the cost.** Tracing is 87 to 96% of RC time in Dell'Ova's screen-probe runs, and the main cost in Kung's. At 1080p a 4 ms budget buys 4 to 12 M rays at 1 to 3 G rays per second, which fits screen probes at 4 to 8 px spacing or a few rays per pixel, but not a dense 128³ grid. Under `RenderingDevice` only a floor exists: 0.375 G segments per second, from gomezzz's whole-frame time.
-- **The evidence favours a hybrid:** a screen-space near field over world-locked world-space cascades, sparse near surfaces or in a bounded clipmap. It reaches off-screen light, keeps the error pattern fixed under camera motion and gives screen hits a same-frame radiance source.
+- **The evidence favours a hybrid:** a screen-space near field over world-locked world-space cascades, sparse near surfaces, in a bounded clipmap or on a generated surface atlas. It reaches off-screen light, keeps the error pattern fixed under camera motion and gives screen hits a same-frame radiance source.
 - **Hit lighting is the Godot-specific obstacle.** At PRE_OPAQUE this frame's lit colour does not exist, Forward+ has no albedo buffer, and shadows are drawn after the PRE_OPAQUE callbacks. A single-frame solve lights its hits from emission and its own shadow rays or per-frame light injection.
 - **Lagged bounces have no cheap replacement.** One bounce plus a sky term is the single-frame baseline; each further bounce costs another solve.
 - **Parameters with evidence behind them:** ×4 directions and ×4 intervals per cascade, 32 cascade 0 directions, a cascade 0 interval of 1.6 to 1.7 spacings, a nested equal-area direction map, a trilinear merge with a binary visibility test, one dispatch per cascade from the top with two live buffers, 6×6 irradiance tiles, RGBA16F.
@@ -121,6 +121,7 @@ These summarize [single_frame_3d_rc.md](topics/single_frame_3d_rc.md), which giv
 | [2026_voxel_3d_rc_repositories.md](sources/2026_voxel_3d_rc_repositories.md) | Voxel clipmap and hardware RT 3D projects |
 | [2026_tauray_rcpg_path_guiding.md](sources/2026_tauray_rcpg_path_guiding.md) | RC volume for path guiding; live probe culling |
 | [2024_mathis_x3xfrm_surface_probe_rc.md](sources/2024_mathis_x3xfrm_surface_probe_rc.md) | Surface-probe 3D Shadertoy and a 2.5D design |
+| [2026_blackline_interactive_spatium_rc.md](sources/2026_blackline_interactive_spatium_rc.md) | Closed-source 3D RC on a laptop GPU: HUDs, passes, settings and a surface-atlas reconstruction |
 | [2025_gavras_screen_probes_world_intervals_thesis.md](sources/2025_gavras_screen_probes_world_intervals_thesis.md) | Thesis: screen probes with world intervals |
 | [2025_kameus_spwi_probe_placement_thesis.md](sources/2025_kameus_spwi_probe_placement_thesis.md) | Thesis: one bilateral probe against min and max probes per tile |
 | [2025_abou_dan_jensen_rc_vbgi_thesis.md](sources/2025_abou_dan_jensen_rc_vbgi_thesis.md) | Thesis abstract: screen probes traced with visibility bitmasks in a game |
@@ -201,7 +202,6 @@ These summarize [single_frame_3d_rc.md](topics/single_frame_3d_rc.md), which giv
 | Tabellion and Lamorlette, irradiance caching in production (SIGGRAPH 2004) | | known through the 2008 irradiance caching course's summary |
 | Kelkar et al., RC for real-time 2D GI (IEEE ICWITE 2025) | https://doi.org/10.1109/icwite64848.2025.11307155 | paywalled; only the abstract is reachable |
 | Love and Deepspace talk, translated upload | https://www.bilibili.com/video/BV1gAdBBcE9B | HTTP 412; the talk is covered from its YouTube upload |
-| Blackline Interactive 3D RC videos | listed in [2026_rc_conference_talks.md](sources/2026_rc_conference_talks.md) | no captions; the descriptions are covered |
 | DDGI at GDC 2019 ("Ray-Traced Irradiance Fields") | https://www.gdcvault.com/play/1026182/ | video not watched; the paper is covered |
 | GM Shaders voxels post | https://mini.gmshaders.com/p/voxels | paywalled; the public part is covered |
 | Reddit threads | | blocked automated reads |

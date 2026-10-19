@@ -38,13 +38,14 @@ Single-frame 3D RC has been run and measured in these systems:
 | Split RC | sparse world probes | OptiX hardware RT | 8.6 ms Sponza, 11.5 ms San Miguel | RTX 3080 Laptop | [3D world space](3d_world_space.md#measurements) |
 | creikey | screen probes over a world voxel clipmap | voxel march | 0.76 ms at 640×360 | not stated | [world-space codes](3d_world_space_implementations.md) |
 | jumeder | dense world grid | DXR | 960 MiB, 126 M rays per frame for a Cornell box | not stated | [world-space codes](3d_world_space_implementations.md) |
+| Blackline Interactive (Spatium) | surface atlas (inferred) | compute BVH | GI 12.1 to 12.6 ms in a room and a Cornell box, 11.4 to 18 ms in Sponza, 15.9 to 27.8 ms in a 10.8 M-triangle scene; from video HUDs, single-frame by the author's claim | Radeon Pro 5500M (2019 laptop, no RT hardware) | [3D surface probes](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive) |
 | Peter (2D reference) | 2D, one probe per pixel | distance field | 0.73 ms at 720p to 7.95 ms at 4K | RX 7900 XTX | [2D implementations](2d_implementations.md) |
 
-Sannikov's two sparse 3D videos (60 to 100 fps with a screen-space marcher, 60 fps with hardware RT, all from scratch) and Blackline Interactive's claims point the same way without published numbers or code ([history](history_and_landscape.md#positions-on-3d-rc)).
+Sannikov's two sparse 3D videos (60 to 100 fps with a screen-space marcher, 60 fps with hardware RT, all from scratch) point the same way without published numbers or code ([history](history_and_landscape.md#positions-on-3d-rc)). Blackline Interactive's row is read from video HUDs of closed code, and its single-frame operation is the author's claim.
 
 The systems that do not run in one frame are informative too: Love and Deepspace converges each bounce over 28 frames, Coppen's surfel probes fill over at least 32 frames, every open Split RC code keeps history although the paper's table is single-frame, RCPG and Reservoir Cascades accumulate by design, and every engine GI (Lumen, daGI2, Brixelizer GI, HSGI, SDFGI, HDDAGI) relies on time ([surface probes](3d_surface_probes.md#single-frame-assessment), [world-space codes](3d_world_space_implementations.md#single-frame-assessment), [sampling and guiding](rc_for_sampling_and_guiding.md#single-frame-assessment), [engine GI](related_engine_gi.md#single-frame-assessment)).
 
-**Where the evidence stands.** Single-frame RC is proven in screen space (shipped) and in world space with hardware ray tracing (one paper with a stage table). It is unproven in world space with a compute tracer, which is the case Godot presents, and no 3D single-frame result has been measured for quality against a reference at a known cost (inference).
+**Where the evidence stands.** Single-frame RC is proven in screen space (shipped) and in world space with hardware ray tracing (one paper with a stage table). In world space with a compute tracer, the case Godot presents, the one instance is Blackline's surface-atlas build: its HUDs show 11 to 28 ms of GI on a 2019 laptop GPU without RT hardware, but there is no code or quality measurement, and nothing shown rules out history. No 3D single-frame result has been measured for quality against a reference at a known cost (inference).
 
 ## Where existing designs lean on time
 
@@ -115,7 +116,8 @@ A screen-space layer for contact detail over world probes for the far field: Egg
 Surfels or UV charts carry the probes ([3D surface probes](3d_surface_probes.md)).
 
 - **Against for single-frame:** surfel probe sets are temporal state, and charts need authored or generated UVs with seams. Love and Deepspace, the shipped member, converges over frames.
-- **What carries over:** surfels as a tracing proxy built once per mesh, and hit-distance visibility in the merge.
+- **For single-frame:** a generated surface atlas appears to carry Blackline's Spatium, the one single-frame world-space RC on a compute tracer shown with timings: 11.4 to 18 ms of GI in Sponza at 4.89 M rays per frame on a Radeon Pro 5500M, a cost set by atlas texels instead of pixels, and no probe inside a wall ([surface atlas](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive)). Its costs are weak contact shadows at 10 to 25 cm texels, chart seams, and an atlas build that must handle arbitrary and moving meshes (inference).
+- **What carries over:** surfels as a tracing proxy built once per mesh, hit-distance visibility in the merge, and the atlas as a probe domain.
 
 ### Holographic RC and volumetric grids
 
@@ -131,10 +133,10 @@ Surfels or UV charts carry the probes ([3D surface probes](3d_surface_probes.md)
 | Sparse world probes | Split RC | yes | not reported | deposit atomics, cascade 0 noise, compute trace cost | strongest world-space candidate |
 | Dense or clipmap grid | jumeder, creikey | mixed | 16 MiB (32³) to 1 GiB (128³) | memory, wall leaks | bounded regions, volumetrics |
 | Hybrid screen plus world | EggyStudio, creikey | no | under 10 MB to 12 MiB | hand-off tuning, unmeasured quality | matches the engine's own plan |
-| Surface probes | none | mixed | 423 MiB (Coppen) | probe convergence | tracing proxies only |
+| Surface probes | observed only (Blackline's HUDs, closed code) | no (Blackline's compute BVH) | 423 MiB (Coppen); 722 MB to 3.7 GB of VRAM in all (Blackline) | probe convergence (surfels); atlas generation, seams and contact shadows (atlas) | an atlas as the world part; tracing proxies |
 | 3D HRC | none | no | 1 to 1.8 GB at 64³ | memory | out |
 
-The evidence favours a hybrid of a screen-space near field over world-locked world-space cascades, with the world part either sparse probes near surfaces or a bounded clipmap (inference). It is the only arrangement that keeps the error pattern fixed under camera motion, reaches off-screen light, gives screen hits a same-frame radiance source and has a measured cost below 1 ms in some form. Its weakest point is that no hybrid has been measured for quality against a reference.
+The evidence favours a hybrid of a screen-space near field over world-locked world-space cascades, with the world part sparse probes near surfaces, a bounded clipmap or a generated surface atlas (inference). It is the only arrangement that keeps the error pattern fixed under camera motion, reaches off-screen light, gives screen hits a same-frame radiance source and has a measured cost below 1 ms in some form. Its weakest point is that no hybrid has been measured for quality against a reference. The surface atlas is the only world part with an observed single-frame instance on a compute tracer, and a screen-space near field would supply the contact shadows its texel size loses (inference).
 
 ## Budgets
 
@@ -210,5 +212,6 @@ Ranked by how much each blocks the goal. Each problem states a hypothesis for th
 8. **A second bounce in one frame.** *Hypothesis:* a coarse second solve two LODs up costs a fraction of the first and captures most second-bounce energy at typical albedos. *Evidence:* Split RC's multi-bounce over frames, the stored-hit-distance route ([world space](3d_world_space.md#open-questions), [alternatives](light_transport_alternatives.md#open-questions)).
 9. **Small lights and the direct split.** *Hypothesis:* lights and emitters below twice the cascade 0 spacing leave the RC scene for analytic direct lighting, and larger emitters stay, which avoids double counting by construction. *Evidence:* the penumbra condition's light-size limit and the analytic small-emitter terms ([core theory](core_theory.md#choosing-cascade-0-derived-and-reported), [world space](3d_world_space.md#connections)).
 10. **The hand-off in a hybrid.** *Hypothesis:* stating the screen-to-world hand-off as an RC interval boundary (length in probe sizes, pull-back on the far read) replaces the hand tuning of engine GI. *Evidence:* every engine system's hand-picked lengths ([engine GI](related_engine_gi.md#connections)).
+11. **A generated surface atlas as the world part.** *Hypothesis:* probes on the texels of an automatically generated chart atlas (one ray per texel per cascade, hemisphere directions, intervals in texels) give leak-free single-frame world-space GI at a cost set by atlas size, and a screen-space cascade −1 restores the contact shadows lost below the texel. *Evidence:* X3XfRM and yhyu13 on analytic rooms, Blackline's observed 11.4 to 18 ms of GI in Sponza on a 2019 laptop GPU, the seams of on-surface caches ([surface probes](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive)).
 
 Theory questions that do not block a first implementation but bear on a paper: whether a 3D lattice can make the extend identity exact without HRC's `O(N⁴)` memory, which interval scaling minimizes perceived error in 3D, how far irradiance gradients from each probe's own rays improve the merge's spatial interpolation, and whether a deterministic RIS merge keeps Reservoir Cascades' leak reduction without its noise ([core theory](core_theory.md#open-questions), [radiance caches](related_radiance_caches.md#open-questions), [sampling and guiding](rc_for_sampling_and_guiding.md#open-questions)).

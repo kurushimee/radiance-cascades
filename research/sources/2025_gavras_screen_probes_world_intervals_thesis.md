@@ -341,7 +341,7 @@ The thesis says sky radiance is computed only at the highest level and propagate
 
 The thesis says a hit blocks light from beyond it, because occlusion is 0 on a hit.
 
-Unclear in source: the meaning of the alpha channel, the exact formulas for probe UV and output position, and which merge function the kernel calls. The argument list matches the bilinear 3D signature in the pseudocode, but the source does not say so.
+Unclear in source: the meaning of the alpha channel, the exact formulas for probe UV and output position, and which merge function the kernel calls. The call passes both the probe depth that bilateral filtering uses and the world position that bilinear 3D uses, so its arguments do not settle which one it is.
 
 #### 4.5.5 Tracing and merging results
 

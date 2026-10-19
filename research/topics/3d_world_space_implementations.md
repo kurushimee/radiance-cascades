@@ -42,7 +42,7 @@ Sources: [Split RC implementations](../sources/2026_split_rc_implementations.md)
 4. `reset_table` rebuilds every hash table from the slot keys. Each slot's lifetime drops by one, and slots at zero are freed and their data zeroed. Counts go back to the CPU to size later dispatches.
 5. Ray counts: each pixel adds 1 to its base probe, and counts sum up the hierarchy. Ray offsets go top-down: top probes take ranges from one global atomic counter and pass sub-ranges to their up to 8 children.
 6. One ray per pixel per LOD, traced to the hit or to infinity, then split into cascades (below).
-7. Merge top-down, one thread block per probe.
+7. Merge top-down, one thread block per probe sharing upper-probe lookups in shared memory; the four Morton-adjacent children of a direction are averaged with warp shuffles, and higher cascades store the pre-averaged cone values (the Split RC paper's implementation notes, in Rust with LuisaCompute over CUDA and OptiX).
 8. Build a 6×6 octahedral irradiance tile (8×8 with border) per cascade 0 probe, then shade.
 
 #### Probes and LOD
@@ -344,16 +344,18 @@ Git history: five commits by the author, from 2024-04-27 to 2024-04-28. Referenc
 
 Tick returns early unless `debug.dirty` is set. Dirty is set at init, when any ImGui config value changes (ray length, scale, max level, branching factor), when the gather radius or ratio sliders change, and on keys 0 to 4 (max level). Passes marked [dirty] run only then; passes marked [frame] run every frame.
 
-- **Init (once):** `octahedralProbeAtlas`, a GL_TEXTURE_2D_ARRAY of RGBA32F, 4096 × 4096 × 7 layers, linear filter, clamp to edge; `octahedralProbeAtlasOriginal`, the same with nearest filtering; `configUBO`, a 48-byte copy of RadianceCascadesConfig. Debug defaults: atlas scale 1, render probe level −1, gather radius 1.0, gather ratio 0.75, sample-original off.
+- **Init (once, `RadianceCascadesInit`):** `octahedralProbeAtlas`, a GL_TEXTURE_2D_ARRAY of RGBA32F, 4096 × 4096 × 7 layers, linear filter, clamp to edge; `octahedralProbeAtlasOriginal`, the same with nearest filtering; `configUBO`, a 48-byte copy of RadianceCascadesConfig. Debug defaults: atlas scale 1, render probe level −1, gather radius 1.0, gather ratio 0.75, sample-original off.
 - **P1 [dirty]:** clear the atlas to zero (`glClearTexImage`).
 - **P2 [dirty] Build** (`radiance-cascades-build.comp`): one dispatch per level, from `maxLevel` down to 0 (default 5, so levels 5 to 0). Uniform 0 is the level (`uint`), uniform 1 the ray range (vec2), the UBO is on binding 0 and the atlas on image binding 1, write-only. Local size 128; thread count = texels per probe × probes at that level, with no bounds check. A thread decodes `probe = id / rays`, `ray = id % rays`, texel `(ray % d, ray / d)` with `d = atlasProbeDiameter·2^level`, and direction `OctahedralDecode((texel + 0.5)/d)`. From the probe centre it marches `t` from `rayRange.x` to `rayRange.y`: if `map(origin + dir·t).d ≤ 0.001` it stores the hit (colour, emission, throughput 0) and stops, otherwise `t += max(1e−6, r.d)`, with no iteration cap. A miss stores colour 0, emission 0, throughput 1. The write goes to layer = level at slot origin + (1, 1) + texel, with slot origin `MortonDecode2D(probe)·(d + 2)`.
 - **P3 [dirty]:** copy the atlas into the original atlas (`glCopyImageSubData`, all layers), which keeps build-only values.
 - **P4 [dirty] Stitch** the original atlas for levels `maxLevel` down to 0 (`radiance-cascades-octaprobe-stitch.comp`): local size 16, uniform 0 the level, uniform 1 the probe count `N/8^level`; thread count = probe count, with an early return at or above it.
 - **P5 [dirty] Merge and stitch loop** from level `maxLevel + 1` down to 0 (6 down to 0 by default). Each level: a memory barrier; the merge (`radiance-cascades-merge.comp`), one thread per texel of level `l` (`d_l²·probes_l`), local size 16, sampler unit 0 the atlas read with `texelFetch` from layer `l + 1`, image unit 1 the atlas read-write on layer `l`, uniform 0 the lower level; a memory barrier; the stitch for the same level with the P4 shader (see the uniform mismatch below).
-- **P6 [frame] Final pass** (`fractal.frag`, a three-vertex triangle with `debug-fullscreen.vert`): uniforms 0 `worldToScreen`, 1 `screenToWorld`, 2 `eye`, 3 `fov`, 4 `screenDims`, 5 the sampler (merged atlas, or the original if sample-original is on), 6 `debugRenderProbeLevel` (default −1), 7 and 8 the gather offset and ratio (declared, unused here). One primary ray per pixel, up to 128 sphere-trace steps, a hit threshold of 2 × the cone radius at distance `t`, and a miss colour of (0.1, 0.1, 0.1).
+- **P6 [frame] Final pass** (`fractal.frag`, a three-vertex triangle with `debug-fullscreen.vert`): uniforms 0 `worldToScreen` (mat4), 1 `screenToWorld` (mat4), 2 `eye` (vec3), 3 `fov` (float), 4 `screenDims` (vec2), 5 the sampler (merged atlas, or the original if sample-original is on), 6 `debugRenderProbeLevel` (default −1), 7 and 8 the gather offset and ratio (declared, unused here). One primary ray per pixel, up to 128 sphere-trace steps, a hit threshold of 2 × the cone radius at distance `t`, and a miss colour of (0.1, 0.1, 0.1).
 - **P7 [frame, optional] Debug views:** `debug-probe-merge.frag` when "debug merge" is on; `radiance-cascade-atlas-debug.frag` draws one strip per level, left to right, when the render-atlas box is on.
 
 #### Parameters and math
+
+Defaults come from `RadianceCascadesDefaultConfig`.
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -530,7 +532,7 @@ https://github.com/creikey/voxel-radiance-cascades (MIT; Rust, Sokol, GLSL compu
 
 ## RC design documents
 
-Design documents found in small engine repositories ([design documents](../sources/2026_engine_rc_design_documents.md)). Only EggyStudio's describes a working 3D hybrid with measurements. Where a document and its code disagree, the code values are given. The 2D canvas tutorial among them is in [2D implementations](2d_implementations.md).
+Design documents found in five small engine repositories ([design documents](../sources/2026_engine_rc_design_documents.md)). Only EggyStudio's describes a working 3D hybrid with measurements. Where a document and its code disagree, the code values are given. The 2D canvas tutorial among them is in [2D implementations](2d_implementations.md).
 
 | Repository | Document | What it is |
 |---|---|---|

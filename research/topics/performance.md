@@ -31,13 +31,13 @@ The measured cost of RC and of the GI systems it competes with, gathered by doma
 | Sohojoe (Godot) | | 1280×736 at quality 0.5 | about 60 MB per RGBA32F cascade texture | [Godot 2D](2d_implementations.md#godot) |
 | tmpvar playground | | sized for the slider limits | 512 MiB probe buffer allocated at startup | [playground](2d_articles_and_demos.md#tmpvars-playground) |
 | jason.today final demo | | 512², 6 cascades | 6.3 M rays per frame; GPU timer disabled | [2D parameters](cascade_layout_and_merging.md#2d-parameters-across-implementations) |
-| Paul Stus | not stated | 2D canvas project | about 78 fps without GI, 37 fps with it ([talks](../sources/2026_rc_conference_talks.md#other-videos-checked)) | here |
+| Paul Stus, "Presentation of my Radiance Cascades project" (https://www.youtube.com/watch?v=ZJ5NmYEwlKQ, 2026-02) | not stated | 2D canvas project | about 78 fps without GI, 37 fps with it ([talks](../sources/2026_rc_conference_talks.md#other-videos-checked)) | here |
 
-McGhee's estimate for brute force, not a measurement: 512 rays per pixel at 1024² is about 500 M rays and 1 s per frame, about 100× over a 60 fps budget ([core theory](core_theory.md#independence-from-light-count-and-scene-content)).
+McGhee's estimate for brute force, not a measurement: 512 rays per pixel at 1024² is about 500 M rays and 1 s per frame, about 100× over a 60 fps budget, so the naive method cannot reach 512 or 1024 rays in real time at large resolutions ([core theory](core_theory.md#independence-from-light-count-and-scene-content)).
 
 ### Per-pass cost in one 2D solver
 
-Peter's bachelor thesis times a 2D solver with one probe per pixel, 4 rays per probe, spacing ×2 and directions ×2 per cascade, SDF circles and boxes sphere-traced up to 128 steps and one RGBA16F atlas of 8× the pixel count. Timings are OpenGL timestamp queries, the median of 1000 frames after 200 warm-up frames, on a Radeon RX 7900 XTX, CornellLike scene ([Peter](../sources/2026_peter_rc_2d_bachelor_thesis.md), design in [2D implementations](2d_implementations.md#cpu-references-and-research-harnesses)).
+Peter's bachelor thesis times a 2D solver with one probe per pixel, 4 rays per probe, spacing ×2 and directions ×2 per cascade, SDF circles and boxes sphere-traced up to 128 steps and one RGBA16F atlas of 8× the pixel count. Timings are OpenGL timestamp queries, the median of 1000 frames after 200 warm-up frames, on a Radeon RX 7900 XTX with a Ryzen 9 9950X3D under Windows 11, CornellLike scene ([Peter](../sources/2026_peter_rc_2d_bachelor_thesis.md), design in [2D implementations](2d_implementations.md#cpu-references-and-research-harnesses)).
 
 | Resolution | Trace | Merge | Copy | RC total | Frame |
 |---|---|---|---|---|---|
@@ -107,17 +107,19 @@ Scaled to 1080p by pixel count (derived, which holds for screen probes at fixed 
 | Other sparse builds | laptop RTX 3080; Apple M2, M3 Max | various | 1 ray per pixel about 2 ms, about 3 rays per pixel 22 ms (3× the rays, 11× the time); software-RT prototype 512 ms (30% tracing, 50% hash insertion); one emitter took a box room from 120 to 30 fps; 2048² frame 34.7 ms | [measurements](3d_world_space.md#measurements) |
 | chandra | CUDA, hardware RT | 2^18 base probes, fp32 | about 1,120 MiB of buffers (from the code's formulas) | [chandra](3d_world_space_implementations.md#chandra) |
 | wroughtinator browser build | WebGPU | presets Performance to Ultra | 90,000 to 720,000 rays per frame | [browser build](3d_world_space_implementations.md#split-radiance-cascades-webgpu-browser-build) |
-| owoDra Split RC test | Radeon 8060S | ray traversal only | 66 µs hardware RT, 231 µs software | [tracing](3d_world_space.md#tracing-for-world-space-cascades) |
+| owoDra/real-time-gi-lab #3, Split RC rays | Radeon 8060S | ray traversal only | 66 µs hardware RT, 231 µs software | [tracing](3d_world_space.md#tracing-for-world-space-cascades) |
 | erhe | not stated, hardware RT | dense grid reduced into DDGI maps, 131,072 texels per frame | update 1.15 to 1.57× a DDGI update; 0.7 ms per million rays against about 6 for its DDGI; 288 MiB | [erhe](3d_world_space_implementations.md#measurements-against-ddgi) |
 | creikey | not stated, D3D11 | 640×360, screen probes over a voxel clipmap | GI 0.76 ms (trace 0.52 ms); final build 2.1 ms average, 2.5 ms worst; halving cascade 0 spacing cost 3.5×; 12 MiB | [creikey](3d_world_space_implementations.md#creikeyvoxel-radiance-cascades) |
 | EggyStudio | laptop GPU | 800×450, distance-field clipmaps plus screen probes, Low to High | 0.59, 0.74, 1.00 ms; 1.65, 4.38, 9.16 MB | [EggyStudio](3d_world_space_implementations.md#eggystudio3dengine) |
-| voxel2026 (jtbirdsell) | RTX 4090 | 1080p, 256³ voxel volume, worst case | 1.98 ms (0.17 volume, 1.55 build, 0.26 query); voxel cone tracing 2.06 ms; 124 MB plus 24 MB | [measurements](3d_world_space.md#measurements) |
+| voxel2026 (jtbirdsell, issue #4) | RTX 4090 | 1080p, 256³ voxel volume, worst case | 1.98 ms (0.17 volume, 1.55 build, 0.26 query); voxel cone tracing 2.06 ms (0.17 volume, 1.88 gather); 124 MB plus 24 MB | [measurements](3d_world_space.md#measurements) |
 | Trillion3D | not stated | camera-centred probe bounce, 64 full-length rays per probe | 1.1 ms against a 0.8 ms budget | [adoption](3d_world_space.md#adoption-and-plans) |
 | Variance-guided retracing | RTX 2080 Ti | 4 full-length rays per probe in high-variance cascade 0 directions | +1 ms on a 4 ms scene | [measurements](3d_world_space.md#measurements) |
 | jumeder | DXR | full 32³ grid, 2048 directions, 4 cascades | 960 MiB, 126 M rays per frame | [jumeder](3d_world_space_implementations.md#jumederdx12-radiance-cascades) |
 | tmpvar 3D grid | | 64³, 36 directions, 6 levels | 18.6 M rays per build; 1,792 MiB per atlas, 3,584 MiB for both | [tmpvar](3d_world_space_implementations.md#tmpvars-radiance-cascades-3d-grid) |
 | rbnelr voxel_game | | 2D slice module, 7 cascades | about 145 MB of RGBA16F, 18 M rays per frame | [voxel_game](3d_world_space_implementations.md#rbnelrvoxel_game) |
 | Surfel RC (Coppen) | Radeon 890M; RTX 4070 Mobile | 6 cascades, resolution not stated | surfel upkeep 2.45 ms on the 890M, 0.82 ms on the 4070 (derived sums); README profile gather 5.35 ms, merge 2.04 ms; 423 MiB; 25.2 M rays with every slot alive | [surfel RC](3d_surface_probes.md#performance) |
+| Spatium (Blackline Interactive), 2026-09-12 | Radeon Pro 5500M, Metal, compute BVH | surface atlas of 1024² (inferred), 3 cascades, 2.04 M rays per frame in Sponza and 2.55 M in Sponza 4K; video HUD | Sponza passes 35.06 ms: cascades 4.55, 10.05 and 10.24, camera 3.72, irradiance filter 2.62, direct 1.65, gbuffer 0.96, gather 0.59, seams 0.37, present 0.32; Sponza 4K 56.30 ms (cascades 7.28, 13.80, 13.72; camera 9.68) | [surface atlas](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive) |
+| Spatium, 2026-10-03 | same | 5 to 6 cascades, 4.11 to 6.15 M rays per frame, native resolution; ranges from several HUD frames | GI 12.6 ms pillar room, 12.1 ms Cornell box, 11.4 to 18 ms Sponza, 15.9 to 27.8 ms Intel Sponza with 10.8 M triangles; 722 MB to 3.7 GB of VRAM | [surface atlas](3d_surface_probes.md#a-generated-surface-atlas-blackline-interactive) |
 | Love and Deepspace | iPhone 12 | surfels in a hash grid, gather at about 70% resolution | about 2 ms of GI; full-resolution gather alone 2.8 ms; a simplified ReSTIR version 3.2 ms | [Love and Deepspace](3d_surface_probes.md#gather-and-timing) |
 | yhyu13 surface charts | RTX 2080 SUPER, OpenGL | Cornell box on 8 UV charts, 6 cascades, RenderDoc replay | 28.6 ms on the full atlases, 5.95 ms after skipping padding; replay varies 2 to 5×; 100.7 MB | [surface charts](3d_surface_probes.md#yhyu13-surface-chart-rc) |
 | X3XfRM | | six 1280×256 RGBA16F chart layers | 15.7 MB | [X3XfRM](3d_surface_probes.md#x3xfrm-mathis) |
@@ -210,6 +212,8 @@ Rays per second divide a ray or segment count by the time of the pass that trace
 | Compute BVH | tinybvh | RTX 5080 Laptop, no RT cores | | primary rays, Sponza | 2.8 to 3 nearest hit, 4 any hit |
 | Compute BVH | tinybvh | RX 5700 XT | | primary rays | about 1.1 |
 | Compute BVH | Surfel RC gather | not stated | 25.2 M at most | gather pass, 5.35 ms | at most 4.7 |
+| Compute BVH | Blackline's Spatium, 2026-10-03 | Radeon Pro 5500M, Metal | 4.11 to 6.15 M | HUD GI time, 11.4 to 27.8 ms | 0.22 to 0.43 |
+| Compute BVH | Blackline's Spatium, 2026-09-12 | Radeon Pro 5500M, Metal | 2.04 and 2.55 M | three cascade passes, 24.8 and 34.8 ms | 0.082 and 0.073 |
 | Voxel DDA | 3D DDA over 4×4×4 bit cubes | not stated | 15 M | trace, about 5 ms | 3.0 |
 | Voxel DDA | creikey clipmap | not stated, D3D11 | 1,884,160 | trace, 0.49 to 0.52 ms | 3.6 to 3.9 |
 | Distance fields | Lumen final gather | PS5 | 1.04 M | trace pass, 1.07 ms | 0.97 |
@@ -225,7 +229,7 @@ Rays per second divide a ray or segment count by the time of the pass that trace
 
 The screen-space rows are derived in detail in [3D screen space](3d_screen_space.md#ray-throughput-across-the-measured-spwi-codes-derived).
 
-- **Three classes.** Hardware RT on short coherent RC rays runs at 6 to 8.2 G rays/s on an RTX 3080. Compute BVHs and voxel DDA run at 2.8 to 3.9 G rays/s on current GPUs. Software traversal of a complex scene on a weak GPU falls to 0.08 to 0.4 G rays/s. The 2D and synthetic rates above 9 G rays/s come from rays a few texels long and say nothing about 3D.
+- **Three classes.** Hardware RT on short coherent RC rays runs at 6 to 8.2 G rays/s on an RTX 3080. Compute BVHs and voxel DDA run at 2.8 to 3.9 G rays/s on current GPUs. Software traversal of a complex scene on a weak GPU (Gavras on the M1, Blackline on a 2019 Radeon Pro 5500M) falls to 0.08 to 0.43 G rays/s. The 2D and synthetic rates above 9 G rays/s come from rays a few texels long and say nothing about 3D.
 - **The compute class is the one that applies to Godot.** `RenderingDevice` compute shaders cannot issue ray queries, so a Godot tracer is a compute BVH, voxel DDA or distance-field march. Its realistic target is the 1 to 3 G rays/s band; gomezzz's floor of 0.375 G segments/s is a frame-capped lower bound, not the tracer's speed.
 - **Rates fall with ray length and scene complexity, not with the method.** Kung's same ray count ran 4.2× slower outdoors than indoors; Gavras's ran 4.4× slower in Sponza than with cubes; Dell'Ova's hardware rate held across spacing. Upper cascades, whose rays are longest, are where a compute tracer loses the most, which is what mip marching (3.5× in DexRT) and coarser scene levels per cascade address.
 - **Hardware RT is not uniformly faster at RC's ray lengths.** erhe's hardware path ran 1.43 G rays/s on unstated hardware, below the compute DDA rows, and Brixelizer beat DXR on short rays; hardware RT's advantage is largest on long incoherent rays through complex geometry ([tracing](scene_representation_and_tracing.md#software-against-hardware)) (inference).

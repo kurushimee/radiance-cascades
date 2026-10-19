@@ -1,6 +1,6 @@
 # 3D surface probes
 
-Surface designs tie RC's probes, or the scene the probes trace, to the surfaces themselves. Probes on surfaces scale with surface area, the "surface" row of the [memory model](core_theory.md#memory-by-domain), and cannot sit inside a wall. This topic covers Coppen's surfel radiance cascades, Love and Deepspace's shipped surfel scene with clipmap probes, probes on UV charts (X3XfRM and yhyu13's demo), on-surface radiance caches outside RC, and a radiance field stored on a plane. Probes in a sparse world grid near visible surfaces are in [3D world space](3d_world_space.md), and probes on the depth buffer in [3D screen space](3d_screen_space.md).
+Surface designs tie RC's probes, or the scene the probes trace, to the surfaces themselves. Probes on surfaces scale with surface area, the "surface" row of the [memory model](core_theory.md#memory-by-domain), and cannot sit inside a wall. This topic covers Coppen's surfel radiance cascades, Love and Deepspace's shipped surfel scene with clipmap probes, probes on UV charts (X3XfRM, yhyu13's demo and the generated surface atlas that Blackline Interactive's results point to), on-surface radiance caches outside RC, and a radiance field stored on a plane. Probes in a sparse world grid near visible surfaces are in [3D world space](3d_world_space.md), and probes on the depth buffer in [3D screen space](3d_screen_space.md).
 
 | Design | Probes | Scene for tracing | Memory follows | Shipped |
 |---|---|---|---|---|
@@ -8,6 +8,7 @@ Surface designs tie RC's probes, or the scene the probes trace, to the surfaces 
 | Love and Deepspace | world clipmap, 3 levels | surfels per mesh in a hash grid | clipmap size | yes, phones |
 | X3XfRM (Mathis) | UV texels of an analytic room | analytic | surface texels | no |
 | yhyu13 surface charts | UV charts of a Cornell box | analytic | surface texels | no |
+| Spatium (Blackline Interactive), reconstructed | texels of a generated surface atlas, 3 to 6 cascades | compute BVH | atlas texels | no |
 | On-surface caches (Tatzgern et al.) | 2×2 texel blocks on mesh islands, not RC | hardware RT | visible islands | no |
 
 ## Surfel Radiance Cascades (src-dgi)
@@ -107,7 +108,7 @@ The two radiance textures are 64 MiB of every cascade's 65 to 90 MiB, so the cas
 
 ### Hash grid (`shared/hash.slang`)
 
-- Grid level of a point: `L = clamp(2 + trunc(log2(d²)), 0, 31)` with `d` the distance to the camera; the code computes `log(d²)·0.7213477` and truncates it.
+- Grid level of a point: `L = clamp(2 + trunc(log2(d²)), 0, 31)` with `d` the distance to the camera (the renderview origin); the code computes `log(d²)·0.7213477` and truncates it.
 - Cell size at level `L`: `2^L/(4·scale_N)`; cell index on an axis `floor(coordinate/cell size)`.
 - Hash key: x, y, z each mod 512 in 9 bits, the level mod 32 in 5 bits (bits 27 to 31); the packed key goes through xxhash32, then mod the grid capacity.
 - Surfel footprint: the axis-aligned box around `position ± radius`. The code computes the level of the point farther from the camera (`position + radius·normalize(position − camera)`) and of the nearer one, inserts into the first and also into the second if they differ. The code names the first "min", but it is the farther point's level, usually the larger.
@@ -146,7 +147,7 @@ The two radiance textures are 64 MiB of every cascade's 65 to 90 MiB, so the cas
 | 5 | 256 | 128 | 16384 | 0.128 | 2.1875 | [6.518987, 26.075947] |
 
 - Rays per frame with every probe alive: 6 × 4,194,304 = 25,165,824, one per texel.
-- **Spacing.** No spacing is set directly. A surfel's world radius at depth `d` is `max(min_radius, radius·d·fov)` with both radii `0.002·2^(N+1)` (`cascade.slang:70-75`, `spawn.slang:133-138`), so `radius = 0.002·2^(N+1)·max(1, d·fov)`: linear in depth beyond `d = 1/fov` and doubling per cascade. `fov` is the vertical field of view in radians (π/2 by default, `renderer.cpp:82`), not `tan(fov/2)`. Density comes from the count quartering, the spawn chance `1/2^N` and the hash grid. The grid cell is `2^L/(4·grid_scale)` with `grid_scale = 70/2^N`; since `0.7213477 = 1/(2 ln 2)`, `L = 2 + floor(log₂ d)`, so `2^L` lies in `(2d, 4d]` and cells grow linearly with distance, about `2^(L+N)/280` (derived).
+- **Spacing.** No spacing is set directly. A surfel's world radius at depth `d` is `max(min_radius, radius·d·fov)` with both radii `0.002·2^(N+1)` (`cascade.slang:70-75`, `spawn.slang:133-138`), so `radius = 0.002·2^(N+1)·max(1, d·fov)`: linear in depth beyond `d = 1/fov` and doubling per cascade. `fov` is the vertical field of view in radians (π/2 by default, `renderer.cpp:82`), not `tan(fov/2)`. Density comes from the count quartering, the spawn chance `1/2^N` and the hash grid. The grid cell is `2^L/(4·grid_scale)` with `grid_scale = 70/2^N` and the level from `hash.slang:31-45`; since `0.7213477 = 1/(2 ln 2)`, `L = 2 + floor(log₂ d)`, so `2^L` lies in `(2d, 4d]` and cells grow linearly with distance, about `2^(L+N)/280` (derived).
 
 The cache texel of an interval belongs to a single probe, so gather writes whole blocks by probe.
 
@@ -196,7 +197,7 @@ Thread counts from the shaders; dispatch sizes for cascade 0 at its default capa
 |---|---|---|---|---|
 | Primary G-buffer (`ray-tracing/primary.slang`) | 16×8 | `ceil(W/16) × ceil(H/8)` | BVH, prims, normals, view | albedo (rgb, alpha), normal-depth |
 | Spawn | 8×8 | `ceil(W/16) × ceil(H/16)`, per cascade | albedo, normal-depth, grid, list, posr, norw | stack, posr, norw |
-| Count | 128 | `ceil(C/128)`, per cascade | posr | grid (atomic increments) |
+| Count (`count.slang`) | 128 | `ceil(C/128)`, per cascade | posr | grid (atomic increments) |
 | Prefix sum pass 1 (`prefix_sum.slang`) | 512 | 512 groups | grid | grid (in place), segments |
 | Prefix sum pass 2 (`prefix_segments.slang`) | 512 | 1 group | grid, segments | segments |
 | Prefix sum pass 3 (`prefix_merge.slang`) | 512 | 512 groups | grid, segments | grid |
@@ -363,6 +364,18 @@ https://github.com/yhyu13/radiance-cascades-demo (`3d/`, MIT) puts probes on the
 
 The charts use 62.5% of each atlas (327,680 of 524,288 texels), so skipping padding explains 1.6× of the 4.8× speed-up; the rest is beyond what the texel count accounts for, within the 2 to 5× replay variance the repository warns about (derived).
 
+### A generated surface atlas (Blackline Interactive)
+
+Blackline Interactive's Spatium is a closed-source 3D RC in the author's own Metal engine, shown on a 2019 MacBook Pro's Radeon Pro 5500M, which has no ray-tracing hardware ([Blackline](../sources/2026_blackline_interactive_spatium_rc.md)). The author claims a single frame with no TAA, accumulation or denoiser, and no light leaks, and keeps the code and design closed. Nothing published states the design, but its HUDs, settings and pass names point to X3XfRM's chart RC generalized to arbitrary meshes (inference).
+
+- **Lineage.** On 2026-08-17 the author ran a 2024 RC Shadertoy natively in the same engine, whose title and scene match X3XfRM (inference), two days before the first version of their own RC GI, and the RC builds keep its window title format. A world-probe build came first (2026-08-29: 7 cascades, cell size 1, 4 bounces, a rebuild button and no GI pass in the per-frame pass list) and was dropped.
+- **What the HUDs and panels show.** Sponza reads "Atlas: 1024x1024 (19.9 cm/tex)", and the texel grows with the scene from 1.7 cm (Cornell box) to 24.7 cm (Sponza with 4K textures). The GI settings are "Interval (texels)" 2.0, "Normal Bias" 0.5, "Merge Cutoff" 0.35 and an irradiance filter with normal weights. Debug modes show the atlas UV apart from the material UV, and the irradiance. The passes are one per cascade, an irradiance filter, seams and a 0.5 to 0.7 ms gather, plus a camera pass for Whitted mirrors and glass. The author says the result is not a lightmap, since lightmaps need UVs made in advance.
+- **Reconstruction.** Probes sit on the texels of a generated atlas, offset along the normal. Each cascade traces one ray per texel over its probe's hemisphere, as X3XfRM's layers do, in world space through a compute BVH (tinybvh is in the engine's library list). Irradiance per texel is filtered and seam-fixed in atlas space, then looked up per pixel (inference). The rays per cascade (0.68 and 0.85 M on a 1024² atlas, later 0.69 to 1.23 M) and the Cornell box's implied 198 m² of coverage against its 181.5 m² of walls fit one ray per texel per cascade. Two Sponza builds disagree by 2.1×, so this stays a hypothesis (derived).
+- **Cost.** In the 2026-09-12 build the three cascade passes take 62 to 71% of the measured GPU time. On 2026-10-03 the GI takes 12.1 to 12.6 ms in a pillar room and the Cornell box, 11.4 to 18 ms in Sponza (5 cascades, 4.89 M rays per frame) and 15.9 to 27.8 ms in Intel Sponza with ivy (10.8 M triangles, 6.15 M rays), 55 to 79% of the GPU time. GI time follows rays and scene complexity, not pixels; the author reports 720p and 2K about 7 FPS apart. VRAM is 722 to 780 MB in the smallest scenes ([performance](performance.md#3d-world-space-and-surfaces)).
+- **Leaks and limits.** The Cornell box's walls are single planes and do not leak, consistent with probes that cannot sit behind a wall and rays that hit true geometry. Indirect contact shadows are weak in every scene, which the author calls the only real problem: the texel, 10 to 25 cm, is cascade 0's probe spacing, so occlusion below it is lost (inference). A bug in the "visibility check" leaves black and white cuts in Bistro.
+
+It is the only single-frame world-space RC on a compute tracer shown with timings, and it runs on a 50 W laptop GPU from 2019. The material does not show whether bounces use earlier frames, how the atlas is generated, or how moving meshes enter it.
+
 ### Other surface parameterizations
 
 Quad patches from slicing a mesh with axis-aligned planes, 2×2 voxel blocks replaced by quads through their mass centres, and lightmap-UV probes (which grow with the scene and distort with automatic UVs) are listed among the sparse designs in [3D world space](3d_world_space.md#other-sparse-designs). Love and Deepspace uses lightmap UVs only to spawn its surfels.
@@ -444,13 +457,14 @@ The video stores a 3D scene's light on a 2D surface, the plane, which is the sur
 - **Hand-over instead of intervals.** X3XfRM and M3ycWt trace every ray from the probe and cross-fade it into the parent by hit distance, while Coppen and Love and Deepspace use RC intervals. The cross-fade is a soft form of ray splitting: a ray to its first hit decides which cascade holds it ([3D world space](3d_world_space.md#ray-splitting)) (inference).
 - **Surfels in two roles.** Coppen's surfels are probes that need spawning, recycling and a hash grid every frame; Love and Deepspace's surfels are a tracing proxy built once per mesh, with ordinary clipmap probes. Only the second shipped, and its probes are a dense world grid ([3D world space](3d_world_space.md#dense-grids)) (inference).
 - **Islands and charts trade leaks for seams.** On-surface storage removes leaks through thin walls and adds seams at chart or island borders, the same trade lightmaps make (Tatzgern's seams, yhyu13's and X3XfRM's per-wall charts) (inference).
+- **Charts scale from rooms to scenes.** X3XfRM and yhyu13 put RC on hand-made charts of analytic rooms. Blackline's builds point to the same layout on a generated atlas of arbitrary meshes, which trades hand-made charts for an atlas generator and seams: the lightmap pipeline without the bake (inference).
 - **GIBS is the common ancestor of surfel maintenance.** Coppen's spawn and recycle heuristics, transform IDs and trapezoidal grid all come from GIBS ([related radiance caches](related_radiance_caches.md)).
 
 ## Single-frame assessment
 
 - **Surfel probes are temporal state.** Coppen's spawning adds at most one surfel per 16×16-pixel tile per frame, so a cleared set takes at least 32 frames to fill at 1080p, and the recycling heuristic keeps surfels for 9 to 18 passes. The gather and merge run every frame without history, but the probe set itself converges over frames, and fast camera motion exposes surfaces without surfels (derived).
 - **Love and Deepspace is not single-frame.** Tracing is spread over frames with cached hit distances, and each bounce converges in 28 frames (5 in a fast mode).
-- **UV charts are single-frame compatible but scene-specific.** X3XfRM's port merges top-down within one frame; the bounce still comes from the previous frame. Charts need authored or generated UVs, at a seam cost, which an engine with arbitrary meshes cannot assume (inference).
+- **UV charts are single-frame compatible; the chart is the cost.** X3XfRM's port merges top-down within one frame; the bounce still comes from the previous frame. Charts need authored or generated UVs, at a seam cost. Blackline's builds suggest that a generated atlas carries Sponza, Bistro and a 10.8 M-triangle scene in 11 to 28 ms of GI on a 2019 laptop GPU, which makes the chart requirement an engineering cost rather than a limit on arbitrary meshes (inference from video HUDs; [surface atlas](#a-generated-surface-atlas-blackline-interactive)).
 - **Under `RenderingDevice`:** Coppen's pipeline needs only 32-bit atomics (counters, stack, atomic max per tile) and a compute BVH, so it maps onto Godot compute, but its 423 MiB at six cascades of 2048² RGBA16F textures (64 MiB per cascade before buffers) is set by texture size, not by surfel count (derived).
 - **What carries over:** surface-bound tracing proxies (surfels with ray-disk tests, as on phones) for a compute tracer without hardware RT, and hit-distance visibility tests in the merge (inference).
 
@@ -461,3 +475,5 @@ The video stores a 3D scene's light on a 2D surface, the plane, which is the sur
 - Would a surfel tracing proxy built per mesh (Love and Deepspace) make long software rays cheap enough for ray splitting under `RenderingDevice`?
 - How do on-surface charts handle dynamic and skinned meshes, given that their islands and triangle ID maps are built per mesh?
 - Is the hit-distance parent test enough to stop leaks in a 3D sparse grid, where parents are not on the same surface as the child?
+- How would a generated atlas handle moving and skinned meshes, and can it be rebuilt per change at Godot's mesh counts?
+- Can a screen-space cascade −1 restore the contact shadows that a 10 to 25 cm atlas texel loses, without the screen-space family's disocclusion problems?
