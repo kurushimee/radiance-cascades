@@ -69,7 +69,7 @@ Start with [Two families](../topics/3d_screen_space.md#two-families), then [Scre
 
 Start with [Specular](../topics/core_theory.md#specular), then [Multi-bounce, specular and comparisons](../topics/3d_world_space.md#multi-bounce-specular-and-comparisons) and [Caustics and refraction](../topics/light_transport_alternatives.md#caustics-and-refraction). Shading terms are in the glossary under [GGX](../topics/supporting_techniques_transport_and_math.md#ggx) and [Split-sum approximation](../topics/supporting_techniques_transport_and_math.md#split-sum-approximation).
 
-- Answer glossy reflections from cascades: Cone query per cascade; sharp mirror reflections stay unresolved. ([Specular](../topics/core_theory.md#specular), core_theory)
+- Answer glossy reflections from cascades: Cone query per cascade; sharp reflections need another method. ([Specular](../topics/core_theory.md#specular), core_theory)
 - Keep direction lookups faithful for specular and guiding: Direction-fidelity criterion; trade-off: standard RC's 2^n intervals violate it. ([Derived points](../topics/rc_for_sampling_and_guiding_rcpg.md#derived-points), rc_for_sampling_and_guiding_rcpg)
 - Find reflections of nearby objects from one probe's stored distances: Layered distance maps search one cube map, but miss thin objects when steps exceed texels. ([Layered distance maps](../topics/scene_representation_and_tracing.md#layered-distance-maps), scene_representation_and_tracing)
 - Smooth noisy probe-based reflections: Bilateral reflection filter; trade-off: blurs detail and is skipped at roughness 0.3 and up. ([HDDAGI](../topics/godot_integration.md#hddagi), godot_integration)
