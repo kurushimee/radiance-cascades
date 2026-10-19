@@ -6,7 +6,7 @@
 | Date | 2026-10 |
 | Kind | Paper, original research with code: an exact flatland reference, derivations with assert-based checks, seeded experiments |
 | Link | [paper.pdf](../../papers/01_error_model/paper.pdf), source [paper.md](../../papers/01_error_model/paper.md); simulator in [papers/lab/flatland.py](../../papers/lab/flatland.py) |
-| Related | [2026_freeman_split_radiance_cascades.md](2026_freeman_split_radiance_cascades.md), [2026_merging_and_ringing.md](2026_merging_and_ringing.md), [2024_osborne_radiance_cascades_radiative_transfer.md](2024_osborne_radiance_cascades_radiative_transfer.md), [2024_sannikov_legitcascades.md](2024_sannikov_legitcascades.md) |
+| Related | [2026_kurushimee_merging_3d.md](2026_kurushimee_merging_3d.md), [2026_freeman_split_radiance_cascades.md](2026_freeman_split_radiance_cascades.md), [2026_merging_and_ringing.md](2026_merging_and_ringing.md), [2024_osborne_radiance_cascades_radiative_transfer.md](2024_osborne_radiance_cascades_radiative_transfer.md), [2024_sannikov_legitcascades.md](2024_sannikov_legitcascades.md) |
 
 The first measurement of RC's error against an exact answer across parameters, in flatland. An exact reference gives the radiance and transmittance of any distance interval, so every quantity RC estimates has a true value; the error then splits exactly into parts with one cause each, and the parameter rules become testable predictions. Scenes emit and absorb only (no reflection), the quantity is fluence (no cosine), and the RC under test traces rays analytically, so the only errors are RC's own. Claims are marked derived (with a check script in `papers/01_error_model/checks/`) or measured (with a seeded script in `papers/01_error_model/experiments/`).
 
@@ -102,8 +102,8 @@ Relative RMSE at `N₀ = 32, K = 2, l = 4`, with cost in mip steps relative to v
 - With `K = 4, l = 4` a bin's angular width halves per cascade while the spacing doubles, so both resolutions grow as `√D` and `t₀` trades one for the other as in 2D; the equal-error interval is `Δs₀·√(N₀/4π)`, 1.60 spacings at 32 directions (derived).
 - With `s` rays spread over each cell the gap is `t·Δω/√s`, so a light of width `w` spans one gap out to `D_max = w²·s·N₀/(4π·t₀)`, linear rather than quadratic in `N₀`: 6.4 spacings for a light two spacings wide at 32 directions and the equal-error `t₀` (derived).
 - Trilinear reads from cell-centred grids: mean unseen seam `Σw|δ|/4 = 0.706/4 = 0.177` upper spacings, closed by an overlap of `0.75·√3 = 1.30` (against the diagonal `√3`) (derived).
-- A light's outline on the sphere crosses many ray cells, so the hit count is conjectured to fluctuate with the perimeter, as lattice-point counts do, giving relative error `∝ x^(−3/4)` rather than `x^(−1)` (conjectured, untested).
-- Whether the optimal `t₀` spreads as widely across 3D scenes needs a 3D reference.
+- A light's outline on the sphere crosses many ray cells, so the hit count is conjectured to fluctuate with the perimeter, as lattice-point counts do, giving relative error `∝ x^(−3/4)` rather than `x^(−1)` (conjectured). A voxel lab later measured `x^−0.68` for a cube light: `x^−1` ruled out, the fall a little slower than `x^−3/4` ([merging in 3D](2026_kurushimee_merging_3d.md#small-lights-derived-and-measured)).
+- Whether the optimal `t₀` spreads as widely across 3D scenes needs a 3D reference; in two 3D rooms the equal-error value is vanilla's best at 32 directions ([merging in 3D](2026_kurushimee_merging_3d.md#the-cascade-0-interval-axis-alignment-and-overlap-measured)).
 
 ## Limits
 
