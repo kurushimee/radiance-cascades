@@ -145,6 +145,7 @@ The fixed-point view of bounces is in [core theory](core_theory.md#bounces).
 
 - **Feedback:** last frame's radiance times albedo comes back as emission. Without a transmittance bound it explodes: one 256² test went from 65 to 5700 at albedo 0.9, 88 times, beyond the 10 times a closed box at albedo 0.9 can reach, so the feedback itself gained energy (derived and inference). Closed reflective boxes need decay or a reset of the temporal input; emission should count only on the first bounce; splitting floors and walls into two layers stabilized one build. Albedo 0.5 sums to twice the direct light after infinite bounces.
 - **Without temporal lag:** stored ray hit distances allow `N` bounces in one frame without recasting rays, in opaque scenes. Bounces can also run as separate RC iterations, with Jacobi iteration or Anderson acceleration to converge faster ([solver math](supporting_techniques_transport_and_math.md#light-transport-and-solver-math)).
+- **Energy per bounce (derived).** In a closed scene of uniform albedo `ρ`, bounce `k` carries `ρ^k` of the emitted light, so `n` lag-free bounces hold `1 − ρ^n` of the infinite-bounce indirect light: 50%, 75% and 87.5% for one to three bounces at `ρ = 0.5`, 70%, 91% and 97% at 0.3, and 20%, 36% and 49% at 0.8. Open scenes lose light to the sky at every bounce, so these shares are lower bounds. A bounce by repeated RC iteration costs a full solve; with stored hit distances it costs re-lighting the hits and a merge, with no new rays ([check](../checks/bounce_energy_share.py)).
 - Path of Exile 2 shipped one extra indirect bounce for directly lit objects. One unnamed game found 3D RC too slow and used a two-bounce method instead.
 
 ## Wavelet point-based GI
@@ -202,4 +203,3 @@ Wang, Meng and Boubekeur, "Wavelet Point-Based Global Illumination", EGSR 2015 (
 
 ## Open questions
 
-- How many lag-free bounces, by stored hit distances or by repeated RC iterations, fit in a frame budget, and how close do they get to the infinite-bounce fixed point at typical albedos?

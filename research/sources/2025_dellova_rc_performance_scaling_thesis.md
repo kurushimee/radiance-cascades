@@ -178,7 +178,7 @@ The PDF text layer is partly garbled in math and figure labels. Equations 4.4 an
 - N = floor( log_sp( min(pc0x, pc0y) ) ), where sp is the probe scaling factor.
 - N is the cascade count limit. The thesis caps it at the user's maximum allowed cascade count.
 - The shortest axis limits N, because probes cannot be divided into whole counts past that point.
-- Figure 4.2 (1D illustration, probe scaling 2): spacing 1 gives 3 levels, spacing 2 gives 2 levels. The figure's sizes are not given, so these were not checked against eq 4.2.
+- Figure 4.2 (1D illustration, probe scaling 2): spacing 1 gives 3 levels, spacing 2 gives 2 levels. The figure gives no sizes, so eq 4.2 cannot be applied to it.
 - Derived: at 1080p with sp = 2, spacing 4 gives min probe count 270 and N = 8. Spacing 5 gives 216 and N = 7. This matches the thesis's statement that spacing above 4 does not reach cascade 8 at 1080p.
 
 #### 4.1.4 Cascade texture size and layout (eqs 4.3 to 4.6)

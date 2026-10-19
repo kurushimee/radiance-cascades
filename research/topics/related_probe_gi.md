@@ -325,8 +325,7 @@ Higher RSM resolution costs more than its rendering time because texture-cache m
 - **The same-frame members of the family are VCT and LPVs.** Both are single-frame by construction but blur and leak; VCT's light reinjection at 16 ms on 2011 hardware ran only when lights moved, a lighting cache, while its per-frame cone gather is not.
 - **DDGI without history is expensive.** Matching DDGI's default noise in one frame needs about 34 M rays for a 32×8×32 grid, 23 ms of tracing at its measured rate (derived), which is why a single-frame world-space method needs RC's ray distribution rather than more rays per probe.
 - **Upkeep that is geometric, not temporal, transfers.** Relocation, probe states, push-out, dead-probe tests and octahedral border handling are all scene-side and work in a single frame.
-- **Visibility tests at the gather.** The Chebyshev test reads precomputed moments; in a single-frame RC those moments would have to come from the same frame's cascade-0 hit distances, which RC traces anyway (inference).
+- **Visibility tests at the gather.** The Chebyshev test reads precomputed moments; in a single-frame RC those moments would have to come from the same frame's cascade-0 hit distances, which RC traces anyway (inference). Short cascade 0 intervals do not make the test unnecessary: the merged cascade 0 holds full radiance from every cascade, so a probe on the far side of a wall carries that side's light whatever `t0` is, and the leak runs along the segment from the shading point to the probe, which no interval traces. It is confined to points within one probe spacing of a wall, at the full radiance difference across it (derived).
 
 ## Open questions
 
-- Does a single-frame RC need Chebyshev visibility at its final gather when cascade-0 intervals are short, or do short intervals already confine the leak to within one probe spacing?
