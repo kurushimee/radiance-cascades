@@ -46,14 +46,14 @@ All kernels use one thread per ray and a stack array; none is stackless.
 
 | Kernel | Language | Layout | Stack | Overflow |
 |---|---|---|---|---|
-| `kernels/traverse_bvh2.cl` | OpenCL | `BVH_GPU` | 32 entries, private | not checked |
-| `kernels/traverse_bvh4.cl` | OpenCL | `BVH4_GPU` | 32, private | not checked |
-| `kernels/traverse_cwbvh.cl` | OpenCL | CWBVH | 24 `uint2`, private | not checked |
-| `kernels/traverse_tlas.cl` | OpenCL | TLAS over `BVH_GPU` or CWBVH BLASes | 32, private | not checked |
+| `kernels/traverse_bvh2.cl` | OpenCL | `BVH_GPU` | 32 entries, private | unguarded: a deeper traversal overruns the array |
+| `kernels/traverse_bvh4.cl` | OpenCL | `BVH4_GPU` | 32, private | unguarded |
+| `kernels/traverse_cwbvh.cl` | OpenCL | CWBVH | 24 `uint2`, private | unguarded |
+| `kernels/traverse_tlas.cl` | OpenCL | TLAS over `BVH_GPU` or CWBVH BLASes | 32, private | unguarded |
 | `external/vulkanrt/shaders/tiny.comp` | GLSL 460 compute | `BVH_GPU` | 32 per thread in shared memory, 8 KB per 8×8 group | the far child is dropped |
 | `external/vulkanrt/shaders/tiny4.comp` | GLSL 460 compute | `BVH4_GPU` | 64, private | the far children are dropped |
 | `external/vulkanrt/shaders/tiny8.comp` | GLSL 460 compute | CWBVH | 8 per thread in two shared arrays | remaining siblings are dropped |
-| `tmpl8_compute/shaders/traverse.comp` | GLSL 430 compute | `BVH_GPU` | 64, private | not checked |
+| `tmpl8_compute/shaders/traverse.comp` | GLSL 430 compute | `BVH_GPU` | 64, private | unguarded |
 
 - The OpenCL kernels have both closest-hit and any-hit (occlusion) versions. The Vulkan GLSL kernels have closest hit only and write a depth image from primary rays, so an RC tracer would adapt them: segment `tmin` and `tmax`, an any-hit early out, and hit data for shading.
 - Shared-memory stacks are indexed depth-major (`stack[depth·GROUP_SIZE + lane]`) so neighboring threads hit neighboring banks. The CWBVH kernel pushes at most one node group per level; its comment gives a measured stack peak of 6 at 450k primitives, which is why 8 entries are enough there. The comment's "8 KB per group" is wrong for the declared arrays, which total 4 KB.

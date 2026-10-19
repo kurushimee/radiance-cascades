@@ -33,7 +33,6 @@ Methods that compete with RC or extend it beyond diffuse light: line sweeps, the
 - [Other uses](#other-uses)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Line sweeping
 
@@ -200,6 +199,3 @@ Wang, Meng and Boubekeur, "Wavelet Point-Based Global Illumination", EGSR 2015 (
 - **Multi-bounce without lag exists in principle**: reusing stored hit distances gives `N` bounces in one frame for opaque scenes, and Jacobi or Anderson iterations converge a fixed number of RC iterations within one frame.
 - **Cellular automata and HologramPropagation move light one cell or row per frame**, so they are temporal by construction and do not fit a single-frame goal.
 - **Caustics break the constant-cost property** that single-frame RC relies on, through ray doubling at every split.
-
-## Open questions
-

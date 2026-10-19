@@ -24,7 +24,6 @@ The glossary entries explain SSAO, HBAO, GTAO, SAO, bent normals and bent cones;
 - [Heightmap horizons](#heightmap-horizons)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Line-sweep ambient obscurance
 
@@ -151,6 +150,3 @@ The Shadertoy sXcGRB stores, per heightmap pixel, the steepest slope toward +x a
 - **PoE1's GI is the shipped single-frame precedent**: no reprojection, a fixed sample budget made to look like more by per-pixel seeds, a 4×4 box filter and mips for distant samples, in 3 ms. Its weakness, a denoiser that blurred detail, is what RC's per-band resolution removes.
 - **Multi-bounce is temporal** in HBIL and in the bitmask's feedback; a single-frame design gets one screen-space bounce unless it traces further.
 - **Cost of noise-free slices.** The bitmask's GI pass grows about linearly with samples (1.54 times for twice the samples), so replacing temporal jitter with more slices per pixel multiplies sampling time by the slices added; screen-space RC instead shares one cascade's slices among the pixels a probe covers (inference).
-
-## Open questions
-

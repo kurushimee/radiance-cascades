@@ -1,9 +1,10 @@
 ---
 id: 001
 title: Close every open question in research/
-status: in_progress
+status: finished
 created: 2026-10-19
-updated: 2026-10-19
+updated: 2026-10-20
+finished: 2026-10-20
 ---
 
 # Close every open question in research/
@@ -50,16 +51,16 @@ Done when each `read`, `engine` and `public` row is answered or closed at the li
 Done when each `derive` row is answered, with a check script for each computed number.
 
 - [x] `derive` rows
-- [ ] Committed
+- [x] Committed
 
 ### 6. Fold-in and verification
 
 Done when the verification in the approved plan passes.
 
-- [ ] Empty "Open questions" sections and the ranked list removed; `index/open_questions.md` deleted; README rows updated
-- [ ] Links repointed; index entries added for new sections
-- [ ] Verification passed
-- [ ] Committed; plan moved to `finished/`
+- [x] Empty "Open questions" sections and the ranked list removed; `index/open_questions.md` deleted; README rows updated
+- [x] Links repointed; index entries added for new sections
+- [x] Verification passed
+- [x] Committed; plan moved to `finished/`
 
 ## Ledger
 
@@ -214,18 +215,18 @@ Each `goes` row names what the research keeps in place of the question: the repo
 | Q144 | DexRT's 3D block-map size | volumetric_and_radiative_transfer | read: DexRT code; else the derived mismatch is recorded; answered from the code: 12,484 words; `volumetric_and_radiative_transfer#dexrt` and the source note |
 | Q145 | Rulkens's darker surfaces | volumetric_and_radiative_transfer | goes: answered by the source note's derivation (0.52 and 0.91 of exact) |
 | Q146 to Q152 | Spatium's atlas, HUD, layout, bounces, directional GI, moving meshes, far field | Blackline note | public; closed at public evidence in the Blackline note `#not-shown-publicly` |
-| R01 | ranked 1: tracer throughput | single_frame_3d_rc | becomes a stated result with Q096 |
-| R02 | ranked 2: same-frame radiance at hits | single_frame_3d_rc | becomes a stated assessment; its hypothesis and evidence stay |
-| R03 | ranked 3: cascade 0 noise | single_frame_3d_rc | becomes a stated assessment |
-| R04 | ranked 4: leak-free merge | single_frame_3d_rc | becomes a stated result with Q104 and Q031 |
-| R05 | ranked 5: quality against cost | single_frame_3d_rc | becomes a stated assessment (no 3D quality-per-ms study) |
-| R06 | ranked 6: deposits without wide atomics | single_frame_3d_rc | becomes a stated assessment |
-| R07 | ranked 7: moving geometry | single_frame_3d_rc | becomes a stated assessment |
-| R08 | ranked 8: a second bounce | single_frame_3d_rc | becomes a stated result with Q094 and Q041 |
-| R09 | ranked 9: small lights and the direct split | single_frame_3d_rc | becomes a stated result with Q062 and Q087 |
-| R10 | ranked 10: the hybrid hand-off | single_frame_3d_rc | becomes a stated assessment |
-| R11 | ranked 11: a generated atlas | single_frame_3d_rc | becomes a stated assessment |
-| R12 | theory paragraph | single_frame_3d_rc | answered by Q057 and Q058; the gradient and RIS items go with Q119 and Q101 |
+| R01 | ranked 1: tracer throughput | single_frame_3d_rc | becomes a stated result with Q096; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R02 | ranked 2: same-frame radiance at hits | single_frame_3d_rc | becomes a stated assessment; its hypothesis and evidence stay; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R03 | ranked 3: cascade 0 noise | single_frame_3d_rc | becomes a stated assessment; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R04 | ranked 4: leak-free merge | single_frame_3d_rc | becomes a stated result with Q104 and Q031; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R05 | ranked 5: quality against cost | single_frame_3d_rc | becomes a stated assessment (no 3D quality-per-ms study); landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R06 | ranked 6: deposits without wide atomics | single_frame_3d_rc | becomes a stated assessment; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R07 | ranked 7: moving geometry | single_frame_3d_rc | becomes a stated assessment; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R08 | ranked 8: a second bounce | single_frame_3d_rc | becomes a stated result with Q094 and Q041; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R09 | ranked 9: small lights and the direct split | single_frame_3d_rc | becomes a stated result with Q062 and Q087; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R10 | ranked 10: the hybrid hand-off | single_frame_3d_rc | becomes a stated assessment; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R11 | ranked 11: a generated atlas | single_frame_3d_rc | becomes a stated assessment; landed in `single_frame_3d_rc#where-the-evidence-stops` |
+| R12 | theory paragraph | single_frame_3d_rc | answered by Q057 and Q058; the gradient and RIS items go with Q119 and Q101; landed in the closing paragraph of `single_frame_3d_rc#where-the-evidence-stops` |
 
 ### Implicit research-voice items
 
@@ -247,7 +248,9 @@ Each `goes` row names what the research keeps in place of the question: the repo
 | I14 | "Double counting is unresolved" | single_frame_3d_rc | with Q062; answered with Q062 |
 | I15 | "What to average is disputed" | volumetric_and_radiative_transfer, sources/2026_volumetric_rc.md | the dispute record stays; the section's slab result ("density averaging is exact across slabs and over-occludes partial coverage") is linked from it |
 | I16 | "the relation is not established" | sources/2026_blackline_interactive_spatium_rc.md | public, with the Blackline rows; restated as a derived bound in the Blackline note `#derived-numbers` |
-| I17 | index lines that restate questions ("untested", "open", "unknown" trade-offs) | index/goals_*.md, index/open_questions.md | phase 6: restated from the answers or removed with their questions |
+| I17 | index lines that restate questions ("untested", "open", "unknown" trade-offs) | index/goals_*.md, index/open_questions.md | done in phase 6: goals lines restated from the answers and linked to the answering sections, or removed with their questions where a sibling line keeps the technique; other index links repointed; four stale trade-offs restated (pow weights, hit-distance test, compute tracer rate, direction maps); entries added for the new sections |
+| I18 | tinybvh overflow column "not checked" | scene_representation_and_tracing_voxels_and_bvhs, sources/2026_compute_bvh_libraries.md | read: the five kernels push without a bound and check only underflow; restated as "unguarded" in both tables |
+| I19 | Margel's input sampling "(not verified by rendering)" | holographic_rc, sources/2026_holographic_rc.md | read: `shader/init.js:25-28` and `cascadeManager.js:113-119`; restated as the texels each node reads |
 
 Records that stay as they are: reported open problems and disputes ("disputed" for cubic interpolation with the bilinear fix, "Reports disagree" on HRC extension starts), "unclear in source" items, provenance qualifiers, and authors' own listed limitations.
 

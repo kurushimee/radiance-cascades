@@ -1,6 +1,6 @@
 # 2D articles and demos: GM Shaders
 
-The two GM Shaders posts by Yaazarai and Xor and their GameMaker repository: layout, index math, pre-averaging, the direction-first layout, timings and the code. The other 2D explainers, and the connections, single-frame assessment and open questions for all of them are in [2D articles and demos](2d_articles_and_demos.md).
+The two GM Shaders posts by Yaazarai and Xor and their GameMaker repository: layout, index math, pre-averaging, the direction-first layout, timings and the code. The other 2D explainers, and the connections and single-frame assessment for all of them are in [2D articles and demos](2d_articles_and_demos.md).
 
 ## GM Shaders (Yaazarai and Xor)
 

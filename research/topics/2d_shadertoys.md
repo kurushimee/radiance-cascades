@@ -19,7 +19,6 @@ Statements marked "derived" were computed from the code's constants; "inference"
 - [Code locations](#code-locations)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Index
 
@@ -190,6 +189,3 @@ Line numbers in the shaders' tabs, as read for the [Shadertoy notes](../sources/
 ## Single-frame assessment
 
 For single-frame 3D RC (inference, from the shaders above): the testbed line's bilinear fix, `C_MINUS1_GATHERING` and the one-pass-per-level schedule of 3cKczD are the parts that transfer; the cube-map packing that forces one level per frame does not. Volumetric marches must scale opacity by step length before their results can be compared across cascades (wfyyDz, ffl3Rf). tf2XRc's per-pixel composite of every cascade shows that the merge can be unrolled at gather time, at 960 fetches per pixel for three 2D cascades, which grows too fast for 3D (derived from its counts). For `n` cascades with branching `K`, gathering every cascade per pixel reads `4·n·D0·K^(n−1)` values per pixel, against `4·D0` for a cascade 0 gather plus the merge's reads spread over the pixels; with `K ≥ 2` and two or more cascades it costs more even when cascade 0 has a probe per pixel, by at least `2K/(1 + K)`, and by about `n·K^(n−1)` when probes are much sparser than pixels ([check](../checks/per_pixel_gather_cost.py)). Extended gathering's single cascade must hold cascade 0's spacing and the top cascade's directions at once to meet the penumbra condition at every distance, `P0·D_top` stored rays against about `n·P0·D0` for a 2D 2x/4x stack, `4^(n−1)/n` times more: the brute-force cost RC avoids. NfVXRc instead keeps 8 directions and interpolates its 200 gather directions between them, so its angular resolution is that of 8 stored directions (derived).
-
-## Open questions
-

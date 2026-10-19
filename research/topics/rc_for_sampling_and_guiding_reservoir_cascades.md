@@ -1,6 +1,6 @@
 # RC for sampling and guiding: Reservoir Cascades
 
-Ivan You's Reservoir Cascades keeps RC's discretization and rewrites the merge between levels as resampled importance sampling, tested in 2D flatland: the argument, notation, method, theory, experiments, limits and code. Its comparison with RCPG and vlam, and the connections, single-frame assessment and open questions for both are in [RC for sampling and guiding](rc_for_sampling_and_guiding.md).
+Ivan You's Reservoir Cascades keeps RC's discretization and rewrites the merge between levels as resampled importance sampling, tested in 2D flatland: the argument, notation, method, theory, experiments, limits and code. Its comparison with RCPG and vlam, and the connections and single-frame assessment for both are in [RC for sampling and guiding](rc_for_sampling_and_guiding.md).
 
 ## Contents
 

@@ -29,7 +29,6 @@ Radiance caches store light at points on or near surfaces, found by hashing or b
   - [PICA PICA (Ray Tracing Gems chapter 25)](#pica-pica-ray-tracing-gems-chapter-25)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Irradiance caching
 
@@ -285,6 +284,3 @@ The table was rebuilt from the PDF's text order, and its speedups match the prin
 - **Their bounces are lagged.** Every cache here gets multiple bounces by reading the previous frame at hits; a single-frame design needs another source of second-bounce light, or accepts one bounce.
 - **Budget figures bound single-frame costs from below.** A cache spending 0.2 to 2 ms per frame while accumulating over many frames shows what one frame's rays buy, not what a converged single-frame result costs.
 - **The geometric parts transfer.** Hash keys, LOD rules, leak bits, ranking of query origins, compaction into live lists with indirect dispatch, and free-index stacks are structure, not history, and work in one frame.
-
-## Open questions
-

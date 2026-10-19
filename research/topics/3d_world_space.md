@@ -36,7 +36,6 @@ World-space RC stores its probes in the scene instead of on the screen. It sees 
   - [In Godot's `RenderingDevice`](#in-godots-renderingdevice)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Why world space
 
@@ -514,6 +513,3 @@ Sources: [GPU hash tables](../sources/2026_gpu_hash_tables_and_sorting.md).
 - **One bounce per frame.** Split RC's multi-bounce feeds a coarser secondary cache over frames. A single-frame second bounce needs a second solve. Two LODs up (`lod + 2`), at 4× the spacing, it has 1/16 of the probes and rays of the first on probes that follow surfaces and 1/64 in a filled volume, and it carries `ρ/(1 + ρ)` of two bounces' light, a third at albedo 0.5 (derived, [check](../checks/bounce_energy_share.py), [energy per bounce](light_transport_alternatives.md#multi-bounce)). One bounce plus an ambient or sky term is the single-frame baseline (inference).
 - **Dense grids are out for whole scenes.** At 128³ and 32 directions a dense stack is 1 GiB in fp16 and 132 M rays (derived). A 32³ to 64³ local volume (16 to 252 MiB) fits memory and could light a bounded fog region ([volumetric](volumetric_and_radiative_transfer.md)).
 - **Leaks without history.** Ray splitting removes probes firing from inside walls for free; merge leaks then need a binary parent test, of which the one-bit hit mask (+50% merge time) and the parent hit-distance test (free) need no extra rays (inference).
-
-## Open questions
-

@@ -46,7 +46,6 @@ Surface designs tie RC's probes, or the scene the probes trace, to the surfaces 
 - [A radiance field stored on a plane](#a-radiance-field-stored-on-a-plane)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Surfel Radiance Cascades (src-dgi)
 
@@ -505,6 +504,3 @@ The video stores a 3D scene's light on a 2D surface, the plane, which is the sur
 - **On a compute-only host** (32-bit integer atomics and no hardware ray tracing, as under Godot's `RenderingDevice`): Coppen's pipeline needs only 32-bit atomics (counters, stack, atomic max per tile) and a compute BVH, so it maps onto such a host, but its 423 MiB at six cascades of 2048² RGBA16F textures (64 MiB per cascade before buffers) is set by texture size, not by surfel count (derived).
 - **A screen-space cascade −1 below the atlas texel** traced per pixel each frame has no history and no probes to move, so the disocclusion and flicker of screen-space GI, which come from reprojected history and jittered probes, do not arise. It inherits the depth buffer's unknown thickness, and its intervals, shorter than a 10 to 25 cm texel, keep its occluders near the pixel and so mostly on screen (derived).
 - **What carries over:** surface-bound tracing proxies (surfels with ray-disk tests, as on phones) for a compute tracer without hardware RT, and hit-distance visibility tests in the merge (inference).
-
-## Open questions
-

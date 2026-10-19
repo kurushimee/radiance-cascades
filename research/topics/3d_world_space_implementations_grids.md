@@ -1,6 +1,6 @@
 # 3D world-space implementations: dense grids and voxel clipmaps
 
-Codes that store world-space cascades on dense probe grids or trace a world voxel clipmap: tmpvar's 3D grid, jumeder's DXR build, rbnelr's voxel game and other world probe grids, Mathis's voxel cascades with hemisphere probes, and creikey's screen probes traced through a voxel clipmap. The table of all world-space codes, the Split RC codes, erhe and the engine design documents, and the connections, single-frame assessment and open questions for these codes are in [3D world-space implementations](3d_world_space_implementations.md).
+Codes that store world-space cascades on dense probe grids or trace a world voxel clipmap: tmpvar's 3D grid, jumeder's DXR build, rbnelr's voxel game and other world probe grids, Mathis's voxel cascades with hemisphere probes, and creikey's screen probes traced through a voxel clipmap. The table of all world-space codes, the Split RC codes, erhe and the engine design documents, and the connections and single-frame assessment for these codes are in [3D world-space implementations](3d_world_space_implementations.md).
 
 ## Contents
 

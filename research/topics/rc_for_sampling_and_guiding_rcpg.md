@@ -1,6 +1,6 @@
 # RC for sampling and guiding: RCPG
 
-RCPG (Ikkala, Jääskeläinen and Mäkitalo, ACM TOG 2026) builds a world-space 3D cascade volume and samples path-tracing directions from it, with tauray as the renderer: cascades, interval bounds, mapping and culling, gathering, sampling, implementation, evaluation and code. Its comparison with Reservoir Cascades and vlam, and the connections, single-frame assessment and open questions for both are in [RC for sampling and guiding](rc_for_sampling_and_guiding.md).
+RCPG (Ikkala, Jääskeläinen and Mäkitalo, ACM TOG 2026) builds a world-space 3D cascade volume and samples path-tracing directions from it, with tauray as the renderer: cascades, interval bounds, mapping and culling, gathering, sampling, implementation, evaluation and code. Its comparison with Reservoir Cascades and vlam, and the connections and single-frame assessment for both are in [RC for sampling and guiding](rc_for_sampling_and_guiding.md).
 
 ## Contents
 

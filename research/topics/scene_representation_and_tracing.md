@@ -28,7 +28,6 @@ Voxel and triangle-BVH tracers are in [voxels and BVHs](scene_representation_and
 - [Where tracing time goes](#where-tracing-time-goes)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## What RC asks of a tracer
 
@@ -290,6 +289,3 @@ RC's coherent low cascades and incoherent high cascades map onto the paper's pri
 - **Exact visibility near, coarse far.** Cascade 0 decides contact shadows and leaks, so it needs an exact or near-exact structure (triangles, an HDDA over fine bits, or the depth buffer for a screen near field). Upper cascades can read coarse mips with directional opacity at a fraction of the cost, which is DexRT's 8× (inference, from the measured mip speedups and the thin-wall leaks of averaged data).
 - **Software tracing cost is rays per second in compute.** The available figures for software tracing are tinybvh's 2.8 G primary rays per second (BVH2, RTX 5080 laptop), creikey's 14.3 G rays per second for a synthetic voxel trace (GPU not named) and the 3.5 to 4× software penalty against hardware RT. None was measured in GLSL under Godot's `RenderingDevice`; its compute shaders are SPIR-V modules dispatched as ordinary Vulkan compute work, so a kernel compiled to the same SPIR-V runs there at the rate it reaches in any Vulkan host on the same GPU ([performance](performance.md#normalized-throughput-derived)) (inference).
 - **Scene volumes fit; dense cascade stacks do not.** A dense 128³ volume takes 2, 4 or 8 MiB at 1, 2 or 4 bytes per voxel and 256³ takes 16, 32 or 64 MiB, all within the 128 MiB per storage buffer that Vulkan guarantees (Godot's `RenderingDevice` reports no larger limit, [RenderingDevice notes](../../docs/rendering_device.md)), and a 3D texture is not bound by that range. A dense 128³ cascade stack with 32 directions takes 1,008 MiB in fp16, nearly 8 such buffers, so the cascades, not the scene, set the memory, and they need textures or several buffers (derived, [check](../checks/scene_volume_sizes.py), [world space](3d_world_space.md#memory-and-rays)).
-
-## Open questions
-

@@ -20,7 +20,6 @@ Statements marked "derived" were computed with a script from the sources' formul
 - [Spectral transport](#spectral-transport)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## RC as a radiative transfer solver
 
@@ -432,6 +431,3 @@ The SIGGRAPH 2021 course "Spectral Imaging in Production" (chapters by Weidlich;
 - **Cost of a dense grid.** A dense 192³ grid with 5 cascades took 20 to 34 ms on a laptop RTX 4080 and about 0.6 GB of cascades; one 3D volumetric RC took about half of a 60 fps frame. A full-scene volumetric grid per frame does not fit beside surface GI, so volumetrics in a single-frame budget point to a bounded fog volume or a screen-plane layout, with the far cascades on mips (inference).
 - **Mips are cheap and lossy.** Per-cascade mips gave DexRT 3.5× and keep steps per cascade constant; thin walls need six directional opacities per voxel, about 6× the opacity storage of one channel, or a variance limit that keeps walls at full resolution (inference).
 - **Formats.** Transmittance needs 16 bits; R11G11B10F holds radiance only; RGBA16F with a single transmittance channel is the common working format. All of this maps onto Godot's `RenderingDevice` storage textures and 3D textures; a u64 block bitmask maps to two u32 words. Godot's own volumetric fog uses froxels, described in [Godot integration](godot_integration.md#volumetric-fog).
-
-## Open questions
-

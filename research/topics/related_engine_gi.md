@@ -30,7 +30,6 @@ Four shipped or open engine GI systems solve the problem RC solves, light from e
   - [PC and console path](#pc-and-console-path)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Lumen
 
@@ -259,6 +258,3 @@ One sample per pixel was too slow on phones, so mobile uses probes:
 - **Removing amortization multiplies cost by the cycle length.** A daGI2 grid updated in full each frame costs 16 times its budget; HSGI's near field 9 times and far field 121 times. A single-frame design either accepts those factors or shrinks the work per level, which RC's angular-spatial trade does by construction (inference).
 - **What transfers unchanged:** Lumen's tracer chain (screen, then SDF, then sky, each resuming from the last), plane-only interpolation, probe-space filtering within a frame, BRDF-only importance sampling (the BRDF half needs no history), daGI2's adaptive placement by plane coverage, the pull-back on far reads, blue-noise ray rotation per tile within a frame, rounding before packed writes, HSGI's in-voxel origin fix, and every count-based indirect dispatch. daGI2's narrow-band SDF needs only `InterlockedMin`, one relaxation pass, and depth marking with HZB removal for moving things, all within Godot's integer atomics; its start-up check of storage loads per format maps to `RenderingDevice.texture_is_format_supported_for_usage`.
 - **What does not:** product sampling from last frame's light, reprojected probe positions and history, hits lit from the previous frame, and multi-bounce built over frames. In Godot the GI pass runs before the opaque pass ([frame order](godot_integration.md#frame-order-and-compositor-hooks)), so the lit frame a hit could read is always last frame's; same-frame hit light has to come from direct-light evaluation at the hit, as Lumen's surface cache does with shadow-map masks.
-
-## Open questions
-

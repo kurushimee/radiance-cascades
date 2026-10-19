@@ -38,7 +38,6 @@ Statements marked "derived" were computed from the sources' own formulas and are
 - [Colour space and range](#colour-space-and-range)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## The penumbra condition
 
@@ -402,6 +401,3 @@ What the theory implies for single-frame 3D RC (inference):
 - **Time:** at full-resolution marching the top cascades dominate; mip marching or interval extension is needed to keep them affordable.
 - **Lights:** RC alone will not resolve sun and small-light shadows at practical spacings. A single-frame design needs direct light with its own shadows (shadow maps, or rays to lights) and RC for the indirect part ([splitting direct light](#splitting-direct-light-derived)), or a variant such as HRC that keeps transverse resolution.
 - **Bounces:** a single frame gives one bounce unless the hierarchy is iterated within the frame.
-
-## Open questions
-

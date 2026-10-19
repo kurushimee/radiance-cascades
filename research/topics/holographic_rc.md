@@ -30,7 +30,6 @@ Statements marked "derived" were computed with a script from the sources' formul
 - [Debugging](#debugging)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## What it fixes
 
@@ -341,7 +340,7 @@ What the light-field papers mean for RC (inference):
 
 ### Other uses
 
-- **Diffusion solver.** Margel's [`holographic-cascades-diffusion`](https://adrianmargel.ca/demo/holographic-cascades-diffusion/) (titled "Holographic Cascades") solves steady-state diffusion on a 129² node grid (`2^7 + 1`), each node weighted 1/8 toward each of its eight neighbours (`init.js` 64-72). Positive scene alpha absorbs; barriers are stored as negative alpha and act as reflectors through the node's self term; each colour channel is a separate source term at 0.25. The solve is direct: 15 merge steps (`2·7 + 1`) alternate between merging block pairs along x and along y, eliminating the seam nodes between blocks by Gaussian elimination with `P[y] = M[m][y]/(1 − min(M[m][m], 0.9999999))` and `M'[a][b] = M[a][b] + M[a][m]·P[b]` (`nodePrimer.js`, `nodeElimination.js`), store each block's boundary-to-interior transfer operator, and apply the operators top-down to recover interior values (`valuePropagation.js`). This is nested dissection, a Schur-complement elimination over a block hierarchy, so the "HRC-based diffusion solver" (3 to 4 ms at 129²) shares HRC's merge-up structure of blocks rather than its rays (inference). A Jacobi residual pass with a 4-neighbour stencil, which does not match the 8-neighbour equation, is disabled. Sampling the input at `coord/2^7` with repeat wrap may make the last row and column read the first ones (not verified by rendering) ([HRC notes](../sources/2026_holographic_rc.md#adrian-margel-line-space-and-a-hierarchical-diffusion-solver)).
+- **Diffusion solver.** Margel's [`holographic-cascades-diffusion`](https://adrianmargel.ca/demo/holographic-cascades-diffusion/) (titled "Holographic Cascades") solves steady-state diffusion on a 129² node grid (`2^7 + 1`), each node weighted 1/8 toward each of its eight neighbours (`init.js` 64-72). Positive scene alpha absorbs; barriers are stored as negative alpha and act as reflectors through the node's self term; each colour channel is a separate source term at 0.25. The solve is direct: 15 merge steps (`2·7 + 1`) alternate between merging block pairs along x and along y, eliminating the seam nodes between blocks by Gaussian elimination with `P[y] = M[m][y]/(1 − min(M[m][m], 0.9999999))` and `M'[a][b] = M[a][b] + M[a][m]·P[b]` (`nodePrimer.js`, `nodeElimination.js`), store each block's boundary-to-interior transfer operator, and apply the operators top-down to recover interior values (`valuePropagation.js`). This is nested dissection, a Schur-complement elimination over a block hierarchy, so the "HRC-based diffusion solver" (3 to 4 ms at 129²) shares HRC's merge-up structure of blocks rather than its rays (inference). A Jacobi residual pass with a 4-neighbour stencil, which does not match the 8-neighbour equation, is disabled. The input is a 129 × 129 texture with nearest filtering and repeat wrap (`cascadeManager.js:113-119`), sampled at `coord/2^7` (`getCascadeSize()`, 128) with y flipped (`shader/init.js:25-28`), so node column 128 reads texel column 0, rows 0 and 128 both read texel row 0, and the texture's last row and column are never read ([HRC notes](../sources/2026_holographic_rc.md#adrian-margel-line-space-and-a-hierarchical-diffusion-solver)).
 - **Audio.** An audio-attenuation prototype added about 50% on top of HRC.
 - **Far fields for stochastic methods.** Reservoir Cascades calls HRC orthogonal to its stochastic approach and names combining HRC far fields with its stochastic near fields as future work ([sampling and guiding](rc_for_sampling_and_guiding.md)).
 
@@ -378,6 +377,3 @@ What the light-field papers mean for RC (inference):
   - The bandwidth lessons apply unchanged: one transmittance channel, radiance and transmittance in one texture, no pre-clear passes, no threads for off-screen probes.
   - Region integrals (polygonal cascades) and gradient storage are the two ideas aimed at small lights and sparse 3D.
 - **Mapping to Godot's `RenderingDevice`.** 2D HRC needs only compute dispatches, storage textures and barriers: no atomics, no float atomics and no ray queries. The pass count is high, 76 to 82 dispatches at 512² to 1024² in the codes that count them ([implementations](holographic_rc_implementations.md)), so dispatch and barrier overhead per pass is part of the budget; a Godot luminance-only build ran 1080p in 7.57 ms on an RTX 3090 (5.10 ms with caching).
-
-## Open questions
-

@@ -1,6 +1,6 @@
 # Scene representation and tracing: voxels and BVHs
 
-Two families of world-space tracers that run as plain compute: voxel grids stepped by hierarchical DDA, from HDDAGI's bit-mask cascades to sparse voxel octrees, and triangle BVHs traversed in compute, from tinybvh's GLSL kernels to Wicked Engine's per-frame GPU build. What RC asks of a tracer, the comparison of all options, depth-buffer and distance-field tracing, shading the hit, robustness, and the connections, single-frame assessment and open questions for tracing are in [scene representation and tracing](scene_representation_and_tracing.md).
+Two families of world-space tracers that run as plain compute: voxel grids stepped by hierarchical DDA, from HDDAGI's bit-mask cascades to sparse voxel octrees, and triangle BVHs traversed in compute, from tinybvh's GLSL kernels to Wicked Engine's per-frame GPU build. What RC asks of a tracer, the comparison of all options, depth-buffer and distance-field tracing, shading the hit, robustness, and the connections and single-frame assessment for tracing are in [scene representation and tracing](scene_representation_and_tracing.md).
 
 ## Contents
 
@@ -149,14 +149,14 @@ https://github.com/jbikker/tinybvh (Jacco Bikker, MIT, read at c9be310) ships Vu
 
 | Kernel | Language | Layout | Stack | Overflow |
 |---|---|---|---|---|
-| `kernels/traverse_bvh2.cl` | OpenCL | `BVH_GPU` | 32 entries, private | not checked |
-| `kernels/traverse_bvh4.cl` | OpenCL | `BVH4_GPU` | 32, private | not checked |
-| `kernels/traverse_cwbvh.cl` | OpenCL | CWBVH | 24 `uint2`, private | not checked |
-| `kernels/traverse_tlas.cl` | OpenCL | TLAS over `BVH_GPU` or CWBVH BLASes | 32, private | not checked |
+| `kernels/traverse_bvh2.cl` | OpenCL | `BVH_GPU` | 32 entries, private | unguarded: a deeper traversal overruns the array |
+| `kernels/traverse_bvh4.cl` | OpenCL | `BVH4_GPU` | 32, private | unguarded |
+| `kernels/traverse_cwbvh.cl` | OpenCL | CWBVH | 24 `uint2`, private | unguarded |
+| `kernels/traverse_tlas.cl` | OpenCL | TLAS over `BVH_GPU` or CWBVH BLASes | 32, private | unguarded |
 | `external/vulkanrt/shaders/tiny.comp` | GLSL 460 compute | `BVH_GPU` | 32 per thread in shared memory, 8 KB per 8×8 group | the far child is dropped |
 | `external/vulkanrt/shaders/tiny4.comp` | GLSL 460 compute | `BVH4_GPU` | 64, private | the far children are dropped |
 | `external/vulkanrt/shaders/tiny8.comp` | GLSL 460 compute | CWBVH | 8 per thread in two shared arrays | remaining siblings are dropped |
-| `tmpl8_compute/shaders/traverse.comp` | GLSL 430 compute | `BVH_GPU` | 64, private | not checked |
+| `tmpl8_compute/shaders/traverse.comp` | GLSL 430 compute | `BVH_GPU` | 64, private | unguarded |
 
 - The OpenCL kernels have closest-hit and any-hit (occlusion) versions. The Vulkan GLSL kernels have closest hit only and write a depth image from primary rays, so an RC tracer adapts them: segment `tmin` and `tmax`, an any-hit early out, and hit data for shading.
 - Shared-memory stacks are indexed depth-major (`stack[depth·GROUP_SIZE + lane]`) so neighbouring threads hit neighbouring banks. The CWBVH kernel pushes at most one node group per level; its comment gives a measured stack peak of 6 at 450k primitives, which is why 8 entries suffice there. The comment's "8 KB per group" is wrong for the declared arrays, which total 4 KB. A full stack silently drops nodes.

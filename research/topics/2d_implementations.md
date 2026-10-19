@@ -17,7 +17,6 @@ Statements marked "derived" were computed from the sources' formulas; "inference
 - [Setups that worked in 2D](#setups-that-worked-in-2d)
 - [Connections across implementations](#connections-across-implementations)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Where each 2D code is covered
 
@@ -240,6 +239,3 @@ For single-frame 3D RC (inference, from the sections above):
 - Scene representations that skip empty space (occupancy pyramids, block masks, mip pyramids) are what make long intervals cheap in 2D; the 3D counterparts are in [scene representation](scene_representation_and_tracing.md).
 - Bounces in 2D come from feeding last frame's result back; a single-frame design needs a second cascade set or pass per bounce, as amida and CoreCascade do, or accepts one bounce.
 - Sparse cascades (IceKontroI) cut rays 4 to 30× in 2D scenes with large empty or solid areas, and the slides' 3D plan (Z-order, hash-free dedupe) is a lead for sparse 3D grids ([3D world space](3d_world_space.md#hash-maps-for-probes)).
-
-## Open questions
-

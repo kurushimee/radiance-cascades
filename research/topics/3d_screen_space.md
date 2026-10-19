@@ -29,7 +29,6 @@ The material is split over three files. This one covers the two families, Path o
   - [Ray throughput across the measured SPWI codes (derived)](#ray-throughput-across-the-measured-spwi-codes-derived)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Two families
 
@@ -325,6 +324,3 @@ The M1 has no ray-tracing hardware (Apple added it with the M3 and A17 Pro), so 
 - **Upper cascades need stability more than lower ones.** The forwarded findings say upper cascades need heavy prefiltering (SSRC) or stronger averaging (wobble) to stay stable, and a tiny sun aliases from cascade 4 up. In a single frame, prefiltered depth moments are the only fix found for SSRC; for SPWI none is known beyond more rays per cone (inference).
 - **Cost at 1080p.** With hardware RT the per-frame cost is a few ms (Dell'Ova at 8 cascades: 2.4 ms at spacing 4 with 16 rays, 8.6 ms at spacing 2 with 16 rays or spacing 4 with 64); with software traversal it is one to two orders of magnitude more (Gavras on the M1); a depth march is cheap only with sector casting, bitmasks and prefiltering. Without hardware ray queries, as under Godot's `RenderingDevice`, SSRC stays affordable, while SPWI depends on a compute tracer reaching a few G rays/s on short coherent rays (derived from the table above).
 - **Screen space limits what a single frame can know.** Off-screen and hidden light needs world rays (SPWI) or a world fallback; SPWI still gives only one bounce from off screen without a cache, and a cache is history.
-
-## Open questions
-

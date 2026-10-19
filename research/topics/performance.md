@@ -20,7 +20,6 @@ The measured cost of RC and of the GI systems it competes with, gathered by doma
 - [Budgets for single-frame 3D RC (derived)](#budgets-for-single-frame-3d-rc-derived)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## What the numbers show
 
@@ -403,6 +402,3 @@ For single-frame 3D RC (inference, from the sections above):
 - Memory is not the constraint for screen-anchored or sparse designs (tens of MiB at 1080p), but dense grids above 64³ are, and Vulkan's 128 MiB storage-buffer guarantee bounds any single allocation.
 - The upper cascades' long rays are where a compute tracer loses most; coarser scene levels per cascade (mips, clipmap levels) are the measured fix, and a design needs them from the start.
 - Sparse designs must budget their bookkeeping at random-access bandwidth: Split RC's non-trace stages took 7.0 to 7.3 ms of its frame, more than its trace on both scenes.
-
-## Open questions
-

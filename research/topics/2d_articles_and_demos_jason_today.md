@@ -1,6 +1,6 @@
 # 2D articles and demos: jason.today
 
-Jason McGhee's two interactive articles with every demo's GLSL inline: part 1 builds naive 2D GI on a jump-flood distance field, and part 2 builds RC on top of it step by step. The other 2D explainers, and the connections, single-frame assessment and open questions for all of them are in [2D articles and demos](2d_articles_and_demos.md).
+Jason McGhee's two interactive articles with every demo's GLSL inline: part 1 builds naive 2D GI on a jump-flood distance field, and part 2 builds RC on top of it step by step. The other 2D explainers, and the connections and single-frame assessment for all of them are in [2D articles and demos](2d_articles_and_demos.md).
 
 ## jason.today (Jason McGhee)
 

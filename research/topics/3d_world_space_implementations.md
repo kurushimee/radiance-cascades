@@ -54,7 +54,6 @@ Dense-grid codes and creikey's voxel clipmap are in [dense grids and voxel clipm
   - [XRENGINE](#xrengine)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Split RC codes
 
@@ -426,6 +425,3 @@ The engine has a lighting-mode switch (shadow maps, hybrid, RC) that the L key c
 - **wroughtinator's native build is the closest model for a build under Godot's `RenderingDevice`:** one GLSL compute source, software BVH, 32-bit integer atomics with fixed-point accumulators, five-word hash slots, retry queues and prefix passes, no CPU readback. Its gaps for single-frame use are its history and its multi-bounce, both read from last frame (inference).
 - **erhe's gates are the failure list a single-frame design inherits:** they come from placement and interval scaling, not sample count ([erhe](#stations-and-gates)).
 - **EggyStudio shows the cheap end:** clipmap world probes plus screen probes at 0.59 to 1.00 ms and under 10 MB at 800×450, with 5 frames to settle after motion, so its single-frame quality is unmeasured.
-
-## Open questions
-

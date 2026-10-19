@@ -27,7 +27,6 @@ The public RC implementations built on Godot, and the compositor-effect projects
 - [Checklist from these projects](#checklist-from-these-projects)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## gomezzz: world-space 3D RC
 
@@ -327,6 +326,3 @@ Each item is a failure seen above, stated as the rule that avoids it.
 - **Neither has single-frame multi-bounce.** Both get bounces by reading last frame's light at hits.
 - **Dynamic triangles cannot enter in the same frame.** gomezzz's CPU BVH takes 1.2 s for 72,012 triangles, and only its 64 analytic primitives move per frame; a single-frame design with moving meshes needs a GPU-built structure ([Wicked Engine](scene_representation_and_tracing_voxels_and_bvhs.md#wicked-engine-a-bvh-built-on-the-gpu-every-frame)).
 - **The dense layout limits the volume.** At 1 KiB per base probe and a 128 MiB guaranteed buffer for level 0, gomezzz's layout stops near a 64³ grid unless levels are split across buffers, which caps a 0.5 m grid at 32 m on a side (derived).
-
-## Open questions
-

@@ -30,7 +30,6 @@ Sannikov publishes as Raikiri on GitHub and as Suslik on Shadertoy: the paper re
   - [Repositories that hold nothing usable](#repositories-that-hold-nothing-usable)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Timeline
 
@@ -403,6 +402,3 @@ These look relevant by name but hold no working GI RC code (each checked through
 **Single-frame computation is Sannikov's line and is the exception elsewhere.** The 2018 SSGI drops temporal reprojection, the 2022 2D GI caches nothing between frames, the 2023 image-space GI uses only the current frame, PoE2 has no TAA, and both 2025 sparse 3D RC videos compute everything from scratch each frame. The reason given is PoE's speed of change: reprojection would blur and make AO lag moving objects (2019 talk), and the game is too dynamic for TAA (2023 Q&A). The paper's own screen-probe variant with world intervals is the one Sannikov build that reprojects (0.1 to 0.5 s to converge). Of the shipped 3D RC, Love and Deepspace converges over 28 frames per bounce and spreads tracing over frames. So the only public evidence that a single-frame 3D world-space RC runs in real time is two videos on a laptop RTX 4090 with no published code, a visible seam between cascades and blocky tiles without interpolation, plus Blackline's surface-atlas builds, whose HUDs show 10 to 28 ms of GI on a 2019 laptop GPU without RT hardware while their single-frame operation rests on the author's word (inference from the sources above; the 3D topics judge each design).
 
 **Shadertoy and LegitScript shaped the public code.** Both hosts run fixed passes once per frame, so most public 2D code merges across frames and settles over several frames, which readers then take as a property of RC. The paper, PoE2 and the 2022 demos merge top-down within one frame. Single-frame merging is a host limitation to remove, not a design choice to copy (inference; the frame counts are in [cascade layout](cascade_layout_and_merging.md)).
-
-## Open questions
-

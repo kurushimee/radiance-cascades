@@ -21,7 +21,6 @@ Six academic works build or measure screen-probe 3D RC: four master's theses fro
 - [Gerassimov (2026): RC against Unity's GI](#gerassimov-2026-rc-against-unitys-gi)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Gavras (2025): SPWI on Metal
 
@@ -438,6 +437,3 @@ NoGI, a baseline without GI, appears only in the charts and CSVs. The CSVs (`gi_
 - All five RC theses run without temporal reuse; Gerassimov's paper and data repository do not identify the RC tested. Single-frame screen-probe RC is the tested default, not an exception.
 - Measured single-frame costs at 1080p-class resolution: 1.9 ms (spacing 4, 16 rays, 5 cascades) to 8.7 ms (spacing 2, 16 rays, 8 cascades) on an RTX 3080 with DXR (Dell'Ova), about 10 ms on an RTX 2070 at one probe per 4×4 px (Kaméus), 2 to 26 ms for SSRC in a game (Abou Dan and Jensen), and 33 to 156 ms with software traversal on an M1 (Gavras).
 - What a single frame lacks is stability, not convergence: every thesis reports flicker and none reports noise.
-
-## Open questions
-

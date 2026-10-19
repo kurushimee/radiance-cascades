@@ -51,7 +51,6 @@ Margel's line-space and diffusion demos, deadlyredcube's extension and sheared-p
 - [Half HRC](#half-hrc)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## amitabha
 
@@ -346,6 +345,3 @@ Eleven 2048² RGBA16F cascades are 352 MiB for one frustum's set and four times 
 - The library codes (TypeGPU, pixi-GI with temporal off, folkjs, cute_framework, hbattal, lancimir, amitabha, Volumetric-HRC) recompute the whole solve every frame; only bounce light carries over, with one frame of latency in folkjs and cute_framework. TypeGPU's gallery example shows single-frame bounces by re-solving per bounce.
 - The Shadertoy multi-frame rings are not a property of HRC and would collapse to one pass per level in a compute pipeline.
 - Pass counts of 76 to 82 per frame at 512² to 1024² are the figure to plan dispatch overhead around; TypeGPU's 64-thread 1D dispatches with a row split above 65535 workgroups are a pattern that maps directly onto Godot's `RenderingDevice` compute lists (inference).
-
-## Open questions
-

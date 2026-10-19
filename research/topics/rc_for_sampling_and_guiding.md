@@ -17,7 +17,6 @@ Reservoir Cascades and RCPG each have their own file: [Reservoir Cascades](rc_fo
 - [Methods compared and cited](#methods-compared-and-cited)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## vlam
 
@@ -90,6 +89,3 @@ Hedstrom's and Junkins's papers attack the same problem as Reservoir Cascades, c
 - **RCPG prices a world-space cascade.** With hardware ray queries, a culled 128³ volume with 16 directions at cascade 0 builds in 1.0 to 1.9 ms on an RTX 3090 at one ray per texel. Matching its averaged quality in one frame by brute force would cost about 37 to 58 ms, so a single-frame version needs integrated texels from cone or beam tracing through a prefiltered scene, or several rays per texel at lower resolution ([scene representation](scene_representation_and_tracing.md)) (derived and inference).
 - **Mapping onto Godot's `RenderingDevice`.** The live-probe list and `ceil(live·dirs/64)` indirect dispatches map onto Godot's indirect compute dispatch; RCPG's per-texel ray query does not, since compute shaders cannot trace and only the experimental Vulkan ray tracing pipeline can; its geometry-shader voxelization needs another route; and its 310 MiB dense allocation exceeds the 128 MiB storage-buffer range Vulkan guarantees, so the cascades belong in textures or split buffers, as tauray's 2D array textures already are ([RenderingDevice notes](../../docs/rendering_device.md)) (inference).
 - **Guiding is outside a pure-RC design,** since it feeds a path tracer. What it offers a single-frame RC is the descent sampler over a merged cascade, which could importance-sample a near-field pass (cascade −1 or screen-space rays) or specular rays from the same frame's cascades (inference, untested).
-
-## Open questions
-

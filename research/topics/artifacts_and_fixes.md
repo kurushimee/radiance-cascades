@@ -26,7 +26,6 @@ Statements marked "derived" were computed from the sources' formulas; "inference
 - [Debugging routine](#debugging-routine)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Ringing
 
@@ -314,6 +313,3 @@ For single-frame 3D RC (inference, from the sections above):
 - Straight-ray fixes need intervals at least `2.6·Δs_c` long in 3D (`t_end ≥ 2.6·Δs_c` removes only the rays that miss the circle), so at usual `t0` they cannot serve cascade 0, and a hybrid (cascade −1 or a trilinear fix low, straight-ray fixes above) matches what the 2D codes converged on.
 - Single-frame scheduling removes the frame-lag artifacts outright and cuts the number of lossy writes per frame to one per cascade.
 - Leaks in 3D come mostly from the scene representation and probe placement, not the merge, and are owned by those topics.
-
-## Open questions
-

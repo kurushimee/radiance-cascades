@@ -25,7 +25,6 @@ Statements marked "derived" were computed from the sources' formulas; "inference
 - [2D parameters across implementations](#2d-parameters-across-implementations)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Probe placement
 
@@ -412,6 +411,3 @@ For a single-frame 3D implementation (inference, from the sections above):
 - **Merge:** trilinear over 8 probes and 4 child directions. A direction-first layout in 3D textures could let the sampler do the trilinear blend; any fix that traces per upper probe must interpolate by hand.
 - **Memory:** cascade −1 per pixel removes the stored cascade 0 and adds contact detail; pre-averaging cuts storage 4×; fused scheduling caps live cascades at two.
 - **Gather:** precompute per-probe irradiance tiles (6×6 octahedral, as Split RC and erhe do) rather than summing every cone per pixel.
-
-## Open questions
-

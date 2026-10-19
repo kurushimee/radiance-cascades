@@ -46,7 +46,6 @@ Public code for screen-probe 3D RC: standalone repositories, two engine plugins,
   - [pixelmager's depth-aware upscaling gist](#pixelmagers-depth-aware-upscaling-gist)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## three-rc
 
@@ -405,6 +404,3 @@ Gavras's merge and gather keep the gist's 10% relative-spread test and `1/(|Δd|
 - three-rc, ClaikoCode, RC-SPWI, KingTheFifth, the Unreal plugin's screen mode and scy3Dd (apart from its two-frame split) compute every frame from scratch; Alpha-Renderer and lXByRh accumulate over frames; the Unity plugin's modes are single frame but unstable.
 - The Unreal plugin's per-sector masks and the Unity plugin's moment-based occlusion are the two single-frame answers to thin-object leaks in a depth march; the SPWI codes rely on world rays instead.
 - None of the screen-space codes has been measured for quality, and only Alpha-Renderer gives a timing (5.5 ms at 1080p on an RTX 3070, a README claim).
-
-## Open questions
-

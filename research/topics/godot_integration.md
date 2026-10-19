@@ -17,7 +17,6 @@ What Godot 4.7.2 (Forward+, Vulkan) gives an RC implementation, what it keeps pr
 - [Engine source locations](#engine-source-locations)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## Running the compute work
 
@@ -504,6 +503,3 @@ Line numbers are at tag 4.7.2-stable and, apart from the checked call order, com
 - **The engine adds occlusion on top.** With SSAO on, the opaque shader multiplies RC irradiance by `min(material AO, SSAO)`, darkening contact regions twice, so a pure RC setup turns SSAO and SSIL off (inference).
 - **Jitter moves screen probes.** Under TAA, depth-reconstructed probe positions shift every frame by the jitter, so a single-frame screen-space solve placed from `get_cam_projection()` flickers with it; HDDAGI's draft reprojects with unjittered projections, and placement can use them too (inference).
 - **Hit radiance needs a same-frame source.** Screen-space hits cannot read this frame's lit color before the opaque pass, so a single-frame design lights its hits from a world-space structure lit this frame, or by evaluating direct light at each hit, as gomezzz does for its point light (inference).
-
-## Open questions
-

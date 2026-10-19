@@ -17,7 +17,6 @@ The GM Shaders and jason.today series each have their own file: [GM Shaders](2d_
 - [Kelkar et al. (IEEE ICWITE 2025)](#kelkar-et-al-ieee-icwite-2025)
 - [Connections](#connections)
 - [Single-frame assessment](#single-frame-assessment)
-- [Open questions](#open-questions)
 
 ## radiance-cascades.com demo and Osborne's slide demo
 
@@ -209,6 +208,3 @@ For single-frame 3D RC (inference, from the sections above):
 - jason.today's two-pass step shows the core economy in its simplest form: 32 raymarches per pixel reach 256 directions. In 3D the same split is what keeps per-pixel cost bounded while upper cascades resolve distant lights.
 - The tile-and-single-fetch merge that all these demos share is the cheapest merge, but tmpvar's bilinear-of-means and Peixoto's 16-read merge show the explicit forms a 3D merge would need where hardware filtering cannot cross tile boundaries ([layout](cascade_layout_and_merging.md#merge-kernels)). By read count it is the cheapest: one hardware-filtered fetch per lower texel after pre-averaging, against 16 shader reads without it, as in GM Shaders' original, Coppen and Peixoto, or tmpvar's four probe means of `N` rays ([storage layouts](cascade_layout_and_merging.md#position-first-and-direction-first)) (derived).
 - Edge handling matters more in 3D, where the share of off-screen or out-of-volume probes grows: Peixoto keeps 43.75% of every cascade off screen, and tmpvar clamps edge probes and plans an outside ring. A ring of one probe per side at every level that serves as an upper cascade adds `((n + 2)^d − n^d)/n^d` of that level, about `2d/n` for `n` probes per axis: 9.7% at 64³ and 237.5% at 4³. Weighted by memory per level, a 64³ cascade 0 with five levels above it pays 35.2% more with 4 directions per parent, where memory halves per level, and 182.5% with 8, where it stays constant; a 512² 2D stack down to 8² pays 15.3%. Clamping costs nothing but turns the bilinear merge into the nearest edge probe within half an upper spacing of each face, a share `1 − (1 − 1/n)^d` of the level: 57.8% at 4³ and 43.8% at 4² (derived; [check](../checks/edge_probe_ring.py)).
-
-## Open questions
-

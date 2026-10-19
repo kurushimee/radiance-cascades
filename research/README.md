@@ -11,11 +11,11 @@ Notes on radiance cascades (RC) and the techniques around them, gathered from pa
 | A named technique, algorithm, data structure, format, artifact or term | The techniques index: [0–9 to F](index/techniques_0_to_f.md) · [G to O](index/techniques_g_to_o.md) · [P to R](index/techniques_p_to_r.md) · [S to Y](index/techniques_s_to_y.md). The explanations of cross-cutting terms are in [supporting_techniques.md](topics/supporting_techniques.md) and its two parts. |
 | A project, repository, Shadertoy ID, paper, thesis, talk, video, game, engine or author | The projects index: [0–9 to E](index/projects_0_to_e.md) · [F to K](index/projects_f_to_k.md) · [L to Q](index/projects_l_to_q.md) · [R to U](index/projects_r_to_u.md) · [V to Z](index/projects_v_to_z.md) |
 | The note on one source, or what could not be read | [Radiance cascades sources](index/sources_rc.md) · [related sources and sources not read](index/sources_related.md) |
-| What is still unresolved | [Open questions](index/open_questions.md), by theme, and the ranked [open problems](topics/single_frame_3d_rc.md#open-problems-ranked) |
+| Where the measured record of single-frame 3D RC ends | [Where the evidence stops](topics/single_frame_3d_rc.md#where-the-evidence-stops) |
 | A subject | The [topics](#topics) below, in reading order |
 | The computation behind a derived figure | [checks/](checks/): one assert-based Python script per derivation (standard library and NumPy), linked from the claim it checks |
 
-Every index entry is one line, so a text search for a term, ID or author over `index/` finds its entry and the links to every section that covers it. Every topic and source note with more than a few sections starts with a contents list. Every topic except the conclusions and the glossary ends with its connections to other topics, a single-frame assessment and open questions. A topic too long to read at once continues in part files named `<topic>_<part>.md`; the main file links its parts and keeps the connections, assessment and open questions for all of them.
+Every index entry is one line, so a text search for a term, ID or author over `index/` finds its entry and the links to every section that covers it. Every topic and source note with more than a few sections starts with a contents list. Every topic except the conclusions and the glossary ends with its connections to other topics and a single-frame assessment. A topic too long to read at once continues in part files named `<topic>_<part>.md`; the main file links its parts and keeps the connections and assessment for all of them.
 
 ## Topics
 
@@ -23,7 +23,7 @@ Start with the conclusions, then read the rest in this order.
 
 **Conclusions**
 
-1. [single_frame_3d_rc.md](topics/single_frame_3d_rc.md): what the research says about 3D RC computed in a single frame: evidence, where designs lean on time and what replaces it, the design families judged, with Godot as a host, budgets, ranked open problems.
+1. [single_frame_3d_rc.md](topics/single_frame_3d_rc.md): what the research says about 3D RC computed in a single frame: evidence, where designs lean on time and what replaces it, the design families judged, with Godot as a host, budgets, and where the evidence stops.
 2. [performance.md](topics/performance.md): measured cost by domain with links to each owning topic, rays per second, time per megapixel and bytes per probe normalized across sources, and per-frame ray, time and memory budgets.
 
 **The method**
