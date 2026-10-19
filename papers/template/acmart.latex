@@ -1,0 +1,87 @@
+\documentclass[acmsmall,nonacm,screen]{acmart}
+% An independent author has no institution address; acmart would otherwise require a country.
+\makeatletter\renewcommand\@ACM@checkaffil{}\makeatother
+
+\usepackage{longtable,array,calc}
+\usepackage{etoolbox}
+\usepackage{newunicodechar}
+
+\makeatletter
+% Correct order of tables after \paragraph or \subparagraph.
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\newsavebox\pandoc@box
+\newcommand*\pandocbounded[1]{%
+  \sbox\pandoc@box{#1}%
+  \Gscale@div\@tempa{\textheight}{\dimexpr\ht\pandoc@box+\dp\pandoc@box\relax}%
+  \Gscale@div\@tempb{\linewidth}{\wd\pandoc@box}%
+  \ifdim\@tempb\p@<\@tempa\p@\let\@tempa\@tempb\fi%
+  \ifdim\@tempa\p@<\p@\scalebox{\@tempa}{\usebox\pandoc@box}%
+  \else\usebox{\pandoc@box}%
+  \fi%
+}
+\def\fps@figure{htbp}
+\makeatother
+
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\newcounter{none}
+\setlength{\emergencystretch}{3em}
+
+% Symbols that appear in running text of the Markdown sources.
+\newunicodechar{≈}{\ensuremath{\approx}}
+\newunicodechar{≤}{\ensuremath{\leq}}
+\newunicodechar{≥}{\ensuremath{\geq}}
+\newunicodechar{−}{\ensuremath{-}}
+\newunicodechar{Δ}{\ensuremath{\Delta}}
+\newunicodechar{β}{\ensuremath{\beta}}
+\newunicodechar{ω}{\ensuremath{\omega}}
+\newunicodechar{ρ}{\ensuremath{\rho}}
+\newunicodechar{ε}{\ensuremath{\varepsilon}}
+\newunicodechar{√}{\ensuremath{\surd}}
+\newunicodechar{∞}{\ensuremath{\infty}}
+
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
+$for(header-includes)$
+$header-includes$
+$endfor$
+
+\begin{document}
+
+\title{$title$}
+$if(subtitle)$
+\subtitle{$subtitle$}
+$endif$
+$for(author)$
+\author{$author.name$}
+\affiliation{%
+  \institution{$author.affiliation$}
+  $if(author.country)$\country{$author.country$}$endif$}
+$endfor$
+
+\begin{abstract}
+$abstract$
+\end{abstract}
+
+$for(ccs)$
+\ccsdesc[$ccs.weight$]{$ccs.concept$~$ccs.sub$}
+$endfor$
+\keywords{$for(keywords)$$keywords$$sep$, $endfor$}
+
+$if(teaser)$
+\begin{teaserfigure}
+  \includegraphics[width=\textwidth]{$teaser.image$}
+  \caption{$teaser.caption$}
+  \Description{$teaser.caption$}
+  \label{fig:teaser}
+\end{teaserfigure}
+$endif$
+
+\maketitle
+
+$body$
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
+
+\end{document}

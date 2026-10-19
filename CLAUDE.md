@@ -16,6 +16,10 @@ Feature and tool work follows [plans/README.md](plans/README.md).
 
 [research/README.md](research/README.md) indexes notes on radiance cascades and related GI techniques. Check it before designing a feature.
 
+## Papers
+
+[papers/README.md](papers/README.md) indexes original papers on radiance cascades, with the experiments behind them. Check them too before designing a feature.
+
 ## GDScript
 
 Read [.claude/rules/gdscript.md](.claude/rules/gdscript.md) before creating a `.gd` file.
