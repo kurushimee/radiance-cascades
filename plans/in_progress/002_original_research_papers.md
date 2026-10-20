@@ -55,7 +55,7 @@ Done as for paper 1. Diffuse opaque scenes, discretized into patches (segment si
 - [x] Experiments and figures
 - [x] Prose, bibliography, PDF
 - [x] Review, rerun, commit
-- [ ] Source note, topics, indexes and README in `research/`
+- [x] Source note, topics, indexes and README in `research/`
 
 ### 5. Close
 

@@ -17,6 +17,9 @@ Glossary entries for light transport and solver math, interpolation and footprin
   - [Radon and Hough transforms, projection-slice theorem](#radon-and-hough-transforms-projection-slice-theorem)
   - [Jacobi iteration](#jacobi-iteration)
   - [Anderson acceleration](#anderson-acceleration)
+  - [GMRES](#gmres)
+  - [Geometric tail](#geometric-tail)
+  - [Ambient term](#ambient-term)
   - [Fast multipole method](#fast-multipole-method)
   - [Hankel functions](#hankel-functions)
   - [Nyquist-Shannon sampling](#nyquist-shannon-sampling)
@@ -106,7 +109,19 @@ Solve `Ax = b` by `x_i^(k+1) = (b_i − Σ_{j≠i} a_ij x_j^(k))/a_ii`, every up
 
 ### Anderson acceleration
 
-Speeds up a fixed-point iteration `x = f(x)` by combining the last `m` iterates with weights that minimize the combined residual, `x_{k+1} = (1 − β)Σα_i x_i + βΣα_i f(x_i)`. References: Anderson, J. ACM 12(4), 1965; Walker and Ni, SIAM J. Numer. Anal. 49(4), 2011 (secondary). Proposed for multi-bounce convergence in [light transport alternatives](../sources/2026_light_transport_alternatives.md).
+Speeds up a fixed-point iteration `x = f(x)` by combining the last `m` iterates with weights that minimize the combined residual, `x_{k+1} = (1 − β)Σα_i x_i + βΣα_i f(x_i)`. References: Anderson, J. ACM 12(4), 1965; Walker and Ni, SIAM J. Numer. Anal. 49(4), 1715–1735, 2011. Proposed for multi-bounce convergence in [light transport alternatives](../sources/2026_light_transport_alternatives.md); on that linear problem it matches [GMRES](#gmres).
+
+### GMRES
+
+Solves `Ax = b` by minimizing the residual over the Krylov space `{r₀, Ar₀, …, A^(k−1)r₀}`: one matrix product per step, plus `k` inner products and one stored vector at step `k`; exact once the space fills. Reference: Saad and Schultz, SIAM J. Sci. Stat. Comput. 7(3), 856–869, 1986. On a linear fixed-point problem, Anderson acceleration with full memory is essentially GMRES (Walker and Ni 2011). For RC bounces as re-merges of stored hits, GMRES on `(I − K̂)L = E + Pf̂s` reaches the frozen solve's own accuracy at albedo 0.9 in 6 to 8 passes with the leak-free bilinear fix in flatland, where plain bounces need up to 34, and in 2 to 5 for every merge in 3D ([bounces in one frame](../sources/2026_kurushimee_bounces_one_frame.md#iterations-derived-and-measured)).
+
+### Geometric tail
+
+Extrapolates a series of bounces `x_n = x_(n−1) + d_n` by its geometric remainder, `x_n + d_n·r_n/(1 − r_n)` with `r_n = Σd_n/Σd_(n−1)`: Aitken's Δ² process (Proc. R. Soc. Edinburgh 46, 289–305, 1927) with one ratio for all unknowns. As `d_n` tends to the dominant eigenvector times `μ̂ⁿ`, `r_n → μ̂` and the tail removes the dominant mode whatever its shape and rate (derived); what remains decays at the second eigenvalue. For RC bounces with the bilinear fix it needs 7 to 18 passes at albedo 0.9 in flatland, most where two rooms couple weakly, and 2 to 5 in 3D, at two global sums per pass ([bounces in one frame](../sources/2026_kurushimee_bounces_one_frame.md#iterations-derived-and-measured)).
+
+### Ambient term
+
+Progressive radiosity's display correction (Cohen, Chen, Wallace and Greenberg, SIGGRAPH 1988): the area mean of the light not yet shot, reflected at the mean albedo again and again, `ρ_i·⟨d_n⟩/(1 − ρ̄)`, added to each patch for display only. With reciprocal form factors, one albedo and a closed scene it restores the exact mean after any number of bounces (derived). It assumes the remaining light is uniform and decays at `ρ̄`, while it decays at the operator's dominant eigenvalue, below `ρ̄` where emitters absorb, light escapes or a merge leaks. Applied to RC bounces with the bilinear fix at albedo 0.9 it needs 22 to 27 passes against plain iteration's 21 to 34, and more than plain in an open scene ([bounces in one frame](../sources/2026_kurushimee_bounces_one_frame.md#iterations-derived-and-measured)).
 
 ### Fast multipole method
 
