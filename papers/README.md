@@ -20,7 +20,7 @@ The Python environment is a uv project; run every script from this directory:
 uv run python lab/selftest.py
 ```
 
-The flatland lab traces rays and computes its reference on the GPU through CuPy, and falls back to NumPy on the CPU when CuPy is missing. The voxel lab, `lab/volume.py`, compiles CUDA kernels through CuPy and needs an NVIDIA GPU. Experiments keep their results in the paper's `build/results/` and only redraw figures while those files exist; deleting them recomputes everything.
+The flatland lab traces rays and computes its reference on the GPU through CuPy, and falls back to NumPy on the CPU when CuPy is missing. The voxel lab, `lab/volume.py`, compiles CUDA kernels through CuPy and needs an NVIDIA GPU. Experiments keep their results in the paper's `build/results/` and only redraw figures while those files exist; deleting them recomputes everything. Run GPU experiments one at a time: concurrent processes share the GPU's memory and finish later than in sequence.
 
 Building the PDFs needs Pandoc, pandoc-crossref built for the same Pandoc version, and a LaTeX distribution with `acmart`, `pdflatex` and `bibtex` on `PATH`:
 

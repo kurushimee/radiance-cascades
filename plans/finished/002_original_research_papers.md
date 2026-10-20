@@ -1,9 +1,10 @@
 ---
 id: 002
 title: Original research papers on radiance cascades
-status: in_progress
+status: finished
 created: 2026-10-20
 updated: 2026-10-20
+finished: 2026-10-20
 ---
 
 # Original research papers on radiance cascades
@@ -59,7 +60,7 @@ Done as for paper 1. Diffuse opaque scenes, discretized into patches (segment si
 
 ### 5. Close
 
-- [ ] Plan moved to `finished/`, memory updated, scratch files deleted
+- [x] Plan moved to `finished/`, memory updated, scratch files deleted
 
 ## Facts / research
 
