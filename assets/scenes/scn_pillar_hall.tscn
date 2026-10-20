@@ -1,0 +1,64 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/mdl_pillar_hall.gltf" id="model"]
+[ext_resource type="Script" path="res://src/host/gi.gd" id="gi"]
+[ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi.gdshader" id="shd_gi"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
+
+[sub_resource type="Environment" id="environment"]
+background_mode = 1
+
+[sub_resource type="CompositorEffect" id="gi_effect"]
+script = ExtResource("gi_effect_script")
+
+[sub_resource type="Compositor" id="compositor"]
+compositor_effects = Array[CompositorEffect]([SubResource("gi_effect")])
+
+[sub_resource type="Animation" id="animated"]
+resource_name = "animated"
+length = 8
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Model/light:mesh:surface_0/material:shader_parameter/emission")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 2, 4, 6, 8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(0.854306, 1, 0.665185, 1), Color(0.665185, 1, 1, 1), Color(0.854306, 0.665185, 1, 1), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="lighting"]
+_data = {
+&"animated": SubResource("animated")
+}
+
+[node name="PillarHall" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("model")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("environment")
+compositor = SubResource("compositor")
+
+[node name="GI" type="Node" parent="."]
+script = ExtResource("gi")
+shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided")])
+
+[node name="Corner" type="Camera3D" parent="."]
+position = Vector3(0.7, 1.7, 0.7)
+rotation = Vector3(-0.0820372, -2.35619, 0)
+fov = 70
+current = true
+
+[node name="Aisle" type="Camera3D" parent="."]
+position = Vector3(2.25, 1.7, 0.6)
+rotation = Vector3(-0.0733973, -3.14159, 0)
+fov = 70
+
+[node name="Lighting" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("lighting")

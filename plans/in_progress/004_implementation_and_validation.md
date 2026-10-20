@@ -1,7 +1,7 @@
 ---
 id: 004
 title: Implement and validate the radiance cascades GI in Godot
-status: backlog
+status: in_progress
 created: 2026-10-20
 updated: 2026-10-20
 ---
@@ -16,14 +16,14 @@ Build the GI that [design/](../../design/README.md) specifies, in Godot 4.7.2 wi
 
 Done when every test scene loads with UV2 and the GI material, and the metrics script compares two captures.
 
-- [ ] Project layout under `src/` as in [godot_host.md](../../design/godot_host.md#code-layout)
-- [ ] `GI` node and a `CompositorEffect` at PRE_OPAQUE that runs once per frame, with debug labels and GPU timestamps
-- [ ] Editor script: scene surface area, texel spacing from [checks/budget.py](../../design/checks/budget.py), import texel size, reimport
-- [ ] Import script that converts materials to the GI `ShaderMaterial` (albedo, emission, fixture flag)
-- [ ] Built scenes: Cornell box, sealed sunlit rooms (single-plane and thick walls), two rooms at albedo 0.9, pillar hall, small objects
+- [x] Project layout under `src/` as in [godot_host.md](../../design/godot_host.md#code-layout)
+- [x] `GI` node and a `CompositorEffect` at PRE_OPAQUE that runs once per frame, with debug labels and GPU timestamps
+- [x] Editor script: scene surface area, texel spacing from [checks/budget.py](../../design/checks/budget.py), import texel size, reimport
+- [x] Import script that converts materials to the GI `ShaderMaterial` (albedo, emission, fixture flag)
+- [x] Built scenes: Cornell box, sealed sunlit rooms (single-plane and thick walls), two rooms at albedo 0.9, pillar hall, small objects
 - [ ] Downloaded scenes, each after the owner approves the download: Crytek Sponza, Bistro, Intel Sponza with ivy; kept out of the repository
-- [ ] Camera poses and static and animated lighting per scene
-- [ ] Capture of `E/π` and final-image buffers to EXR, and a Python metrics script (relative RMSE, bias, HDR-FLIP via `flip-evaluator`, leak)
+- [x] Camera poses and static and animated lighting per scene
+- [x] Capture of `E/π` and final-image buffers to EXR, and a Python metrics script (relative RMSE, bias, HDR-FLIP via `flip-evaluator`, leak)
 
 **Fallback.** If a scene's import fails to unwrap, it is replaced by another scene that tests the same thing.
 
@@ -119,3 +119,33 @@ Done when moving objects stay within the budget's 0.5 ms on the test scenes and 
 - The design and the measurements behind it: [design/README.md](../../design/README.md), [design/experiments.md](../../design/experiments.md); planning figures in [design/budget.md](../../design/budget.md).
 - Engine behaviour checked against 4.7.2: [docs/rendering_device.md](../../docs/rendering_device.md), [docs/compositor_and_shading.md](../../docs/compositor_and_shading.md), [docs/lightmap_uv2.md](../../docs/lightmap_uv2.md).
 - What the research could not settle: [research/topics/single_frame_3d_rc.md](../../research/topics/single_frame_3d_rc.md#where-the-evidence-stops).
+- Engine import behaviour behind the M0 tools: [docs/scene_import.md](../../docs/scene_import.md).
+
+### M0
+
+- **Rebuilding the built scenes.** `python src/reference/build_scenes.py`, then `godot --headless --path . --import` for new models, then `godot --headless --path . --script res://src/editor/texel_size.gd -- <models>`.
+- **Texel sizes** at the planning point (8 M records, 16 bins):
+
+  | Scene | Surface | Across | Texel size |
+  |---|---|---|---|
+  | Cornell box | 1.9 m² | 1.0 m | 0.009 m |
+  | Sealed room, thick walls | 205 m² | 12 m | 0.084 m |
+  | Sealed room, single-plane walls (both sides counted) | 224 m² | 12 m | 0.087 m |
+  | Two rooms | 432.5 m² | 13 m | 0.121 m |
+  | Pillar hall | 521.9 m² | 13 m | 0.133 m |
+  | Small objects | 1642 m² | 56.6 m | 0.235 m |
+
+- **No T-junctions.** Neighbouring quads must share corners: greedy-merged rectangles in the voxel rooms rasterized with black pinholes along their edges. The builder writes one quad per voxel face and merges equal vertices, which also keeps each plane one connected chart for the unwrap.
+- **Godot's sun shadow leaks** thin bright lines along the foot of the single-plane walls, where the wall meets the ground. The leak is in Godot's direct light, so it shows in the final image and not in `E/π`.
+- **The Cornell light** reads (18.375, 13.98, 6.75) in the half-float final image: Mitsuba's radiance (18.387, 13.987, 6.754) to half precision.
+- **Without GI**, the global `gi_irradiance` is unset and samples black, so `E/π` is zero and the relative figures and the leak come out null. The pillar hall's final images are black too, since its only light is the ceiling panel's, which reaches surfaces only through the GI.
+- **HDR-FLIP on a dark reference.** `flip-evaluator` sets its exposure range from the reference's luminance, `log2(xMax / Ymax)` to `log2(xMax / max(Ymedian, ε))`, and calls `exit(-1)` when the start exceeds the stop, which happens when the peak luminance is below float32 ε (`computeExposures` in `src/cpp/FLIP.h`). The metrics script returns null for such a reference instead.
+- **Render times without GI**, 1280×720: GPU median 0.15 to 0.43 ms over the six built scenes.
+- **Downloads awaiting approval**, none in the repository:
+
+  | Scene | File | Source | Size |
+  |---|---|---|---|
+  | Crytek Sponza | `Models/Sponza/glTF/`, 71 files | github.com/KhronosGroup/glTF-Sample-Assets | 52.7 MB |
+  | Intel Sponza | `main_sponza.zip` | cdrdv2.intel.com/v1/dl/getContent/830833 | 3.99 GB (3.71 GiB) |
+  | Intel Sponza ivy | `pkg_b_ivy1.zip` | cdrdv2.intel.com/v1/dl/getContent/726656 | 1.38 GB (1.29 GiB) |
+  | Bistro | `Bistro_v5_2.zip` | NVIDIA ORCA, developer.nvidia.com/downloads/bistro | 894 MB |

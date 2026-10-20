@@ -26,6 +26,8 @@ Each scene is pinned by its asset source, camera poses and lighting, and kept ou
 
 Sources, licences and sizes are recorded in [research](../research/sources/2026_gi_evaluation_tools_and_scenes.md). Every download waits for the project owner's approval.
 
+**Built scenes.** `src/reference/build_scenes.py` writes them as glTF models and Godot scenes. The rooms are the lab's 32-voxel scenes ([experiments.md](experiments.md)) at 0.25 m per voxel and albedo 0.9, so their errors compare with the lab's. The Cornell box has the published geometry with Mitsuba 3's RGB reflectances and light radiance, so Mitsuba builds the same box from the same numbers.
+
 **Lighting.** Every scene has a static setup and an animated one: the sun moving across the sky, lamps switching, an emissive panel changing colour. Lamps are Godot lights with fixture meshes ([lighting.md](lighting.md#emitters)).
 
 ## Reference
@@ -44,7 +46,7 @@ Sources, licences and sizes are recorded in [research](../research/sources/2026_
 | Determinism | the same frame rendered after two different histories, compared bit for bit |
 | Memory | `RenderingDevice` allocations of the GI |
 
-HDR-FLIP comes from the `flip-evaluator` Python package, which takes linear HDR arrays ([research](../research/sources/2026_gi_evaluation_tools_and_scenes.md#flips-python-package)).
+The GI's `E/π` buffer is a render in which the GI materials show the irradiance they receive and nothing else; pixels without a surface are left out. HDR-FLIP comes from the `flip-evaluator` Python package, which takes linear HDR arrays ([research](../research/sources/2026_gi_evaluation_tools_and_scenes.md#flips-python-package)).
 
 ## Acceptance
 

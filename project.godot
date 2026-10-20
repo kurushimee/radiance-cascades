@@ -16,7 +16,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-SceneCapture="*res://src/dev/scene_capture.gd"
+SceneCapture="*res://src/reference/scene_capture.gd"
 
 [debug]
 
@@ -36,3 +36,14 @@ window/stretch/aspect="expand"
 rendering_device/driver.windows="vulkan"
 rendering_device/fallback_to_d3d12=false
 rendering_device/fallback_to_opengl3=false
+
+[shader_globals]
+
+gi_irradiance={
+"type": "sampler2D",
+"value": ""
+}
+gi_view={
+"type": "int",
+"value": 0
+}

@@ -72,6 +72,7 @@ A `Texture3DRD` works as a global `sampler3D` shader parameter. `set_texture_rd_
 - Only differences within one frame mean anything; absolute values look like nanoseconds since the Unix epoch.
 - On the main device, a frame's timestamps become readable two frames later (`get_frame_delay()` is 2) and stay for one frame only. Read the list every frame on the render thread, match names, and check `get_captured_timestamps_frame()`.
 - On a local device, timestamps are readable right after `sync()`.
+- `capture_timestamp()` fails inside a compute list that has dispatched, a draw list that has drawn or a ray tracing list that has traced (`rendering_device.cpp`). Time a pass by capturing before its list begins and after it ends.
 - The engine captures no timestamps of its own.
 
 ## Labels

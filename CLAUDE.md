@@ -46,7 +46,7 @@ Edit `.gd` files with Edit or Write: gdls misses changes made any other way and 
 
 | Directory | Contents |
 |-----------|----------|
-| `src/<feature>/` | GDScript, with each compute shader next to the script that dispatches it |
+| `src/<feature>/` | GDScript, with each compute shader next to the script that dispatches it; Python tools for the scenes and metrics in `src/reference/` |
 | `assets/` | Scenes, models, textures, materials |
 
 | Asset prefix | Asset |

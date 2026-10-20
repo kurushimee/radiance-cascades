@@ -35,7 +35,7 @@ The `CompositorEffect` runs at PRE_OPAQUE, where Forward+ has ended the depth pr
 
 ## Materials and import
 
-- **One project material.** Every GI mesh uses a project `ShaderMaterial` with albedo, emission and fixture parameters. Its fragment shader samples the irradiance atlas at UV2 and writes `IRRADIANCE` ([near_field.md](near_field.md#the-composite)). An import script converts imported materials to it.
+- **One project material.** Every GI mesh uses a project `ShaderMaterial` with albedo, emission and fixture parameters, through one shader or, for double-sided materials, its copy with culling off. Its fragment shader samples the irradiance atlas at UV2 and writes `IRRADIANCE` ([near_field.md](near_field.md#the-composite)). An import script converts imported materials to it and marks a material as a fixture when its name starts with `fixture`.
 - **UV2 at import.** Scenes import with `meshes/light_baking` set to Static Lightmaps, and an editor script sets `meshes/lightmap_texel_size` to the spacing the [budget](budget.md#texel-spacing) gives for the scene's area ([docs](../docs/lightmap_uv2.md)).
 - **Environment.** SSAO and SSIL are off; the environment's sky stays, as the solve reads it ([lighting.md](lighting.md#sky)).
 
@@ -55,9 +55,11 @@ Following the repository's layout, each feature folder holds its scripts with th
 
 | Folder | Contents |
 |---|---|
+| `src/host/` | the `GI` node and the `CompositorEffect` |
+| `src/editor/` | the texel-size tool that sets each scene's import options |
 | `src/tracer/` | BVH build, traversal include, TLAS |
 | `src/atlas/` | packing, capture, dilation, seams |
 | `src/cascades/` | probe insertion, hash, records, merge passes |
 | `src/lighting/` | direct light, sky table, bounces and tail |
 | `src/composite/` | the material conversion at import; the GI shader itself is an asset (`shd` prefix) |
-| `src/reference/` | the path tracer and the measurement harness ([evaluation.md](evaluation.md)) |
+| `src/reference/` | the path tracer, the built test scenes and the measurement harness: capture and metrics ([evaluation.md](evaluation.md)) |

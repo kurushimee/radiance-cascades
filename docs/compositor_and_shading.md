@@ -14,6 +14,14 @@ Forward+ runs PRE_OPAQUE effects right after the depth pre-pass has ended its dr
 
 A material that writes `IRRADIANCE` replaces the ambient term: after the ambient color and sky, `ambient_light = mix(ambient_light, IRRADIANCE.rgb, IRRADIANCE.a)`, and the result is then multiplied by AO, albedo and `1 − metallic` and added to emission and direct light (`scene_forward_clustered.glsl`). Nothing on that path divides by π, so the slot expects irradiance over π, the cosine-weighted mean radiance: uniform radiance `L` gives outgoing radiance `albedo · L`.
 
+## Diffuse
+
+A spatial shader without a `diffuse_*` render mode uses Lambert: the render mode list starts with `lambert` (`shader_types.cpp`), only the other modes emit a define (`scene_shader_forward_clustered.cpp`), and the light code falls back to Lambert without one (`scene_forward_lights_inc.glsl`). `StandardMaterial3D` defaults to Burley. The project setting `rendering/shading/overrides/force_lambert_over_burley` turns Burley into Lambert.
+
+## Global sampler parameters
+
+A global sampler parameter without a texture binds the default texture of its hint, as a material sampler does: black for `hint_default_black` (`material_storage.cpp`).
+
 ## Light units and attenuation
 
 `scene_forward_lights_inc.glsl` and `light_storage.cpp`:
@@ -28,6 +36,10 @@ A material that writes `IRRADIANCE` replaces the ambient term: after the ambient
 ## Sky
 
 Scripts reach the sky only as a CPU `Image`: `RenderingServer.sky_bake_panorama(sky, energy, bake_irradiance, size)` or `environment_bake_panorama(environment, bake_irradiance, size)` returns a linear, untonemapped equirectangular panorama of the radiance map, or of the irradiance map with `bake_irradiance`. No method returns the sky's RD texture, and the engine stores the radiance map as an octahedral map (`sky.cpp`).
+
+## HDR readback
+
+With `use_hdr_2d`, a viewport renders to RGBA16F, and `get_texture().get_image()` returns `FORMAT_RGBAH` when `transparent_bg` is on and `FORMAT_RGBH` otherwise; an opaque viewport reads its alpha as one (`texture_storage.cpp`). With the Linear tonemapper the values are linear and unclamped. `Image.save_exr` works in exported builds too: the tinyexr module builds on every platform and registers the saver without an editor guard (`modules/tinyexr/`).
 
 ## Texture RIDs
 

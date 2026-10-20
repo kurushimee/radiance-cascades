@@ -4,3 +4,4 @@
 
 .gdls/
 *.rdc
+*.unwrap_cache

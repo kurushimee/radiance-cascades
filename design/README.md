@@ -1,6 +1,6 @@
 # Design
 
-This is the design of a world-space diffuse global illumination system for Godot 4.7.2, built from radiance cascades alone. The whole solution is rebuilt every frame from scratch, with no temporal accumulation and no denoiser. It aims to match a path-traced reference within the limits in [evaluation.md](evaluation.md) and to cost 6 ms per frame at 1080p on an RTX 2070, half of a 12 ms ceiling. Implementation and validation follow [plan 004](../plans/backlog/004_implementation_and_validation.md).
+This is the design of a world-space diffuse global illumination system for Godot 4.7.2, built from radiance cascades alone. The whole solution is rebuilt every frame from scratch, with no temporal accumulation and no denoiser. It aims to match a path-traced reference within the limits in [evaluation.md](evaluation.md) and to cost 6 ms per frame at 1080p on an RTX 2070, half of a 12 ms ceiling. Implementation and validation follow [plan 004](../plans/in_progress/004_implementation_and_validation.md).
 
 ## Contents
 

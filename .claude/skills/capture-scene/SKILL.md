@@ -15,7 +15,9 @@ godot --path "$(pwd -W)" --resolution 1280x720 --position 40,40 --disable-vsync 
   --scene res://assets/scenes/scn_<name>.tscn -- --capture="$capture_dir"
 ```
 
-The capture directory then holds `screenshot.png` and `capture.json`. Look at the screenshot before saying anything about how the scene looks. Run one capture at a time.
+The capture directory then holds `screenshot.png`, `capture.json` and a folder per camera with `final.exr` and `irradiance.exr`, the final image and the `E/π` the GI materials receive, both linear. Look at the screenshot before saying anything about how the scene looks. Run one capture at a time.
+
+`--animation=animated` plays the scene's animated lighting, and `--time=<seconds>` holds it at that time. `uv run src/reference/metrics.py` compares two camera folders.
 
 Any entry in `errors` invalidates the capture. Engine errors before the project boots, and crashes, show only in the command output.
 

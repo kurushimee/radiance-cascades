@@ -1,0 +1,59 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/mdl_cornell_box.gltf" id="model"]
+[ext_resource type="Script" path="res://src/host/gi.gd" id="gi"]
+[ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi.gdshader" id="shd_gi"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
+
+[sub_resource type="Environment" id="environment"]
+background_mode = 1
+
+[sub_resource type="CompositorEffect" id="gi_effect"]
+script = ExtResource("gi_effect_script")
+
+[sub_resource type="Compositor" id="compositor"]
+compositor_effects = Array[CompositorEffect]([SubResource("gi_effect")])
+
+[sub_resource type="Animation" id="animated"]
+resource_name = "animated"
+length = 8
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Model/light:mesh:surface_0/material:shader_parameter/emission")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 2, 4, 6, 8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 0.886374, 0.640043, 1), Color(0.640043, 1, 0.697451, 1), Color(0.640043, 0.801625, 1, 1), Color(1, 0.640043, 0.965329, 1), Color(1, 0.886374, 0.640043, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="lighting"]
+_data = {
+&"animated": SubResource("animated")
+}
+
+[node name="CornellBox" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("model")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("environment")
+compositor = SubResource("compositor")
+
+[node name="GI" type="Node" parent="."]
+script = ExtResource("gi")
+shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided")])
+
+[node name="Front" type="Camera3D" parent="."]
+position = Vector3(0.278, 0.273, -0.8)
+rotation = Vector3(0, -3.14159, 0)
+fov = 39.3076
+current = true
+
+[node name="Lighting" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("lighting")

@@ -4,8 +4,12 @@ A bounce pass re-shades and re-merges every stored hit record, so the passes cos
 other pass gets a fixed allowance. Records per texel come from the lab (design/experiments.md, E2 and E3): cascade 0
 keeps 4 * bins bent segments (about four front parents per bin), and each world cascade adds records in proportion to
 the bins. The lab's scenes stop at three world cascades; above those the model adds a constant per cascade.
+
+`python budget.py <area> <diameter>` prints the texel spacing at the planning point for a scene of that surface area
+(m²) and diameter (m), after the checks pass.
 """
 import math
+import sys
 
 CEILING_MS = 12.0
 AIM_MS = 6.0
@@ -102,3 +106,6 @@ assert round((8e6 - 64 * 8e6 / 269) / 1e6, 1) == 6.1
 # Geometry: 48-byte triangles plus 18.6 to 24.1 bytes of binary nodes per triangle.
 assert [round(260e3 * (48 + b) / 1e6) for b in (18.6, 24.1)] == [17, 19]
 assert [round(10.8e6 * (48 + b) / 1e9, 2) for b in (18.6, 24.1)] == [0.72, 0.78]
+
+if len(sys.argv) == 3:
+    print(spacing(float(sys.argv[1]), record_budget(passes_ms), diameter=float(sys.argv[2]))[0])
