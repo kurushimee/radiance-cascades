@@ -10,7 +10,7 @@ Original research on radiance cascades: derivations, assert-checked numbers and 
 
 ## Layout
 
-Each paper directory holds `paper.md` (the source), `paper.pdf` (the built paper), `checks/` (one assert script per derived number), `experiments/` (seeded scripts that regenerate every figure and table) and `figures/`. [lab/](lab/) holds the simulators and reference solvers the experiments share.
+Each paper directory holds `paper.md` (the source), `paper.pdf` (the built paper), `checks/` (one assert script per derived number), `experiments/` (seeded scripts that regenerate every figure and table) and `figures/`. [lab/](lab/) holds the simulators and reference solvers the experiments share; the design's experiments in [design/experiments/](../design/experiments/) import them too, so a change to the lab reruns those as well.
 
 ## Running
 

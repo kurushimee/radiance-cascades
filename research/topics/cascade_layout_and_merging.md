@@ -280,6 +280,7 @@ When cascade 0 has fewer probes than pixels, each pixel can trace its own short 
 - LegitCascades' final gather runs the bilinear-fixed merge with the interval `[0, cm1]` per pixel for each cascade 0 direction, `cm1 = 1.0` cascade 0 spacings by default ([LegitCascades](../sources/2024_sannikov_legitcascades.md#final-gather)).
 - Split RC starts cascade 0 rays at a small distance and fills the gap with per-pixel screen-space raymarching, as in visibility-bitmask SSGI, merged as cascade −1; it recovers contact detail smaller than the cascade 0 spacing for 1.4 ms, where the unoptimized directional gather cost 23 ms ([Split RC](../sources/2026_freeman_split_radiance_cascades.md#extensions-shown)).
 - A sparse 3D build instead inserts a new cascade before cascade 0 with a quarter of the distance, half the probe size and a quarter of the directions ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#parameters-and-directions)).
+- On surface probes with bent surface merges, a point's short trace whose misses read its texel's merged radiance counts near occluders twice, since that radiance already comes from rays starting at the texel; an occlusion ratio over the texel's darkens contact points 13 to 15% because near occluders are lit; only a probe at the point merged into the upper cascade like a texel gains, around thin occluders ([surface probes](3d_surface_probes.md#measured-against-a-reference)).
 
 ## Final gather
 

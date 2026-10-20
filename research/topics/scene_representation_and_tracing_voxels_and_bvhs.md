@@ -15,6 +15,7 @@ Two families of world-space tracers that run as plain compute: voxel grids stepp
   - [tinybvh](#tinybvh)
   - [Wicked Engine: a BVH built on the GPU every frame](#wicked-engine-a-bvh-built-on-the-gpu-every-frame)
   - [BVH width and ray coherence](#bvh-width-and-ray-coherence)
+  - [GPU builds and wide nodes, measured](#gpu-builds-and-wide-nodes-measured)
   - [Other software BVHs in RC projects](#other-software-bvhs-in-rc-projects)
   - [Software against hardware](#software-against-hardware)
 
@@ -199,6 +200,24 @@ The claim that a binary BVH beat an 8-wide compressed BVH by 2× for SPWI becaus
 | RTX 5080 laptop | 2.8 G rays/s | 1.9 G | 1.4 G |
 
 The maintainer puts CWBVH's deficit down to its OpenCL traversal code, which lost the CUDA original's shared-memory stack, says OpenCL needs separate paths per vendor and that BVH2 is the clear winner on Apple, and keeps CWBVH mostly for history; incoherent rays were not tested. The issue therefore supports BVH2 for coherent rays in tinybvh's OpenCL code, with the cause given as traversal code, not ray coherence alone. Smaller BVH stacks saved a few ms on an M2. A binary BVH beat wide BVHs for coherent RC rays in the sparse builds too ([sparse 3D RC](../sources/2026_sparse_and_3d_rc.md#tracing-without-hardware-rt)). For GLSL compute, as under Godot, tinybvh's 2-wide `tiny.comp` is the lowest-risk starting point (inference).
+
+### GPU builds and wide nodes, measured
+
+Published measurements of GPU builders and node layouts, none on an RTX 2070 ([notes](../sources/2026_gpu_bvh_builders_and_wide_traversal.md)):
+
+- **Build time.** On a Radeon RX 7900 XT, H-PLOC built 12.7 M triangles in 12.71 ms and 10 M in 11.45 ms, within 15% of a single-kernel LBVH (11.46 and 9.88 ms) and 1.1 to 1.8 times faster than PLOC++. On an RX 6800 XT, LBVH built 12.76 M triangles in 36.7 ms and PLOC in 129 ms.
+- **Build quality.** H-PLOC's trees trace 5 to 17% slower than parallel reinsertion (PRBVH), whose build takes seconds to minutes; SAH builds are not the ceiling either, costing more on average than PLOC and ATRBVH.
+- **Build memory.** About 80 bytes per primitive after quad pairing, which removes 20 to 50% of the triangles, mostly reusable from the leaf data.
+- **Node width.** Compressed 8-wide nodes (CWBVH, 80 B) traced incoherent rays 2.2 to 2.7 times faster than a binary BVH in CUDA, and primary rays 1.33 to 1.36 times; their structure takes 8.1 to 8.6 bytes per triangle against 24 for the binary layout, triangles excluded. Uncompressed 4- and 8-wide nodes were no faster than binary ones, and up to 14% slower for shadow rays.
+- **RT cores.** An RTX 2080 Ti traced about 2.5 to 3 G rays/s in software and about 12.4 G with RT cores on simple scenes, 0.5 against 6.4 G on Hairball.
+
+**What follows (derived and inferred).**
+
+- A 10 M-triangle static scene builds in about 11 to 12 ms on a current high-end GPU (H-PLOC or LBVH), so a GPU build is a load-time cost, and a per-frame rebuild fits only the moving part of a scene.
+- The speedups of wide nodes come from compression and grow with incoherence. Short coherent segments, as in RC's lower cascades, gain least, which agrees with the binary BVH beating wide ones for coherent RC rays ([width and coherence](#bvh-width-and-ray-coherence)).
+- No GPU builder writes CWBVH nodes. A GPU-built tree is therefore binary or uncompressed-wide, and a CWBVH comes from a CPU build and conversion, as in tinybvh and obvhs.
+- Scaled by SM count from the 2080 Ti, software traversal on a 36-SM Turing GPU would reach about 1.3 to 1.6 G rays/s on simple scenes. That agrees with the 1 to 3 G rays/s class assumed for compute tracers ([performance](performance.md#normalized-throughput-derived)).
+- At 10.8 M triangles, 48-byte triangles take 518 MB and a binary tree another 200 to 260 MB. Every such buffer exceeds Vulkan's guaranteed 128 MiB per storage buffer, but devices report far more. Splitting is needed only where a device reports less.
 
 ### Other software BVHs in RC projects
 

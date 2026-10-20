@@ -42,6 +42,8 @@ Surface designs tie RC's probes, or the scene the probes trace, to the surfaces 
   - [yhyu13 surface-chart RC](#yhyu13-surface-chart-rc)
   - [A generated surface atlas (Blackline Interactive)](#a-generated-surface-atlas-blackline-interactive)
   - [Other surface parameterizations](#other-surface-parameterizations)
+  - [Building a surface atlas](#building-a-surface-atlas)
+  - [Measured against a reference](#measured-against-a-reference)
 - [On-surface radiance caches (Tatzgern et al. 2024)](#on-surface-radiance-caches-tatzgern-et-al-2024)
 - [A radiance field stored on a plane](#a-radiance-field-stored-on-a-plane)
 - [Connections](#connections)
@@ -415,6 +417,36 @@ It is the only single-frame world-space RC on a compute tracer shown with timing
 ### Other surface parameterizations
 
 Quad patches from slicing a mesh with axis-aligned planes, 2×2 voxel blocks replaced by quads through their mass centres, and lightmap-UV probes (which grow with the scene and distort with automatic UVs) are listed among the sparse designs in [3D world space](3d_world_space.md#other-sparse-designs). Love and Deepspace uses lightmap UVs only to spawn its surfels.
+
+### Building a surface atlas
+
+Lightmap practice covers how charts are made, padded, stitched and packed; no RC source states these rules for a probe atlas ([notes](../sources/2026_lightmap_atlases_seams_and_packing.md)).
+
+- **Charts.** xatlas grows charts under weighted normal-deviation, roundness, straightness and seam metrics and stops at a total cost of 2.0, so lower costs give more, flatter charts; area and boundary-length caps are optional. Unity splits at a hard angle of 88° by default, and The Witness follows normal seams in proportion to their angle.
+- **Padding.** Production lightmaps keep charts about two texels apart. xatlas pads by a set pixel count and by default leaves room for bilinear reads, and Unity's default margin is 4 pixels at 1024². The Witness pads one texel and packs charts in order of area into near-square atlases.
+- **Coverage.** Charts are rasterized conservatively, or uncovered border texels are dilated from covered neighbours, so bilinear reads never pull in empty texels.
+- **Seams.** Seam pairs are found as 3D edges that appear with two different UV pairs. Lightmappers blend texels across each pair after the bake. Seamlessness can be stated exactly, as the null space of a linear operator on the texels (Seamless), but no lightmapper is known to solve it at run time.
+- **Packing.** MAXRECTS packs best; Skyline packs best online into one bin, and stb_rect_pack's Skyline Bottom-Left is the common ready-made choice.
+
+**What follows for a probe atlas (derived and inferred).**
+
+- **A seam in a probe atlas is a discontinuity in the probes, not only in the stored irradiance.** Texels on the two sides of a seam are separate probes, and each traces its own rays. Their irradiance differs by the solver's error, not by a missing filter, so blending after the solve removes a visible step but not its cause.
+- **Probes need parents across chart borders.** Upper cascades on world-locked probes avoid the problem, because a texel's parents never depend on which chart it is in.
+- **Small charts are expensive.** A `w × h` chart with `p` texels of padding takes `(w + 2p)(h + 2p)` texels: a 2×2 chart with one texel of padding takes 16 for 4 of surface. A probe atlas pays for this in tracing as well as memory, unless padding texels are skipped (X3XfRM's 1.6× from skipping them).
+- **Probe atlases need coverage tests, not dilation alone.** A dilated padding texel holds a copied value for bilinear reads but must not become a probe of its own.
+
+### Measured against a reference
+
+Surface probes on voxel faces, 16 hemisphere bins at `t0 = 1.60` texels, with stored hits, against Monte Carlo irradiance in six 32³ scenes ([source note](../sources/2026_kurushimee_surface_probe_lab.md)):
+
+- **World parents behind the surface.** Around a surface probe, a world grid's trilinear parents include some behind the surface, which see its back. Bent merges over all eight are 9.5 to 20% dark at the first bounce; dropping the parents on or behind the tangent plane and renormalizing removes the bias and cuts the error after five bounces 1.4 to 3 times.
+- **Sealing.** Only bent merges seal, and the surface hand-over decides it: with the self test there, a closed box leaks 0.006 of the sky even when every world hand-over is bent. The trilinear fix on front parents at the surface and the sphere fix at every world hand-over leak 0.0008, at furnace deficits of 0.0010 to 0.0052 and 181 to 265 stored hits per texel; Kuhn at the world hand-overs seals to 0.0001 for 21 to 37% more hits.
+- **Chart lattices against world grids.** On large, planar, axis-aligned charts, lattices with the bilinear fix keep 2 to 4 times fewer hits than world grids with one trilinear fix everywhere, at a similar error; per-hand-over merges close most of that gap. Charts that are curved, thin or small were not measured.
+- **Directions.** 36 bins cut the error after five bounces by a third to a half in single rooms for 2.1 to 2.2 times the hits; rooms joined by a door and halls of thin pillars stay at 0.11 to 0.15 at any bin count, an interpolation error of the world probes.
+- **Below the texel.** At geometry aligned to the texels, bilinear reads are within 1 to 6% at contact points. Only a probe at the point merged into the upper cascade like a texel gains (0.053 → 0.033 around thin pillars); a short trace with the texel's merged radiance behind it counts near occluders twice, and an occlusion ratio over the texel's biases contact points 13 to 15% dark because near occluders are lit.
+- **Passes.** A geometric tail reaches the solve's fixed point within 0.015 to 0.047 after five passes at albedo 0.9 in single rooms and a pillar hall, and within 0.023 after three at albedo 0.5; two rooms joined by a door stay 0.14 away after five.
+
+**Inferred.** At the scale the atlas resolves, the texel itself carries the near field. What a near-field estimate must add is the radiance of occluders smaller than a texel, merged like a cascade, not a visibility factor.
 
 ## On-surface radiance caches (Tatzgern et al. 2024)
 

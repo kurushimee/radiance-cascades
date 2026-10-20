@@ -45,6 +45,8 @@ The compositor effects in [Godot projects](godot_projects.md#compositor-effect-p
 
 Forward+ renders a frame in this order; line numbers refer to `servers/rendering/renderer_rd/forward_clustered/render_forward_clustered.cpp` at 4.7.2-stable. The order of PRE_OPAQUE callbacks, `_pre_opaque_render` with `process_gi`, the opaque pass and POST_OPAQUE callbacks was checked at the tag.
 
+No draw list is open when PRE_OPAQUE callbacks start, so a callback can run its own raster pass on its own framebuffer if it ends the draw list before returning; this, the light units and attenuation, and where UV2 comes from are confirmed in the engine notes ([compositor and shading](../../docs/compositor_and_shading.md), [lightmap UV2](../../docs/lightmap_uv2.md)).
+
 1. `sdfgi_update` creates the SDFGI object when SDFGI is enabled, deletes it when disabled or reset, and otherwise calls its `update`. The caller was not in the files read.
 2. `_render_scene` calls `_update_sdfgi`, which voxelizes each pending region and relights static lights when they need it.
 3. For normal views, not reflection probes: `update_cascades`, `pre_process_gi` and `update_light`.

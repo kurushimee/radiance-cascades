@@ -32,6 +32,7 @@ Visibility-bitmask GI (VBGI). Split RC uses it as "cascade −1" for contact det
 - [Code post (2023)](#code-post-2023)
 - [Limitations (from the source)](#limitations-from-the-source)
 - [Conclusion and future work](#conclusion-and-future-work)
+- [Later work on thickness](#later-work-on-thickness)
 - [Links found](#links-found)
 
 ## Introduction
@@ -266,6 +267,17 @@ Therrien's post https://cdrinmatane.github.io/posts/ssaovb-code/ (2023-05-11) gi
 - Future work: a per-pixel thickness heuristic.
 - Future work: caching similar to LSAO, to reduce bandwidth ([LSAO notes](2013_timonen_line_sweep_ambient_obscurance.md)).
 - Future work: approximating low-frequency ambient irradiance at runtime.
+
+## Later work on thickness
+
+The paper leaves a per-pixel thickness heuristic as future work. Later work, read 2026-10-20:
+
+- **GT-VBAO** (matiasgql), an Unreal Engine 5 plugin announced 2026-07-03 (https://forums.unrealengine.com/t/matiasgql-gt-vbao-ground-truth-visibility-bitmask-ambient-occlusion/2733317), assigns thickness to occluders with the bitmask to reduce halos and samples the hemisphere cosine-weighted. It gives no timings, GPU or licence; it is sold on Fab (https://www.fab.com/listings/c9daa6de-c837-400c-a98e-a4c44032e7b7, listing seen only in search results).
+- **Ottosson's per-horizon heuristic**, described in an 80.lv article of 2025-02-17 (https://80.lv/articles/screen-space-ambient-occlusion-test-for-upcoming-cozy-city-builder), estimates whether successive horizon samples lie on the same surface and uses that surface's width as the thickness, plus random variation. The article gives no formula for the same-surface test or the random range.
+- **Back-face depth** (https://blog.voxagon.se/2017/11/22/a-better-depth-buffer-for-raymarching.html, search result only) approximates thickness as back minus front depth, which holds for closed convex objects that do not overlap.
+- **Blender EEVEE** exposes Thickness, Backface and Thickness Near settings for its screen-space GI and AO (https://docs.blender.org/manual/en/5.2/render/eevee/render_settings/raytracing.html, search result only).
+- A Shadertoy titled "Screen Space Horizon GI" (https://www.shadertoy.com/view/dsGBzW) is described in search results as a 32-bit horizon mask with multiple bounces; the page returned 403, so the code is unverified.
+- No public implementation of the bitmask indirect lighting with verified code was found, and the authors' slides (https://cdrinmatane.github.io/posts/cgspotlight-slides/) were not opened.
 
 ## Links found
 

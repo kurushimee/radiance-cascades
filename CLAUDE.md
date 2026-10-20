@@ -20,6 +20,10 @@ Feature and tool work follows [plans/README.md](plans/README.md).
 
 [papers/README.md](papers/README.md) indexes original papers on radiance cascades, with the experiments behind them. Check them too before designing a feature.
 
+## Design
+
+[design/README.md](design/README.md) specifies the GI system the code implements. A measurement that changes a design figure or decision updates the design file that owns it and its script in `design/checks/`.
+
 ## GDScript
 
 Read [.claude/rules/gdscript.md](.claude/rules/gdscript.md) before creating a `.gd` file.
