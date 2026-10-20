@@ -118,17 +118,14 @@ def _side_radiance(device, index, origins):
     return xp.where(facing_left, left[index], right[index])
 
 
-def trace(scene, origins, dirs, tmin, tmax):
-    """First hit of each ray `origin + t*dir`, `tmin <= t <= tmax`.
-
-    Returns (radiance, hit, t). A ray that hits nothing returns radiance 0, or the sky if `tmax` is infinite.
-    """
+def _nearest(scene, origins, dirs, tmin, tmax):
+    """Yields the rays a chunk at a time on the device, with the nearest segment each meets in `[tmin, tmax]`:
+    (chunk, origins, tmax, segment, t, u), the hit at `a + u*(b - a)`, `t` infinite on a miss."""
     device = a, e, _, _ = _device(scene)
     origins, dirs = np.asarray(origins, float), np.asarray(dirs, float)
     count = len(origins)
     tmin = np.broadcast_to(np.asarray(tmin, float), (count,))
     tmax = np.broadcast_to(np.asarray(tmax, float), (count,))
-    radiance, hit, best_t = np.empty(count), np.empty(count, bool), np.empty(count)
     step = max(1, CHUNK // max(1, len(e)))
     # Rays move to the device a chunk at a time, so device memory stays bounded whatever the ray count.
     for lo in range(0, count, step):
@@ -141,13 +138,38 @@ def trace(scene, origins, dirs, tmin, tmax):
             t = cross(ao, e[None]) / denom
             u = cross(ao, d[:, None]) / denom
         t = xp.where((u >= 0) & (u <= 1) & (t >= near) & (t <= far), t, np.inf)
-        best = xp.argmin(t, axis=1)
-        t = xp.take_along_axis(t, best[:, None], 1)[:, 0]
+        best = xp.argmin(t, axis=1)[:, None]
+        yield (chunk, o, far[:, 0], best[:, 0], xp.take_along_axis(t, best, 1)[:, 0],
+               xp.take_along_axis(u, best, 1)[:, 0])
+
+
+def trace(scene, origins, dirs, tmin, tmax):
+    """First hit of each ray `origin + t*dir`, `tmin <= t <= tmax`.
+
+    Returns (radiance, hit, t). A ray that hits nothing returns radiance 0, or the sky if `tmax` is infinite.
+    """
+    device = _device(scene)
+    count = len(origins)
+    radiance, hit, best_t = np.empty(count), np.empty(count, bool), np.empty(count)
+    for chunk, o, far, best, t, _ in _nearest(scene, origins, dirs, tmin, tmax):
         found = xp.isfinite(t)
-        rad = xp.where(xp.isinf(far[:, 0]), scene.sky, 0.0)
+        rad = xp.where(xp.isinf(far), scene.sky, 0.0)
         rad[found] = _side_radiance(device, best[found], o[found])
         radiance[chunk], hit[chunk], best_t[chunk] = host(rad), host(found), host(t)
     return radiance, hit, best_t
+
+
+def first_hits(scene, origins, dirs, tmin, tmax):
+    """Segment each ray hits first (-1 on a miss), where along it (`u` from 0 at `a` to 1 at `b`), and whether the
+    ray arrives on its left side."""
+    count = len(origins)
+    segment, u, left = np.empty(count, int), np.empty(count), np.empty(count, bool)
+    for chunk, o, _, best, t, along in _nearest(scene, origins, dirs, tmin, tmax):
+        found = xp.isfinite(t)
+        a, e = xp.asarray(scene.a)[best], xp.asarray(scene.b - scene.a)[best]
+        segment[chunk] = host(xp.where(found, best, -1))
+        u[chunk], left[chunk] = host(along), host(cross(e, o - a) > 0)
+    return segment, u, left
 
 
 def _clip_to_annulus(ra, e, a, b):

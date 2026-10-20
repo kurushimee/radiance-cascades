@@ -6,7 +6,7 @@ Original research on radiance cascades: derivations, assert-checked numbers and 
 |---|---|---|
 | [01_error_model](01_error_model/) | Where the error of radiance cascades comes from, measured against an exact flatland reference, and the parameters that minimize it | [done](01_error_model/paper.pdf) |
 | [02_merging_3d](02_merging_3d/) | Merging in 3D probe grids: leaks, parallax and cost of thirteen merges against a voxel reference, and a self test that halves the leak at no rays | [done](02_merging_3d/paper.pdf) |
-| 03_bounces_one_frame | Several bounces within one frame by re-merging frozen rays | planned |
+| [03_bounces_one_frame](03_bounces_one_frame/) | Several bounces in one frame by re-merging stored ray hits: the leak deficit that compounds over bounces, its eigenvalue shift, and iterations that converge in a few passes | [done](03_bounces_one_frame/paper.pdf) |
 
 ## Layout
 

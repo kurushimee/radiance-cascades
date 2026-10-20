@@ -43,18 +43,18 @@ Done as for paper 1. Proposals: a depth-reprojected merge, which reads each pare
 - [x] Experiments and figures
 - [x] Prose, bibliography, PDF
 - [x] Review, rerun, commit
-- [ ] Source note, topics, indexes and README in `research/`
+- [x] Source note, topics, indexes and README in `research/`
 
 ### 4. Paper 3: several bounces in one frame
 
-Done as for paper 1.
+Done as for paper 1. Diffuse opaque scenes, discretized into patches (segment sides in flatland, voxel faces in 3D), each with emission and albedo. With geometry fixed, every ray's hit record (the patch it hit) is fixed, so an RC solve is a linear map from patch radiance to irradiance at the patches' collocation points; one more bounce is a re-shade of the hit records and a re-merge, with no rays. The exact reference solves the same collocation system: in flatland with exact point-to-patch form factors from the oracle, in 3D with frozen cosine-weighted Monte Carlo rays from the same points. Questions: the furnace (uniform radiance) is exact under the vanilla merge, so in a closed scene RC's operator has the exact one's dominant eigenpair; how the error of the converged solution relates to the one-bounce error (the second eigenvalue, i.e. how weakly a scene's parts couple, against albedo); how many re-merges plain iteration, tail (ambient) extrapolation, Anderson mixing and GMRES need, since the iteration state is only the patch vector; one bounce plus an ambient term as the baseline; a coarse re-merge that stops at cascade 1 for later bounces; cost per bounce in texel reads and memory per hit record.
 
-- [ ] Novelty check
-- [ ] Exact radiosity reference and the frozen-ray bounce solver
-- [ ] Derivations and checks
-- [ ] Experiments and figures
-- [ ] Prose, bibliography, PDF
-- [ ] Review, rerun, commit
+- [x] Novelty check
+- [x] Exact radiosity reference and the frozen-ray bounce solver
+- [x] Derivations and checks
+- [x] Experiments and figures
+- [x] Prose, bibliography, PDF
+- [x] Review, rerun, commit
 - [ ] Source note, topics, indexes and README in `research/`
 
 ### 5. Close
@@ -66,5 +66,6 @@ Done as for paper 1.
 - Gaps the papers address: `research/topics/single_frame_3d_rc.md#where-the-evidence-stops` items 4, 5 and 8; "there is no measured optimum" for interval scaling in `research/topics/core_theory.md#two-criteria-for-interval-scaling-derived`; the "not reported" cells of the fixes table in `research/topics/artifacts_and_fixes.md#fixes-compared`; lag-free multi-bounce "exists in principle" in `research/topics/light_transport_alternatives.md#single-frame-assessment`.
 - Prior art to credit: the 2D parallax fix reprojects at the lower ray's end; Reservoir Cascades reprojects through one depth `t_c`; lXByRh reprojects hit points into finer probes and replaces radiance; directional-opacity mips (VCT, GIVoxels, DexRT) rule out a paper on mip marching.
 - Web searches on 2026-10-20 for error analysis, single-frame multi-bounce and 3D merge comparisons found nothing beyond the sources already in `research/`.
+- Paper 3's furnace hypothesis failed: every merge whose weights sum to one passes the furnace, yet inside a closed region it reads light from behind walls, so the frozen operator's dominant eigenvalue is not the exact one. That leak deficit, its eigenvalue shift and its compounding over bounces became the paper's center. Enlighten (precomputed form factors, bounces fed back per frame) and Arvo, Torrance and Smits 1994 (operator-perturbation error analysis) are the prior art closest to the frozen solve; a web search on 2026-10-20 found no measured single-frame multi-bounce RC.
 - Python 3.14 has numpy 2.5 and scipy 1.18 but not matplotlib; uv 0.12 is installed. The GPU is an RTX 2070 with 8 GB.
 - CuPy 14.2 (`cupy-cuda13x[ctk]`) runs the lab's tracer and reference on the GPU and matches the CPU to 1e-15. The RTX 2070's fp64 is slow but still far faster than the CPU; several GPU processes at once ran slower than one and exhausted memory, so the experiments run sequentially and the tracer moves rays to the device in chunks.

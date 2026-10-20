@@ -254,12 +254,12 @@ __device__ void count(unsigned long long* counters, unsigned long long rays, uns
     atomicAdd(&counters[4], drops);
 }
 
-// Each texel's own ray over its interval: the radiance it hits (the sky past an infinite interval) and the distance.
+// Each texel's own ray over its interval: the radiance it hits (the sky past an infinite interval), the distance,
+// and the voxel and face it hits.
 extern "C" __global__
 void trace_texels(const unsigned char* solid, const float* emission, const int n, const float sky, const int* g,
                   const float h, const int m, const float* R, const float t_start, const float t_end, float* radiance,
-                  float* hit,
-                  unsigned long long* counters) {
+                  float* hit, int* voxel, signed char* face, unsigned long long* counters) {
     int bins = 2 * m * m;
     long long tid = (long long)blockDim.x * blockIdx.x + threadIdx.x;
     if (tid >= (long long)g[3] * g[4] * g[5] * bins) return;
@@ -267,13 +267,16 @@ void trace_texels(const unsigned char* solid, const float* emission, const int n
     Hit first = march(solid, n, p, bin_direction(R, tid % bins, m), t_start, t_end);
     radiance[tid] = first.voxel >= 0 ? emission[first.voxel] : (isinf(t_end) ? sky : 0.0f);
     hit[tid] = first.t;
+    voxel[tid] = first.voxel;
+    face[tid] = first.face;
     count(counters, 1, first.steps, 0);
 }
 
 // Merged radiance and depth of one texel of cascade c from the upper cascade, whose intervals start t_join
-// from their probes.
+// from their probes. A ray the merge traces itself sees shade[7 * voxel + face] at its hit, or shade[7 * voxel + 6]
+// when it starts inside the voxel.
 extern "C" __global__
-void merge(const unsigned char* solid, const float* emission, const int n, const int* g, const float h, const int m,
+void merge(const unsigned char* solid, const float* shade, const int n, const int* g, const float h, const int m,
            const float* R, const float t_start, const float t_join, const float* own_radiance, const float* own_hit,
            const int* ug, const float* up_radiance, const float* up_depth, const float* up_hit,
            const float upper_end, const int mode, const float tau, float* radiance, float* depth,
@@ -422,7 +425,7 @@ void merge(const unsigned char* solid, const float* emission, const int n, const
                 }
             }
             if (blocked) {
-                out_radiance += up.weight[v] * emission[hit.voxel];
+                out_radiance += up.weight[v] * shade[7 * hit.voxel + (hit.face < 0 ? 6 : hit.face)];
                 out_inverse += up.weight[v] / hit.t;
                 continue;
             }
@@ -596,45 +599,73 @@ def cascades(volume, params, merge="vanilla", tau=0.5, merges=None):
     """Radiance cascades over the volume. `merges` may name a merge per cascade below the top, overriding `merge`;
     `tau` is the self test's tolerance in lower probe spacings.
 
-    Returns, from cascade 0 up, each cascade's merged radiance, merged depth and own hit distance as device arrays of
-    shape (probes, directions), and the cost summed over cascades: traced rays, DDA voxel visits, texel reads,
-    visibility tests and the tests that dropped a parent.
+    Returns, from cascade 0 up, each cascade's merged radiance, merged depth, own hit distance, and the voxel and face
+    its own rays hit, as device arrays of shape (probes, directions), and the cost summed over cascades: traced rays,
+    DDA voxel visits, texel reads, visibility tests and the tests that dropped a parent.
     """
     merges = merges or [merge] * (params.levels - 1)
     solid, emission = volume.device()
     rotation = cp.asarray(params.rotation, cp.float32)
+    levels, own = [], []
     counters = cp.zeros(5, cp.uint64)
-    levels = []
-    for c, (start, count) in reversed(list(enumerate(grids(params, volume.n)))):
+    for c, (start, count) in enumerate(grids(params, volume.n)):
         g = cp.asarray(np.concatenate([start, count]), cp.int32)
-        h, m = 2.0 ** c, params.m0 * 2 ** c
         texels = int(np.prod(count)) * params.directions(c)
-        blocks = ((texels + 255) // 256,)
         t_start, t_end = params.interval(c)
-        own_radiance, own_hit = cp.empty(texels, cp.float32), cp.empty(texels, cp.float32)
+        radiance, hit = cp.empty(texels, cp.float32), cp.empty(texels, cp.float32)
+        voxel, face = cp.empty(texels, cp.int32), cp.empty(texels, cp.int8)
         traced = cp.zeros(5, cp.uint64)
-        _TRACE(blocks, (256,), (solid, emission, np.int32(volume.n), np.float32(volume.sky), g, np.float32(h),
-                                np.int32(m), rotation, np.float32(t_start), np.float32(t_end), own_radiance, own_hit,
-                                traced))
-        radiance, depth = own_radiance, own_hit
-        if levels:
-            mode = MERGES.index(merges[c])
-            if mode < BENT:
-                counters += traced
-            radiance, depth = cp.empty(texels, cp.float32), cp.empty(texels, cp.float32)
-            upper = levels[-1]
-            _MERGE(blocks, (256,), (solid, emission, np.int32(volume.n), g, np.float32(h), np.int32(m), rotation,
-                                    np.float32(t_start), np.float32(params.boundary(c)), own_radiance, own_hit,
-                                    upper["grid"], upper["radiance"], upper["depth"], upper["hit"],
-                                    np.float32(upper["end"]), np.int32(mode), np.float32(tau * h), radiance, depth,
-                                    counters))
-        else:
+        _TRACE(((texels + 255) // 256,), (256,),
+               (solid, emission, np.int32(volume.n), np.float32(volume.sky), g, np.float32(2.0 ** c),
+                np.int32(params.m0 * 2 ** c), rotation, np.float32(t_start), np.float32(t_end), radiance, hit, voxel,
+                face, traced))
+        # Merges that trace their own rays from each lower probe do not use its straight ray.
+        if c == params.levels - 1 or MERGES.index(merges[c]) < BENT:
             counters += traced
         shape = (-1, params.directions(c))
-        levels.append({"grid": g, "end": t_end, "radiance": radiance.reshape(shape), "depth": depth.reshape(shape),
-                       "hit": own_hit.reshape(shape)})
-    cost = dict(zip(("rays", "steps", "reads", "tests", "drops"), (int(v) for v in counters.get())))
-    return levels[::-1], cost
+        levels.append({"grid": g, "end": t_end, "hit": hit.reshape(shape), "voxel": voxel.reshape(shape),
+                       "face": face.reshape(shape)})
+        own.append(radiance)
+    merged, depth, merge_cost = _merge(volume, params, levels, own, merges, tau)
+    for level, r, d in zip(levels, merged, depth):
+        level["radiance"], level["depth"] = r, d
+    cost = dict(zip(("rays", "steps", "reads", "tests", "drops"), (int(v) for v in (counters + merge_cost).get())))
+    return levels, cost
+
+
+def remerge(volume, params, levels, own, shade, merge="vanilla", tau=0.5, merges=None):
+    """The merged radiance of every cascade, from cascade 0 up, for new own radiance `own[c]` of each texel (device
+    arrays, one value per texel) over the rays, depths and hit distances of `levels`, and the merge's texel reads.
+    `shade` (7 per voxel: its six faces, then what a ray starting inside it sees) lights the hits of the rays a bent
+    merge traces itself; such a merge traces them again, which gives what reading their stored hits would."""
+    merges = merges or [merge] * (params.levels - 1)
+    merged, _, cost = _merge(volume, params, levels, own, merges, tau, shade)
+    return merged, int(cost[2].get())
+
+
+def _merge(volume, params, levels, own, merges, tau, shade=None):
+    """Merges the cascades top-down; returns per cascade the merged radiance and depth, and the cost counters."""
+    solid, emission = volume.device()
+    shade = cp.repeat(emission, 7) if shade is None else shade
+    rotation = cp.asarray(params.rotation, cp.float32)
+    counters = cp.zeros(5, cp.uint64)
+    top = params.levels - 1
+    shape = lambda c: (-1, params.directions(c))  # noqa: E731
+    radiance, depth = [None] * params.levels, [None] * params.levels
+    radiance[top], depth[top] = own[top].reshape(shape(top)), levels[top]["hit"]
+    for c in reversed(range(top)):
+        texels = own[c].size
+        h, m = 2.0 ** c, params.m0 * 2 ** c
+        t_start, _ = params.interval(c)
+        out, out_depth = cp.empty(texels, cp.float32), cp.empty(texels, cp.float32)
+        _MERGE(((texels + 255) // 256,), (256,),
+               (solid, shade, np.int32(volume.n), levels[c]["grid"], np.float32(h), np.int32(m), rotation,
+                np.float32(t_start), np.float32(params.boundary(c)), cp.ascontiguousarray(own[c].ravel()),
+                levels[c]["hit"], levels[c + 1]["grid"], radiance[c + 1], depth[c + 1], levels[c + 1]["hit"],
+                np.float32(levels[c + 1]["end"]), np.int32(MERGES.index(merges[c])), np.float32(tau * h), out,
+                out_depth, counters))
+        radiance[c], depth[c] = out.reshape(shape(c)), out_depth.reshape(shape(c))
+    return radiance, depth, counters
 
 
 def solve(volume, params, merge="vanilla", tau=0.5, merges=None):
