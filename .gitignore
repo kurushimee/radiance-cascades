@@ -5,3 +5,4 @@
 .gdls/
 *.rdc
 *.unwrap_cache
+/assets/downloaded/

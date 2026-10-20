@@ -10,5 +10,5 @@ World-space diffuse global illumination for Godot 4.7.2, built from radiance cas
 | [plans/](plans/README.md) | Plans for feature and tool work |
 | [docs/](docs/) | Godot engine behaviour checked against the engine source |
 | `src/` | GDScript, with compute shaders next to the scripts that dispatch them, and Python tools for the test scenes and metrics |
-| `assets/` | Scenes, models and shaders, including the built test scenes |
+| `assets/` | Scenes, models and shaders of the test scenes; downloaded models go to `assets/downloaded/`, which git ignores |
 | `scripts/` | Repository tooling |

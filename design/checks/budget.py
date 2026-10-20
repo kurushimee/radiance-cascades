@@ -79,6 +79,11 @@ assert [round(s, 2) for s, _, _ in plan] == [0.18, 0.32, 0.45]
 assert all(world == 4 and records == 269 for _, world, records in plan)
 assert round(8e6 / 269) == 29740
 
+# The downloaded test scenes as measured (area in m², diameter in m), and the spacing they get at the planning point.
+MEASURED = {"Bistro interior": (1445.2, 26.0, 0.22), "Crytek Sponza": (8144.5, 37.1, 0.46),
+            "Intel Sponza with ivy": (10782.7, 47.7, 0.53), "Bistro exterior": (137297.0, 258.5, 2.15)}
+assert all(round(spacing(a, 8e6, diameter=d)[0], 2) == s for a, d, s in MEASURED.values())
+
 # The cost per record moves the spacing with its square root: 0.03 ns gives 0.17 m at 3,000 m², 0.3 ns 0.48 m.
 assert round(spacing(3000, record_budget(passes_ms, c_r_ns=0.03))[0], 2) == 0.17
 assert round(spacing(3000, record_budget(passes_ms, c_r_ns=0.3))[0], 2) == 0.48

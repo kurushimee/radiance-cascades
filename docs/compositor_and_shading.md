@@ -39,7 +39,7 @@ Scripts reach the sky only as a CPU `Image`: `RenderingServer.sky_bake_panorama(
 
 ## HDR readback
 
-With `use_hdr_2d`, a viewport renders to RGBA16F, and `get_texture().get_image()` returns `FORMAT_RGBAH` when `transparent_bg` is on and `FORMAT_RGBH` otherwise; an opaque viewport reads its alpha as one (`texture_storage.cpp`). With the Linear tonemapper the values are linear and unclamped. `Image.save_exr` works in exported builds too: the tinyexr module builds on every platform and registers the saver without an editor guard (`modules/tinyexr/`).
+With `use_hdr_2d`, a viewport renders to RGBA16F, and `get_texture().get_image()` returns `FORMAT_RGBAH` when `transparent_bg` is on and `FORMAT_RGBH` otherwise; an opaque viewport reads its alpha as one (`texture_storage.cpp`). An alpha-scissor material writes alpha one where it keeps a pixel (`scene_forward_clustered.glsl`), so a transparent background still separates surfaces from sky exactly. With the Linear tonemapper the values are linear and unclamped. `Image.save_exr` works in exported builds too: the tinyexr module builds on every platform and registers the saver without an editor guard (`modules/tinyexr/`).
 
 ## Texture RIDs
 

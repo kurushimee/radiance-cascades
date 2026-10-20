@@ -1,0 +1,89 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/downloaded/bistro/BistroExterior.fbx" id="Model"]
+[ext_resource type="Script" path="res://src/host/gi.gd" id="gi"]
+[ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi.gdshader" id="shd_gi"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
+[ext_resource type="Texture2D" path="res://assets/downloaded/bistro/san_giuseppe_bridge_4k.hdr" id="panorama"]
+
+[sub_resource type="PanoramaSkyMaterial" id="sky_material"]
+panorama = ExtResource("panorama")
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_material")
+
+[sub_resource type="Environment" id="environment"]
+background_mode = 2
+sky = SubResource("sky")
+
+[sub_resource type="CompositorEffect" id="gi_effect"]
+script = ExtResource("gi_effect_script")
+
+[sub_resource type="Compositor" id="compositor"]
+compositor_effects = Array[CompositorEffect]([SubResource("gi_effect")])
+
+[sub_resource type="Animation" id="animated"]
+resource_name = "animated"
+length = 60
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sun:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 60),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(-1.06814, 0, 0), Vector3(-1.06814, 6.28319, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="lighting"]
+_data = {
+&"animated": SubResource("animated")
+}
+
+[node name="BistroExterior" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("Model")]
+
+[node name="directionalLight1" parent="Model/BistroExterior"]
+visible = false
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("environment")
+compositor = SubResource("compositor")
+
+[node name="GI" type="Node" parent="."]
+script = ExtResource("gi")
+shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided"), ExtResource("shd_gi_alpha_tested"), ExtResource("shd_gi_double_sided_alpha_tested")])
+fixture_materials = PackedStringArray()
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-1.06814, 0, 0)
+shadow_enabled = true
+
+[node name="Corner" type="Camera3D" parent="."]
+position = Vector3(-15.7, 1.9, -4.5)
+rotation = Vector3(-0.0164622, -2.15994, 0)
+fov = 70
+current = true
+
+[node name="Terrace" type="Camera3D" parent="."]
+position = Vector3(-4.5, 1.9, 13.4)
+rotation = Vector3(-0.020257, -0.824804, 0)
+fov = 70
+
+[node name="Plaza" type="Camera3D" parent="."]
+position = Vector3(60, 1.9, 30)
+rotation = Vector3(0.0491177, -1.92957, 0)
+fov = 70
+
+[node name="Lighting" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("lighting")
+
+[editable path="Model"]

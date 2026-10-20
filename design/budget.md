@@ -56,7 +56,18 @@ At 3,000 m², the spacing moves with each assumption:
 | 3 passes | 0.25 m |
 | 36 bins | 0.42 m |
 
-**So the GI resolves light at 20 to 45 cm on typical game scenes.** Light that changes faster than that, such as contact shading under small objects, is below the solve's resolution. The surface area of each test scene is measured in plan 004 M2, and the texel spacing is computed from it at load.
+**So the GI resolves light at 20 to 45 cm on typical game scenes.** Light that changes faster than that, such as contact shading under small objects, is below the solve's resolution. The texel spacing of each scene is computed from its surface area at import.
+
+The downloaded test scenes have more surface than the planning point assumed, with double-sided surfaces counted twice:
+
+| Scene | Surface area | Across | Texel spacing |
+|---|---|---|---|
+| Bistro interior | 1,445 m² | 26 m | 0.22 m |
+| Crytek Sponza | 8,145 m² | 37 m | 0.46 m |
+| Intel Sponza with ivy | 10,783 m² | 48 m | 0.53 m |
+| Bistro exterior | 137,297 m² | 259 m | 2.15 m |
+
+The budget scene, Crytek Sponza, gets 0.46 m texels rather than the 0.32 m of 3,000 m². Bistro's exterior is a city block: at 8 M records, its whole surface gets texels over 2 m apart.
 
 ## What buys finer texels
 

@@ -1,0 +1,69 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/downloaded/intel_sponza/NewSponza_Main_glTF_003.gltf" id="Model"]
+[ext_resource type="PackedScene" path="res://assets/downloaded/intel_sponza_ivy/NewSponza_IvyGrowth_glTF.gltf" id="Ivy"]
+[ext_resource type="Script" path="res://src/host/gi.gd" id="gi"]
+[ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi.gdshader" id="shd_gi"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_material"]
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_material")
+
+[sub_resource type="Environment" id="environment"]
+background_mode = 2
+sky = SubResource("sky")
+
+[sub_resource type="CompositorEffect" id="gi_effect"]
+script = ExtResource("gi_effect_script")
+
+[sub_resource type="Compositor" id="compositor"]
+compositor_effects = Array[CompositorEffect]([SubResource("gi_effect")])
+
+[sub_resource type="Animation" id="animated"]
+resource_name = "animated"
+length = 60
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sun:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 60),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(-0.975639, -1.75929, 0), Vector3(-0.975639, 4.52389, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="lighting"]
+_data = {
+&"animated": SubResource("animated")
+}
+
+[node name="IntelSponza" type="Node3D"]
+
+[node name="Model" parent="." instance=ExtResource("Model")]
+
+[node name="Ivy" parent="." instance=ExtResource("Ivy")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("environment")
+compositor = SubResource("compositor")
+
+[node name="GI" type="Node" parent="."]
+script = ExtResource("gi")
+shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided"), ExtResource("shd_gi_alpha_tested"), ExtResource("shd_gi_double_sided_alpha_tested")])
+fixture_materials = PackedStringArray()
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.975639, -1.75929, 0)
+shadow_enabled = true
+
+[node name="Lighting" type="AnimationPlayer" parent="."]
+libraries/ = SubResource("lighting")

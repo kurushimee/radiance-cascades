@@ -19,9 +19,9 @@ Done when every test scene loads with UV2 and the GI material, and the metrics s
 - [x] Project layout under `src/` as in [godot_host.md](../../design/godot_host.md#code-layout)
 - [x] `GI` node and a `CompositorEffect` at PRE_OPAQUE that runs once per frame, with debug labels and GPU timestamps
 - [x] Editor script: scene surface area, texel spacing from [checks/budget.py](../../design/checks/budget.py), import texel size, reimport
-- [x] Import script that converts materials to the GI `ShaderMaterial` (albedo, emission, fixture flag)
+- [x] Import script that converts materials to the GI `ShaderMaterial` (albedo, emission, alpha, two-sidedness); fixtures listed by material on the `GI` node
 - [x] Built scenes: Cornell box, sealed sunlit rooms (single-plane and thick walls), two rooms at albedo 0.9, pillar hall, small objects
-- [ ] Downloaded scenes, each after the owner approves the download: Crytek Sponza, Bistro, Intel Sponza with ivy; kept out of the repository
+- [x] Downloaded scenes: Crytek Sponza, Bistro, Intel Sponza with ivy; kept out of the repository
 - [x] Camera poses and static and animated lighting per scene
 - [x] Capture of `E/π` and final-image buffers to EXR, and a Python metrics script (relative RMSE, bias, HDR-FLIP via `flip-evaluator`, leak)
 
@@ -123,7 +123,7 @@ Done when moving objects stay within the budget's 0.5 ms on the test scenes and 
 
 ### M0
 
-- **Rebuilding the built scenes.** `python src/reference/build_scenes.py`, then `godot --headless --path . --import` for new models, then `godot --headless --path . --script res://src/editor/texel_size.gd -- <models>`.
+- **Rebuilding the built scenes.** `python src/reference/build_scenes.py`, then `godot --headless --path . --import` for new models, then `godot --headless --path . --script res://src/editor/texel_size.gd -- res://assets/scenes/<scene>.tscn ...`. The texel tool sums the surface over all of a scene's models and reimports only models whose options changed.
 - **Texel sizes** at the planning point (8 M records, 16 bins):
 
   | Scene | Surface | Across | Texel size |
@@ -141,11 +141,11 @@ Done when moving objects stay within the budget's 0.5 ms on the test scenes and 
 - **Without GI**, the global `gi_irradiance` is unset and samples black, so `E/π` is zero and the relative figures and the leak come out null. The pillar hall's final images are black too, since its only light is the ceiling panel's, which reaches surfaces only through the GI.
 - **HDR-FLIP on a dark reference.** `flip-evaluator` sets its exposure range from the reference's luminance, `log2(xMax / Ymax)` to `log2(xMax / max(Ymedian, ε))`, and calls `exit(-1)` when the start exceeds the stop, which happens when the peak luminance is below float32 ε (`computeExposures` in `src/cpp/FLIP.h`). The metrics script returns null for such a reference instead.
 - **Render times without GI**, 1280×720: GPU median 0.15 to 0.43 ms over the six built scenes.
-- **Downloads awaiting approval**, none in the repository:
-
-  | Scene | File | Source | Size |
-  |---|---|---|---|
-  | Crytek Sponza | `Models/Sponza/glTF/`, 71 files | github.com/KhronosGroup/glTF-Sample-Assets | 52.7 MB |
-  | Intel Sponza | `main_sponza.zip` | cdrdv2.intel.com/v1/dl/getContent/830833 | 3.99 GB (3.71 GiB) |
-  | Intel Sponza ivy | `pkg_b_ivy1.zip` | cdrdv2.intel.com/v1/dl/getContent/726656 | 1.38 GB (1.29 GiB) |
-  | Bistro | `Bistro_v5_2.zip` | NVIDIA ORCA, developer.nvidia.com/downloads/bistro | 894 MB |
+- **Downloaded scenes.** `python src/reference/fetch_scenes.py` fetches Khronos' Crytek Sponza glTF folder (52.7 MB), Intel Sponza (3.99 GB), its ivy (1.38 GB) and Bistro (894 MB), checks each against its pinned size, keeps the models, textures and licences in `assets/downloaded/` and deletes the archives. Then `godot --headless --path . --import`, then the texel tool on the four scenes. The first import with UV2 took 13.6 minutes for all four models, about 2 of them for the ivy.
+- **Triangles:** Intel Sponza 3.75 M plus 5.07 M of ivy, Bistro exterior 2.83 M, Bistro interior 1.05 M, Crytek Sponza 262 K.
+- **Units.** Crytek Sponza's vertices are in centimetres and its glTF node scales them to metres; Intel Sponza and Bistro are in metres. The import's texel size is in the model's own units, so the texel tool reports an error when a scene scales a model.
+- **Texel sizes** of the downloaded scenes: [budget.md](../../design/budget.md#texel-spacing). Bistro's exterior, 137,297 m² over 259 m, gets 2.149 m.
+- **Lights.** Intel Sponza exports its 24 lights with zero intensity, so they import dark. Bistro's own lights are hidden through editable-children overrides, since its FBX lights carry its authoring tool's intensities and a range of 4096 ([docs/scene_import.md](../../docs/scene_import.md#fbx-materials-and-lights)).
+- **Bistro's emitters.** Its FBX materials put emission in a texture over a black colour, which Godot adds; the import script turns that into a white colour multiplied by the texture. Besides the ceiling lamps (the fixtures), Bistro's interior keeps three emissive materials (ceiling fans, wall lights, a lantern) and its exterior glows in string lights, street lamps, spotlights and two shop signs: emitters that stay in the solve, mostly small, for M6's fixture-size question.
+- **Cameras.** Khronos' Crytek Sponza has none, so the builder adds three, placed by trial renders. Bistro's exterior camera looks mostly at shadowed facades; the builder adds a corner, a terrace and a plaza with sky in view. Bistro's streets lie 0.15 to 0.37 m above the origin.
+- **Render times without GI**, 1280×720, GPU median over two or three captures each, some with other camera poses: Crytek Sponza 0.70 to 1.07 ms, Bistro interior 1.04 to 1.27 ms, Bistro exterior 1.45 to 1.72 ms, Intel Sponza 6.19 to 6.27 ms.

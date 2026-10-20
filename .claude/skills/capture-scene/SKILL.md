@@ -21,6 +21,8 @@ The capture directory then holds `screenshot.png`, `capture.json` and a folder p
 
 Any entry in `errors` invalidates the capture. Engine errors before the project boots, and crashes, show only in the command output.
 
+The downloaded scenes (Crytek Sponza, Intel Sponza, Bistro) load only after `python src/reference/fetch_scenes.py` and an import.
+
 A new `class_name` is unknown to a capture until `godot --headless --path "$(pwd -W)" --import` runs.
 
 ## Timings

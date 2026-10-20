@@ -1,5 +1,6 @@
-"""Writes the evaluation's built test scenes (design/evaluation.md): glTF geometry to assets/models/ and Godot scenes
-to assets/scenes/.
+"""Writes the evaluation's test scenes (design/evaluation.md) as Godot scenes in assets/scenes/, with the geometry of
+the built ones as glTF in assets/models/. The downloaded ones instance the models that fetch_scenes.py puts in
+assets/downloaded/, with this project's lights, sky and animation.
 
 The rooms are the lab's 32-voxel scenes (design/experiments/common.py and papers/03_bounces_one_frame/experiments/)
 at 0.25 m per voxel and the lab's albedo of 0.9, so that their results compare with E1 to E5. The Cornell box has the
@@ -25,6 +26,9 @@ N = 32
 ALBEDO = 0.9
 PANEL = 5.0  # radiance of the rooms' ceiling panels
 SUN = (35.0, 30.0)  # elevation and azimuth, degrees
+SPONZA_SUN = (55.9, -100.8)  # Intel Sponza's own sun, which it exports with zero intensity
+DOWNLOADED = "res://assets/downloaded"
+SHADERS = ("shd_gi", "shd_gi_double_sided", "shd_gi_alpha_tested", "shd_gi_double_sided_alpha_tested")
 SUN_PERIOD = 60.0
 PANEL_PERIOD = 8.0
 LAMP_PERIOD = 4.0
@@ -46,9 +50,12 @@ class Quad:
 
 @dataclass(frozen=True)
 class Lamp:
-    """A Godot light under a fixture: the fixture's emission stays out of the solve."""
+    """A Godot light under a fixture: the fixture's emission stays out of the solve. The animation switches the
+    fixture's material through a mesh node and surface that use it."""
     position: tuple
     fixture: str
+    mesh: str
+    surface: int = 0
 
 
 @dataclass
@@ -56,12 +63,19 @@ class Scene:
     name: str
     quads: list
     materials: dict
-    cameras: dict  # name: (eye, target)
+    cameras: dict  # name: (eye, target), besides the cameras a downloaded model brings
     fov: float = 70.0
+    models: dict = field(default_factory=dict)  # node: path of downloaded models
     sky: bool = False
-    sun: bool = False
+    panorama: str = ""  # an HDR panorama for the sky
+    sun: tuple = ()  # elevation and azimuth, degrees
     lamps: dict = field(default_factory=dict)
     panel: str = ""  # the emissive material whose colour the animation changes
+    hidden: tuple = ()  # lights inside a model that this project's lights replace
+
+    def __post_init__(self):
+        if not self.models:
+            self.models = {"Model": f"res://assets/models/mdl_{self.name}.gltf"}
 
 
 def grey(value):
@@ -212,7 +226,7 @@ def sealed_room_thick():
     volume.fill((8, 1, 8), (24, 17, 24))
     volume.carve((9, 1, 9), (23, 16, 23))
     cameras = {"Outside": ((10.5, 4.0, 10.5), (4.0, 1.5, 4.0)), "Inside": ((2.6, 1.7, 2.6), (5.6, 1.0, 5.6))}
-    return Scene("sealed_room_thick", volume.quads(), {"white": WHITE}, cameras, sky=True, sun=True)
+    return Scene("sealed_room_thick", volume.quads(), {"white": WHITE}, cameras, sky=True, sun=SUN)
 
 
 def sealed_room_plane():
@@ -226,7 +240,7 @@ def sealed_room_plane():
     quads.append(face(1, 1, top, (lo, hi), (lo, hi), "white_two_sided"))
     materials = {"white": WHITE, "white_two_sided": Material(grey(ALBEDO), two_sided=True)}
     cameras = {"Outside": ((10.5, 4.0, 10.5), (4.0, 1.5, 4.0)), "Inside": ((2.4, 1.7, 2.4), (5.6, 0.8, 5.6))}
-    return Scene("sealed_room_plane", quads, materials, cameras, sky=True, sun=True)
+    return Scene("sealed_room_plane", quads, materials, cameras, sky=True, sun=SUN)
 
 
 def two_rooms():
@@ -240,7 +254,7 @@ def two_rooms():
     materials = {"white": WHITE, "light": Material((0.0, 0.0, 0.0), grey(PANEL)),
                  "fixture_lamp": Material((0.0, 0.0, 0.0), (10.0, 9.0, 7.5))}
     cameras = {"RoomA": ((0.8, 1.7, 7.2), (4.1, 1.5, 4.0)), "RoomB": ((7.2, 1.7, 0.8), (4.1, 1.5, 4.0))}
-    lamps = {"Lamp": Lamp((6.125, 6.8, 4.125), "fixture_lamp")}
+    lamps = {"Lamp": Lamp((6.125, 6.8, 4.125), "fixture_lamp", "Model/fixture_lamp")}
     return Scene("two_rooms", volume.quads(), materials, cameras, lamps=lamps)
 
 
@@ -278,7 +292,41 @@ def small_objects():
                         quads += box((x + dx - 0.015, 0.0, z + dz - 0.015), (x + dx + 0.015, 0.42, z + dz + 0.015),
                                      "white", bottom=False)
     cameras = {"Overview": ((14.0, 3.5, 14.0), (20.0, 0.0, 20.0)), "Low": ((13.0, 0.5, 20.0), (20.0, 0.2, 20.0))}
-    return Scene("small_objects", quads, {"white": WHITE}, cameras, sky=True, sun=True)
+    return Scene("small_objects", quads, {"white": WHITE}, cameras, sky=True, sun=SUN)
+
+
+def crytek_sponza():
+    """Khronos' copy of Crytek Sponza under the sky and Intel Sponza's sun."""
+    cameras = {"Atrium": ((-9.0, 1.6, 0.0), (10.0, 3.0, 0.0)), "Gallery": ((-9.0, 6.2, -4.2), (10.0, 6.0, -4.2)),
+               "Arcade": ((-10.0, 1.7, -4.0), (10.0, 1.7, -4.0))}
+    models = {"Model": f"{DOWNLOADED}/crytek_sponza/Sponza.gltf"}
+    return Scene("crytek_sponza", [], {}, cameras, models=models, sky=True, sun=SPONZA_SUN)
+
+
+def intel_sponza():
+    """Intel Sponza with its ivy, seen from its own six cameras, under the sky and its own sun's direction."""
+    models = {"Model": f"{DOWNLOADED}/intel_sponza/NewSponza_Main_glTF_003.gltf",
+              "Ivy": f"{DOWNLOADED}/intel_sponza_ivy/NewSponza_IvyGrowth_glTF.gltf"}
+    return Scene("intel_sponza", [], {}, {}, models=models, sky=True, sun=SPONZA_SUN)
+
+
+def bistro_exterior():
+    """Bistro's streets from its own camera and three of ours, under its HDR sky and a sun in its own sun's direction."""
+    cameras = {"Corner": ((-15.7, 1.9, -4.5), (4.5, 1.5, 9.0)), "Terrace": ((-4.5, 1.9, 13.4), (10.0, 1.5, 0.0)),
+               "Plaza": ((60.0, 1.9, 30.0), (100.0, 4.0, 45.0))}
+    models = {"Model": f"{DOWNLOADED}/bistro/BistroExterior.fbx"}
+    return Scene("bistro_exterior", [], {}, cameras, models=models, panorama=f"{DOWNLOADED}/bistro/san_giuseppe_bridge_4k.hdr",
+                 sun=(61.2, 0.0), hidden=("BistroExterior/directionalLight1",))
+
+
+def bistro_interior():
+    """Bistro's interior from its own camera, lit by lamps at its four point lights, under its ceiling lamps."""
+    positions = [(4.991, 3.031, -0.489), (7.989, 3.074, 1.015), (4.263, 3.095, -4.920), (6.107, 2.939, -8.468)]
+    fixture = ("Paris_Ceiling_Lamp", "Model/Bistro_Research_Interior_Paris_Ceiling_Light_01_2356")
+    lamps = {f"Lamp{i}": Lamp(position, *fixture) for i, position in enumerate(positions, 1)}
+    models = {"Model": f"{DOWNLOADED}/bistro/BistroInterior.fbx"}
+    return Scene("bistro_interior", [], {}, {}, models=models, lamps=lamps,
+                 hidden=tuple(f"pointLight{i}" for i in range(1, 5)))
 
 
 # glTF.
@@ -382,8 +430,8 @@ def rotation_to(direction):
     return (math.atan2(dy, math.hypot(dx, dz)), math.atan2(-dx, -dz), 0.0)
 
 
-def sun_rotation(azimuth_offset=0.0):
-    elevation, azimuth = math.radians(SUN[0]), math.radians(SUN[1])
+def sun_rotation(sun, azimuth_offset=0.0):
+    elevation, azimuth = math.radians(sun[0]), math.radians(sun[1])
     return (-elevation, azimuth + azimuth_offset, 0.0)
 
 
@@ -409,7 +457,7 @@ def animation(scene):
     tracks, length = [], 0.0
     if scene.sun:
         tracks.append(track(len(tracks), "Sun:rotation", (0.0, SUN_PERIOD),
-                            [vector(sun_rotation()), vector(sun_rotation(2 * math.pi))]))
+                            [vector(sun_rotation(scene.sun)), vector(sun_rotation(scene.sun, 2 * math.pi))]))
         length = SUN_PERIOD
     if scene.panel:
         emission = scene.materials[scene.panel].emission
@@ -420,47 +468,67 @@ def animation(scene):
         path = f"Model/{scene.panel}:mesh:surface_0/material:shader_parameter/emission"
         tracks.append(track(len(tracks), path, times, [color(linear_to_srgb(c) for c in rgb) for rgb in colours]))
         length = max(length, PANEL_PERIOD)
+    half = LAMP_PERIOD / 2
+    fixtures = {}
     for name, lamp in scene.lamps.items():
-        half = LAMP_PERIOD / 2
         tracks.append(track(len(tracks), f"{name}:visible", (0.0, half), ["true", "false"], discrete=True))
-        energy = max(max(scene.materials[lamp.fixture].emission), 1.0)
-        path = f"Model/{lamp.fixture}:mesh:surface_0/material:shader_parameter/emission_energy"
-        tracks.append(track(len(tracks), path, (0.0, half), [f"{energy:g}", "0.0"], discrete=True))
+        material = scene.materials.get(lamp.fixture)
+        fixtures[lamp.mesh, lamp.surface] = max(max(material.emission), 1.0) if material else 1.0
         length = max(length, LAMP_PERIOD)
+    for (mesh, surface), energy in fixtures.items():
+        path = f"{mesh}:mesh:surface_{surface}/material:shader_parameter/emission_energy"
+        tracks.append(track(len(tracks), path, (0.0, half), [f"{energy:g}", "0.0"], discrete=True))
     return f'[sub_resource type="Animation" id="animated"]\nresource_name = "animated"\nlength = {length:g}\n' \
            f"loop_mode = 1\n" + "\n".join(tracks)
 
 
+def environment(scene):
+    if scene.panorama:
+        sky_material = '[sub_resource type="PanoramaSkyMaterial" id="sky_material"]\npanorama = ExtResource("panorama")'
+    elif scene.sky:
+        sky_material = '[sub_resource type="ProceduralSkyMaterial" id="sky_material"]'
+    else:
+        return '[sub_resource type="Environment" id="environment"]\nbackground_mode = 1'
+    return (f'{sky_material}\n\n[sub_resource type="Sky" id="sky"]\nsky_material = SubResource("sky_material")\n\n'
+            '[sub_resource type="Environment" id="environment"]\nbackground_mode = 2\nsky = SubResource("sky")')
+
+
 def tscn(scene):
     root = "".join(part.capitalize() for part in scene.name.split("_"))
-    background = ('[sub_resource type="ProceduralSkyMaterial" id="sky_material"]\n\n'
-                  '[sub_resource type="Sky" id="sky"]\nsky_material = SubResource("sky_material")\n\n'
-                  '[sub_resource type="Environment" id="environment"]\nbackground_mode = 2\nsky = SubResource("sky")'
-                  if scene.sky else '[sub_resource type="Environment" id="environment"]\nbackground_mode = 1')
+    resources = [f'[ext_resource type="PackedScene" path="{path}" id="{node}"]'
+                 for node, path in scene.models.items()]
+    resources += ['[ext_resource type="Script" path="res://src/host/gi.gd" id="gi"]',
+                  '[ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]']
+    resources += [f'[ext_resource type="Shader" path="res://assets/shaders/{shader}.gdshader" id="{shader}"]'
+                  for shader in SHADERS]
+    if scene.panorama:
+        resources.append(f'[ext_resource type="Texture2D" path="{scene.panorama}" id="panorama"]')
+    shaders = ", ".join(f'ExtResource("{shader}")' for shader in SHADERS)
+    fixtures = ", ".join(f'"{name}"' for name in dict.fromkeys(lamp.fixture for lamp in scene.lamps.values()))
     sections = [
         "[gd_scene format=3]",
-        f'[ext_resource type="PackedScene" path="res://assets/models/mdl_{scene.name}.gltf" id="model"]\n'
-        '[ext_resource type="Script" path="res://src/host/gi.gd" id="gi"]\n'
-        '[ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]\n'
-        '[ext_resource type="Shader" path="res://assets/shaders/shd_gi.gdshader" id="shd_gi"]\n'
-        '[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" '
-        'id="shd_gi_double_sided"]',
-        background,
+        "\n".join(resources),
+        environment(scene),
         '[sub_resource type="CompositorEffect" id="gi_effect"]\nscript = ExtResource("gi_effect_script")',
         '[sub_resource type="Compositor" id="compositor"]\n'
         'compositor_effects = Array[CompositorEffect]([SubResource("gi_effect")])',
         animation(scene),
         '[sub_resource type="AnimationLibrary" id="lighting"]\n_data = {\n&"animated": SubResource("animated")\n}',
         f'[node name="{root}" type="Node3D"]',
-        '[node name="Model" parent="." instance=ExtResource("model")]',
+    ]
+    sections += [f'[node name="{node}" parent="." instance=ExtResource("{node}")]' for node in scene.models]
+    for path in scene.hidden:
+        parent, _, name = f"Model/{path}".rpartition("/")
+        sections.append(f'[node name="{name}" parent="{parent}"]\nvisible = false')
+    sections += [
         '[node name="WorldEnvironment" type="WorldEnvironment" parent="."]\n'
         'environment = SubResource("environment")\ncompositor = SubResource("compositor")',
         '[node name="GI" type="Node" parent="."]\nscript = ExtResource("gi")\n'
-        'shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided")])',
+        f"shaders = Array[Shader]([{shaders}])\nfixture_materials = PackedStringArray({fixtures})",
     ]
     if scene.sun:
         sections.append('[node name="Sun" type="DirectionalLight3D" parent="."]\n'
-                        f"rotation = {vector(sun_rotation())}\nshadow_enabled = true")
+                        f"rotation = {vector(sun_rotation(scene.sun))}\nshadow_enabled = true")
     for name, lamp in scene.lamps.items():
         sections.append(f'[node name="{name}" type="OmniLight3D" parent="."]\nposition = {vector(lamp.position)}\n'
                         "shadow_enabled = true\nomni_range = 10.0")
@@ -469,14 +537,19 @@ def tscn(scene):
         sections.append(f'[node name="{name}" type="Camera3D" parent="."]\nposition = {vector(eye)}\n'
                         f"rotation = {vector(rotation_to(sub(target, eye)))}\nfov = {scene.fov:.6g}{current}")
     sections.append('[node name="Lighting" type="AnimationPlayer" parent="."]\nlibraries/ = SubResource("lighting")')
+    if scene.hidden:
+        sections.append('[editable path="Model"]')
     return "\n\n".join(sections) + "\n"
 
 
 def main():
-    for build in (cornell_box, sealed_room_thick, sealed_room_plane, two_rooms, pillar_hall, small_objects):
+    for build in (cornell_box, sealed_room_thick, sealed_room_plane, two_rooms, pillar_hall, small_objects,
+                  crytek_sponza, intel_sponza, bistro_exterior, bistro_interior):
         scene = build()
-        for path, text in ((f"assets/models/mdl_{scene.name}.gltf", gltf(scene)),
-                           (f"assets/scenes/scn_{scene.name}.tscn", tscn(scene))):
+        files = {f"assets/scenes/scn_{scene.name}.tscn": tscn(scene)}
+        if scene.quads:
+            files[f"assets/models/mdl_{scene.name}.gltf"] = gltf(scene)
+        for path, text in files.items():
             target = ROOT / path
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, encoding="utf-8", newline="\n")

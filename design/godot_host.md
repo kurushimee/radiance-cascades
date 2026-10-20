@@ -35,7 +35,8 @@ The `CompositorEffect` runs at PRE_OPAQUE, where Forward+ has ended the depth pr
 
 ## Materials and import
 
-- **One project material.** Every GI mesh uses a project `ShaderMaterial` with albedo, emission and fixture parameters, through one shader or, for double-sided materials, its copy with culling off. Its fragment shader samples the irradiance atlas at UV2 and writes `IRRADIANCE` ([near_field.md](near_field.md#the-composite)). An import script converts imported materials to it and marks a material as a fixture when its name starts with `fixture`.
+- **One project material.** Every GI mesh uses a project `ShaderMaterial` with albedo and emission parameters, through one shader in four variants: one- or two-sided, opaque or alpha-tested. Its fragment shader samples the irradiance atlas at UV2 and writes `IRRADIANCE` ([near_field.md](near_field.md#the-composite)). An import script converts imported materials to it. Alpha-scissor materials are cards and become two-sided; blended materials become alpha-tested, since transparency is out of scope.
+- **Fixtures.** The `GI` node lists the materials of lamp fixtures by name, so a downloaded model needs no renaming.
 - **UV2 at import.** Scenes import with `meshes/light_baking` set to Static Lightmaps, and an editor script sets `meshes/lightmap_texel_size` to the spacing the [budget](budget.md#texel-spacing) gives for the scene's area ([docs](../docs/lightmap_uv2.md)).
 - **Environment.** SSAO and SSIL are off; the environment's sky stays, as the solve reads it ([lighting.md](lighting.md#sky)).
 

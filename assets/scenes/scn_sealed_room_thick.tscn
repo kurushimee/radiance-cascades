@@ -1,10 +1,12 @@
 [gd_scene format=3]
 
-[ext_resource type="PackedScene" path="res://assets/models/mdl_sealed_room_thick.gltf" id="model"]
+[ext_resource type="PackedScene" path="res://assets/models/mdl_sealed_room_thick.gltf" id="Model"]
 [ext_resource type="Script" path="res://src/host/gi.gd" id="gi"]
 [ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi.gdshader" id="shd_gi"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
+[ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 
@@ -45,7 +47,7 @@ _data = {
 
 [node name="SealedRoomThick" type="Node3D"]
 
-[node name="Model" parent="." instance=ExtResource("model")]
+[node name="Model" parent="." instance=ExtResource("Model")]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("environment")
@@ -53,7 +55,8 @@ compositor = SubResource("compositor")
 
 [node name="GI" type="Node" parent="."]
 script = ExtResource("gi")
-shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided")])
+shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided"), ExtResource("shd_gi_alpha_tested"), ExtResource("shd_gi_double_sided_alpha_tested")])
+fixture_materials = PackedStringArray()
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.610865, 0.523599, 0)

@@ -17,16 +17,18 @@ Each scene is pinned by its asset source, camera poses and lighting, and kept ou
 |---|---|---|
 | Cornell box | built in Godot from published dimensions | the cross-check against an independent renderer |
 | Crytek Sponza | Khronos glTF-Sample-Assets, CRYENGINE licence | the budget scene: atrium, sun and sky, colour bleeding |
-| Intel Sponza with ivy | Intel GPU Research Samples, CC BY; 3.71 GB base, 1.29 GB ivy | 10.8 M triangles, alpha-tested foliage, load time |
-| Bistro, interior and exterior | NVIDIA ORCA, CC BY 4.0; 1.05 M and 2.83 M triangles | many small objects, emissive signs, lamps |
+| Intel Sponza with ivy | Intel GPU Research Samples, CC BY; 3.71 GB base, 1.29 GB ivy | 8.8 M triangles, 5.1 M of them ivy leaves modelled as geometry, load time |
+| Bistro, interior and exterior | NVIDIA ORCA, CC BY 4.0; 1.05 M and 2.83 M triangles | many small objects, alpha-tested foliage, emissive signs, lamps |
 | Sealed sunlit rooms | built in Godot: closed rooms with single-plane and thick walls in sunlight | leaks, two-sided surfaces |
 | Two rooms | built in Godot: rooms joined by a door, albedo 0.9 | slow bounce convergence |
 | Pillar hall | built in Godot: a hall with a grid of thin pillars | interpolation around thin occluders |
 | Small objects | built in Godot: objects smaller than a texel on a floor | the near field ([near_field.md](near_field.md#the-candidate-for-m5)) |
 
-Sources, licences and sizes are recorded in [research](../research/sources/2026_gi_evaluation_tools_and_scenes.md). Every download waits for the project owner's approval.
+Sources, licences and sizes are recorded in [research](../research/sources/2026_gi_evaluation_tools_and_scenes.md).
 
 **Built scenes.** `src/reference/build_scenes.py` writes them as glTF models and Godot scenes. The rooms are the lab's 32-voxel scenes ([experiments.md](experiments.md)) at 0.25 m per voxel and albedo 0.9, so their errors compare with the lab's. The Cornell box has the published geometry with Mitsuba 3's RGB reflectances and light radiance, so Mitsuba builds the same box from the same numbers.
+
+**Downloaded scenes.** `src/reference/fetch_scenes.py` fetches them from their sources into `assets/downloaded/`, which git ignores, and `build_scenes.py` writes their Godot scenes. Their own lights are replaced: Intel Sponza exports its lights with zero intensity, and Bistro's FBX intensities are in its authoring tool's units. The sun points the way Intel Sponza's and Bistro's own suns do, Crytek Sponza takes Intel Sponza's, Bistro's exterior keeps its HDR sky, and Bistro's interior gets a lamp at each of its four point lights, with the ceiling lamps as fixtures. Bistro's other emissive materials, such as its string lights, shop signs, fans and wall lights, stay in the solve. Intel Sponza and Bistro bring their own cameras; Crytek Sponza gets three and Bistro's exterior three more, in its streets and plaza.
 
 **Lighting.** Every scene has a static setup and an animated one: the sun moving across the sky, lamps switching, an emissive panel changing colour. Lamps are Godot lights with fixture meshes ([lighting.md](lighting.md#emitters)).
 
