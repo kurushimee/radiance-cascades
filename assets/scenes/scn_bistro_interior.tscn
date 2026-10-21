@@ -7,9 +7,13 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
+[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
 
 [sub_resource type="Environment" id="environment"]
 background_mode = 1
+tonemap_mode = 4
+tonemap_exposure = 1.4
+ssr_enabled = true
 
 [sub_resource type="CompositorEffect" id="gi_effect"]
 script = ExtResource("gi_effect_script")
@@ -72,7 +76,7 @@ tracks/3/keys = {
 tracks/4/type = "value"
 tracks/4/imported = false
 tracks/4/enabled = true
-tracks/4/path = NodePath("Model/Bistro_Research_Interior_Paris_Ceiling_Light_01_2356:mesh:surface_0/material:shader_parameter/emission_energy")
+tracks/4/path = NodePath("Model/Bistro_Research_Interior_Paris_Ceiling_Light_03_2360:mesh:surface_0/material:shader_parameter/emission_energy")
 tracks/4/interp = 1
 tracks/4/loop_wrap = true
 tracks/4/keys = {
@@ -103,34 +107,57 @@ visible = false
 [node name="pointLight4" parent="Model"]
 visible = false
 
+[node name="Bistro_Research_Interior_Paris_Ceiling_Light_03_2360" parent="Model"]
+cast_shadow = 0
+
+[node name="Bistro_Research_Interior_Paris_Ceiling_Light_04_2362" parent="Model"]
+cast_shadow = 0
+
+[node name="Bistro_Research_Interior_Paris_Ceiling_Light_02_2358" parent="Model"]
+cast_shadow = 0
+
+[node name="Bistro_Research_Interior_Paris_Ceiling_Light_01_2356" parent="Model"]
+cast_shadow = 0
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("environment")
 compositor = SubResource("compositor")
 
 [node name="GI" type="Node" parent="."]
 script = ExtResource("gi")
-shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided"), ExtResource("shd_gi_alpha_tested"), ExtResource("shd_gi_double_sided_alpha_tested")])
-fixture_materials = PackedStringArray("Paris_Ceiling_Lamp")
+one_sided_shader = ExtResource("shd_gi")
+two_sided_shader = ExtResource("shd_gi_double_sided")
+alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
+two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
+triangles_shader = ExtResource("triangles_shader")
 
 [node name="Lamp1" type="OmniLight3D" parent="."]
 position = Vector3(4.991, 3.031, -0.489)
+light_size = 0.1
 shadow_enabled = true
-omni_range = 10.0
+omni_range = 20
+omni_attenuation = 2.0
 
 [node name="Lamp2" type="OmniLight3D" parent="."]
 position = Vector3(7.989, 3.074, 1.015)
+light_size = 0.1
 shadow_enabled = true
-omni_range = 10.0
+omni_range = 20
+omni_attenuation = 2.0
 
 [node name="Lamp3" type="OmniLight3D" parent="."]
 position = Vector3(4.263, 3.095, -4.92)
+light_size = 0.1
 shadow_enabled = true
-omni_range = 10.0
+omni_range = 20
+omni_attenuation = 2.0
 
 [node name="Lamp4" type="OmniLight3D" parent="."]
 position = Vector3(6.107, 2.939, -8.468)
+light_size = 0.1
 shadow_enabled = true
-omni_range = 10.0
+omni_range = 20
+omni_attenuation = 2.0
 
 [node name="Lighting" type="AnimationPlayer" parent="."]
 libraries/ = SubResource("lighting")

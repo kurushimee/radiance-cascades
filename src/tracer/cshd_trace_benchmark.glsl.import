@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://cwvgei47i8arm"
+path="res://.godot/imported/cshd_trace_benchmark.glsl-563d301d9076719a915039183a669ac3.res"
+
+[deps]
+
+source_file="res://src/tracer/cshd_trace_benchmark.glsl"
+dest_files=["res://.godot/imported/cshd_trace_benchmark.glsl-563d301d9076719a915039183a669ac3.res"]
+
+[params]
+

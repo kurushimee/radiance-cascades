@@ -1,6 +1,6 @@
 # Lightmap UV2
 
-Read in the 4.7.2-stable source; paths are relative to the engine repository.
+Read in the 4.7.2-stable source and checked again in NVIDIA's fork at `135dff3887`; paths are relative to the engine repository.
 
 ## Unwrapping happens at import
 
@@ -8,7 +8,7 @@ Read in the 4.7.2-stable source; paths are relative to the engine repository.
 
 ## Texel size
 
-The texel size is in scene units at the mesh node's scale: xatlas gets `texelsPerUnit = 1 / texel_size`, and the unwrap transforms the vertices by the scale of the node's transform only, dropping its rotation and translation (`scene/resources/mesh.cpp`). A surface of area `A` therefore covers about `A / texel_size²` texels before padding.
+The texel size is in scene units at the mesh node's scale: xatlas gets `texelsPerUnit = 1 / texel_size`, and the unwrap transforms the vertices by the scale of the node's transform only, dropping its rotation and translation (`ImporterMesh::lightmap_unwrap_cached` in `scene/resources/3d/importer_mesh.cpp`, which the import runs). A surface of area `A` therefore covers about `A / texel_size²` texels before padding.
 
 ## xatlas options
 

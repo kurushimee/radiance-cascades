@@ -2,15 +2,25 @@
 # requires-python = ">=3.11"
 # dependencies = ["flip-evaluator", "numpy", "openexr"]
 # ///
-"""The evaluation's image metrics (design/evaluation.md#metrics) on camera folders written by scene_capture.gd, each
-holding a final.exr and an irradiance.exr. Pixels without a surface, alpha 0 in irradiance.exr, are left out.
+"""The evaluation's image metrics (design/evaluation.md#metrics) on camera folders written by scene_capture.gd. A
+capture of the GI holds final.exr, Godot's final image, and irradiance.exr, the E/π it hands Godot. A path-traced
+reference holds the path tracer's E/π in irradiance.exr, Godot's final image with that E/π in final.exr, Godot's final
+image at an irradiance of 0 and of 1, from which flip-limit composes the final image for other irradiances, and the
+surfaces' world positions in position.exr. A denoised reference adds the path-traced final image, path_traced.exr; an
+accumulated one adds E/π over its even frames, irradiance_half.exr. Pixels without a surface, alpha 0 in
+irradiance.exr, are left out.
 
     uv run src/reference/metrics.py compare <test camera folder> <reference camera folder>
     uv run src/reference/metrics.py leak <inside camera folder> <outside camera folder>
+    uv run src/reference/metrics.py agree <reference camera folder with albedo.exr> <other reference's camera folder>
+    uv run src/reference/metrics.py flip-limit <reference camera folder> <texel spacing> <RMSE limit> <bias limit>
+    uv run src/reference/metrics.py flip-floor <denoised reference camera folder>
 
-Both print JSON. A relative figure is null when the reference's mean is zero, and HDR-FLIP when the reference's final
+All print JSON. A relative figure is null when the reference's mean is zero, and HDR-FLIP when the reference's final
 image has no light.
 """
+import inspect
+import itertools
 import json
 import sys
 from pathlib import Path
@@ -20,8 +30,17 @@ import numpy as np
 import OpenEXR
 
 FINAL = "final.exr"
+PATH_TRACED = "path_traced.exr"
 IRRADIANCE = "irradiance.exr"
+IRRADIANCE_HALF = "irradiance_half.exr"
+ALBEDO = "albedo.exr"
+POSITION = "position.exr"
+NO_INDIRECT = "no_indirect.exr"
+UNIT_INDIRECT = "unit_indirect.exr"
 LUMINANCE = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
+CREASE = 0.1  # a bend in the positions this large against their step marks a crease or a jump
+ALBEDO_STEP = 1e-3
+LATTICE_PRIMES = np.array([73856093, 19349663, 83492791], dtype=np.uint64)  # Teschner et al. 2003
 
 
 def read(path):
@@ -34,6 +53,41 @@ def irradiance(folder):
     """E/π, and the mask of the pixels with a surface."""
     pixels = read(Path(folder) / IRRADIANCE)
     return pixels[..., :3], pixels[..., 3] > 0.5
+
+
+def half_difference(folder):
+    """A reference's mean over all samples less its mean over the even ones. It varies as much as the full mean does,
+    so its square estimates the full mean's variance at each pixel, and so does that of any average of its channels."""
+    return irradiance(folder)[0] - read(Path(folder) / IRRADIANCE_HALF)[..., :3]
+
+
+def interior(folder):
+    """The pixels whose 3x3 neighbourhood sees one smooth surface: one albedo, and positions without a crease or a
+    jump. A renderer that filters over each pixel blends the pixels at those edges."""
+    albedo = read(Path(folder) / ALBEDO)
+    position = read(Path(folder) / POSITION)[..., :3]
+    smooth = albedo[..., 3] > 0.5
+    for axis in (0, 1):
+        previous, following = np.roll(position, 1, axis), np.roll(position, -1, axis)
+        bend = np.linalg.norm(previous - 2 * position + following, axis=-1)
+        smooth &= bend <= CREASE * np.linalg.norm(following - previous, axis=-1) / 2
+        smooth &= np.abs(np.roll(albedo, -1, axis) - albedo).max(axis=-1) <= ALBEDO_STEP
+    smooth[[0, -1], :] = False
+    smooth[:, [0, -1]] = False
+    return np.logical_and.reduce([np.roll(smooth, shift, (0, 1)) for shift in itertools.product((-1, 0, 1), repeat=2)])
+
+
+def compose(folder, values):
+    """A reference's final image for the irradiance `values`. With Godot's specular occlusion off, as in the GI
+    materials, Godot's final image is affine in each pixel's irradiance, apart from its screen-space reflections, which
+    show other pixels'."""
+    none = read(Path(folder) / NO_INDIRECT)[..., :3]
+    unit = read(Path(folder) / UNIT_INDIRECT)[..., :3]
+    return np.ascontiguousarray(none + (unit - none) * values)
+
+
+def final(folder, name=FINAL):
+    return np.ascontiguousarray(read(Path(folder) / name)[..., :3])
 
 
 def relative(estimate, exact):
@@ -50,8 +104,8 @@ def compare(test, reference):
     reference_irradiance, reference_mask = irradiance(reference)
     mask = test_mask & reference_mask
     rmse, bias = relative(test_irradiance[mask], reference_irradiance[mask])
-    finals = [np.ascontiguousarray(read(Path(folder) / FINAL)[..., :3]) for folder in (reference, test)]
-    return {"relative_rmse": rmse, "relative_bias": bias, "hdr_flip": hdr_flip(*finals), "pixels": int(mask.sum())}
+    return {"relative_rmse": rmse, "relative_bias": bias, "hdr_flip": hdr_flip(final(reference), final(test)),
+            "pixels": int(mask.sum())}
 
 
 def hdr_flip(reference, test):
@@ -71,9 +125,86 @@ def leak(inside, outside):
     return {"inside": means[0], "outside": means[1], "leak": means[0] / means[1] if means[1] else None}
 
 
-COMMANDS = {"compare": compare, "leak": leak}
+def flip_floor(reference):
+    """The HDR-FLIP of Godot's final image with the reference's E/π against the path-traced one: what Godot's own
+    direct light, shadows and reflections leave between an exact GI and path tracing."""
+    return {"hdr_flip": hdr_flip(final(reference, PATH_TRACED), final(reference))}
+
+
+def agree(first, second):
+    """Two references of one view, compared over the pixels both see, away from the edges in the first, whose albedo
+    and positions come from the pixels' centres. They agree when the relative bias is within three standard deviations
+    of the mean and the relative RMSE is the one their noise accounts for."""
+    first_values, first_mask = irradiance(first)
+    second_values, second_mask = irradiance(second)
+    mask = first_mask & second_mask & interior(first)
+    difference = (first_values - second_values)[mask]
+    halves = [half_difference(folder)[mask] for folder in (first, second)]
+    pixel_variance = sum(np.mean(half, axis=-1) ** 2 for half in halves)
+    scale = float(np.mean(second_values[mask]))
+    return {
+        "relative_bias": float(np.mean(difference)) / scale,
+        "bias_deviations": float(np.mean(difference) / (np.sqrt(np.sum(pixel_variance)) / len(difference))),
+        "relative_rmse": float(np.sqrt(np.mean(difference ** 2))) / scale,
+        "noise_rmse": float(np.sqrt(np.mean(sum(half ** 2 for half in halves)))) / scale,
+        "pixels": int(mask.sum()),
+    }
+
+
+def lattice_noise(points, spacing):
+    """Value noise: a random value at each corner of a world lattice, interpolated trilinearly."""
+    scaled = points / spacing
+    cells = np.floor(scaled).astype(np.int64)
+    fractions = scaled - cells
+    total = np.zeros(len(points))
+    for corner in itertools.product((0, 1), repeat=3):
+        weights = np.prod(np.where(corner, fractions, 1.0 - fractions), axis=-1)
+        keys = np.bitwise_xor.reduce((cells + corner).astype(np.uint64) * LATTICE_PRIMES, axis=-1)
+        total += weights * (splitmix64(keys) >> np.uint64(11)) / 2.0 ** 53
+    return total
+
+
+def splitmix64(keys):
+    keys = keys + np.uint64(0x9E3779B97F4A7C15)
+    keys = (keys ^ (keys >> np.uint64(30))) * np.uint64(0xBF58476D1CE4E5B9)
+    keys = (keys ^ (keys >> np.uint64(27))) * np.uint64(0x94D049BB133111EB)
+    return keys ^ (keys >> np.uint64(31))
+
+
+def flip_limit(reference, spacing, rmse_limit, bias_limit):
+    """The HDR-FLIP that the indirect-error limits allow: the reference's E/π scaled by 1 ± bias + s·n(x), with n
+    zero-mean unit-RMS value noise on a world lattice at the texel spacing and s set for the RMSE limit, composed into a
+    final image. The limit is the smaller FLIP of the two signs of the bias."""
+    values, mask = irradiance(reference)
+    pattern = lattice_noise(read(Path(reference) / POSITION)[mask][:, :3].astype(np.float64), float(spacing))
+    noise_map = np.zeros(mask.shape)
+    noise_map[mask] = (pattern - pattern.mean()) / pattern.std()
+    exact = compose(reference, values)
+    results = []
+    for bias in (float(bias_limit), -float(bias_limit)):
+        perturbed = values * (1.0 + bias + noise_scale(values[mask], noise_map[mask], bias, float(rmse_limit))
+                              * noise_map[..., None])
+        rmse, achieved_bias = relative(perturbed[mask], values[mask])
+        results.append({"hdr_flip": hdr_flip(exact, compose(reference, perturbed)), "relative_rmse": rmse,
+                        "relative_bias": achieved_bias})
+    flips = [result["hdr_flip"] for result in results]
+    return {"hdr_flip": None if None in flips else min(flips), "perturbations": results}
+
+
+def noise_scale(values, pattern, bias, rmse_limit):
+    """The s at which the relative RMSE, sqrt(mean(E²(bias + s·n)²)) / mean(E), equals the limit: the positive root
+    of a quadratic in s."""
+    squares, pattern = values ** 2, pattern[:, None]
+    quadratic = [np.mean(squares * pattern ** 2), 2 * bias * np.mean(squares * pattern),
+                 bias ** 2 * np.mean(squares) - (rmse_limit * np.mean(values)) ** 2]
+    return float(np.max(np.roots(quadratic)))
+
+
+COMMANDS = {"compare": compare, "leak": leak, "agree": agree, "flip-limit": flip_limit,
+            "flip-floor": flip_floor}
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4 or sys.argv[1] not in COMMANDS:
+    command = COMMANDS.get(sys.argv[1] if len(sys.argv) > 1 else "")
+    if command is None or len(sys.argv) - 2 != len(inspect.signature(command).parameters):
         sys.exit(__doc__)
-    print(json.dumps(COMMANDS[sys.argv[1]](*sys.argv[2:]), indent=1))
+    print(json.dumps(command(*sys.argv[2:]), indent=1))

@@ -7,9 +7,13 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
+[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
 
 [sub_resource type="Environment" id="environment"]
 background_mode = 1
+tonemap_mode = 4
+tonemap_exposure = 3.5
+ssr_enabled = true
 
 [sub_resource type="CompositorEffect" id="gi_effect"]
 script = ExtResource("gi_effect_script")
@@ -49,8 +53,11 @@ compositor = SubResource("compositor")
 
 [node name="GI" type="Node" parent="."]
 script = ExtResource("gi")
-shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided"), ExtResource("shd_gi_alpha_tested"), ExtResource("shd_gi_double_sided_alpha_tested")])
-fixture_materials = PackedStringArray()
+one_sided_shader = ExtResource("shd_gi")
+two_sided_shader = ExtResource("shd_gi_double_sided")
+alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
+two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
+triangles_shader = ExtResource("triangles_shader")
 
 [node name="Front" type="Camera3D" parent="."]
 position = Vector3(0.278, 0.273, -0.8)

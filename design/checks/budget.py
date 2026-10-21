@@ -27,6 +27,12 @@ FIRST_MAX, REST_MAX = 35, 110  # bound: the largest the lab measured at each
 BANDWIDTH = 448e9 * 0.7
 BYTES_PER_RECORD = (8, 16)  # the record itself, its share of a merged write, a parent read on a miss
 
+# Measured with hardware ray queries on Intel Sponza and Crytek Sponza (plan 004 M1): lowest and highest rate.
+SHADOW_RAYS_PER_S = (1.47e9, 2.40e9)
+SHORT_SEGMENTS_PER_S = (1.88e9, 2.61e9)  # cascades 0 and 1
+SEGMENTS_PER_S = (0.64e9, 3.96e9)  # every cascade
+TRACER_BYTES_PER_TRIANGLE = 48 + 56 + 128  # corners, attributes, acceleration structures with their scratch
+
 
 def t0(bins):
     """Cascade 0's equal-error interval in texel spacings."""
@@ -98,8 +104,14 @@ assert round(spacing(3000, 8e6, bins=36)[0], 2) == 0.42
 # A record keeps a 4-byte hit texel, a byte of parent flags and a 2-byte distance: 56 MB at the planning budget.
 assert 8e6 * (4 + 1 + 2) / 1e6 == 56
 
-# At 1 G rays/s, the direct-light and moving-object lines cover 200,000 and 500,000 rays.
-assert [round(FIXED_MS[k] * 1e-3 * 1e9) for k in ("direct light", "moving objects")] == [200_000, 500_000]
+# At the measured rates, the direct-light line covers 294,000 to 480,000 shadow rays, one per texel for the sun and for
+# 9 to 15 moving lights over 30,000 texels, and the moving-object line 940,000 to 1,305,000 short segments; at load,
+# 8 M segments take 2.0 to 12.5 ms.
+shadow_rays = [round(FIXED_MS["direct light"] * 1e-3 * r) for r in SHADOW_RAYS_PER_S]
+assert shadow_rays == [294_000, 480_000]
+assert [round(rays / 30_000 - 1) for rays in shadow_rays] == [9, 15]
+assert [round(FIXED_MS["moving objects"] * 1e-3 * r) for r in SHORT_SEGMENTS_PER_S] == [940_000, 1_305_000]
+assert [round(8e6 / r * 1e3, 1) for r in reversed(SEGMENTS_PER_S)] == [2.0, 12.5]
 
 # Without a near-field pass the passes get 5 ms: 10 M records, texels about 11% closer at 3,000 m².
 assert math.isclose(record_budget(passes_ms + FIXED_MS["near field"]), 10e6)
@@ -108,9 +120,9 @@ assert round(1 - spacing(3000, 10e6)[0] / spacing(3000, 8e6)[0], 2) == 0.11
 # Merged world radiance: one value per world record, the records past cascade 0's 64 per texel.
 assert round((8e6 - 64 * 8e6 / 269) / 1e6, 1) == 6.1
 
-# Geometry: 48-byte triangles plus 18.6 to 24.1 bytes of binary nodes per triangle.
-assert [round(260e3 * (48 + b) / 1e6) for b in (18.6, 24.1)] == [17, 19]
-assert [round(10.8e6 * (48 + b) / 1e9, 2) for b in (18.6, 24.1)] == [0.72, 0.78]
+# Geometry: 232 bytes per triangle, 61 MB for Crytek Sponza and 2.5 GB for a 10.8 M-triangle scene.
+assert round(262_267 * TRACER_BYTES_PER_TRIANGLE / 1e6) == 61
+assert round(10.8e6 * TRACER_BYTES_PER_TRIANGLE / 1e9, 1) == 2.5
 
 if len(sys.argv) == 3:
     print(spacing(float(sys.argv[1]), record_budget(passes_ms), diameter=float(sys.argv[2]))[0])

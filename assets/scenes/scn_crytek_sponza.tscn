@@ -7,8 +7,10 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
+[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
+ground_bottom_color = Color(0.35, 0.35, 0.35, 1)
 
 [sub_resource type="Sky" id="sky"]
 sky_material = SubResource("sky_material")
@@ -16,6 +18,23 @@ sky_material = SubResource("sky_material")
 [sub_resource type="Environment" id="environment"]
 background_mode = 2
 sky = SubResource("sky")
+tonemap_mode = 4
+tonemap_exposure = 106
+ssr_enabled = true
+
+[sub_resource type="Environment" id="environment_Gallery"]
+background_mode = 2
+sky = SubResource("sky")
+tonemap_mode = 4
+tonemap_exposure = 900
+ssr_enabled = true
+
+[sub_resource type="Environment" id="environment_Arcade"]
+background_mode = 2
+sky = SubResource("sky")
+tonemap_mode = 4
+tonemap_exposure = 4000
+ssr_enabled = true
 
 [sub_resource type="CompositorEffect" id="gi_effect"]
 script = ExtResource("gi_effect_script")
@@ -55,12 +74,22 @@ compositor = SubResource("compositor")
 
 [node name="GI" type="Node" parent="."]
 script = ExtResource("gi")
-shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided"), ExtResource("shd_gi_alpha_tested"), ExtResource("shd_gi_double_sided_alpha_tested")])
-fixture_materials = PackedStringArray()
+one_sided_shader = ExtResource("shd_gi")
+two_sided_shader = ExtResource("shd_gi_double_sided")
+alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
+two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
+triangles_shader = ExtResource("triangles_shader")
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.975639, -1.75929, 0)
+light_color = Color(1, 1, 1, 1)
+light_energy = 1
+light_angular_distance = 0.5
 shadow_enabled = true
+shadow_bias = 0.03
+shadow_normal_bias = 0.5
+directional_shadow_max_distance = 40
+sky_mode = 1
 
 [node name="Atrium" type="Camera3D" parent="."]
 position = Vector3(-9, 1.6, 0)
@@ -71,11 +100,13 @@ current = true
 [node name="Gallery" type="Camera3D" parent="."]
 position = Vector3(-9, 6.2, -4.2)
 rotation = Vector3(-0.0105259, -1.5708, 0)
+environment = SubResource("environment_Gallery")
 fov = 70
 
 [node name="Arcade" type="Camera3D" parent="."]
-position = Vector3(-10, 1.7, -4)
-rotation = Vector3(0, -1.5708, 0)
+position = Vector3(-11, 1.7, -4.4)
+rotation = Vector3(0.0139812, -1.77733, 0)
+environment = SubResource("environment_Arcade")
 fov = 70
 
 [node name="Lighting" type="AnimationPlayer" parent="."]

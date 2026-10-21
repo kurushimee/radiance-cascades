@@ -4,7 +4,7 @@ already there at its pinned size is not fetched again.
 
     python src/reference/fetch_scenes.py
 
-The models then need an import (`godot --headless --path . --import`) and src/editor/texel_size.gd.
+The models then need an import (`godot --headless --path . --import`) and src/editor/import_options.gd.
 """
 import fnmatch
 import json

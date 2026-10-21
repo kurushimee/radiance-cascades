@@ -10,7 +10,7 @@ Each pixel reads its irradiance from the atlas at its own UV2, bilinearly, insid
 
 ## The composite
 
-- **The material reads the atlas.** The irradiance atlas, stored as `E/π`, is a `Texture2DRD` set as a global `sampler2D` shader parameter. Godot accepts it if it is 2D, single-layer, created with sampling usage and in an image-mappable format ([research](../research/topics/godot_integration.md)). Every GI material samples it at UV2 and writes `IRRADIANCE = vec4(value, 1.0)`.
+- **The material reads the atlas.** The irradiance atlas, stored as `E/π`, is a `Texture2DRD` set as a global `sampler2D` shader parameter. Godot accepts it if it is 2D, single-layer, created with sampling usage and in an image-mappable format ([research](../research/topics/godot_integration.md)). Every GI material samples it at UV2 and writes `IRRADIANCE = vec4(value, 1.0)`, and the same `RADIANCE` for the indirect specular ([lighting.md](lighting.md#sky)).
 - **`E/π`, not `E`.** Godot mixes `IRRADIANCE.rgb` into the ambient light and multiplies it by AO, albedo and `1 − metallic`, with no division by π ([docs](../docs/compositor_and_shading.md)).
 - **Alpha 1** replaces Godot's ambient light entirely, so the solve's sky term is the only sky light ([lighting.md](lighting.md#sky)).
 - **SSAO and SSIL are off.** SSAO would multiply the solve's light by a contact factor, which E4 showed darkens wrongly; SSIL would add bounced light a second time.

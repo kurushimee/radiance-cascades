@@ -1,10 +1,12 @@
 # Radiance Cascades
 
-Radiance cascades global illumination in Godot 4.7.2, written in GDScript with GLSL compute shaders through `RenderingDevice`.
+Radiance cascades global illumination in Godot, on NVIDIA's fork with its path tracer ([README](README.md#engine)), written in GDScript with GLSL compute shaders through `RenderingDevice`.
 
 ## Docs
 
 Read [docs/rendering_device.md](docs/rendering_device.md) before writing or debugging `RenderingDevice` code.
+
+Read [docs/path_tracer.md](docs/path_tracer.md) before working on the path-traced reference, the GI materials or the engine patch.
 
 Engine behavior that took a capture, a crash, or a source read to find, and that the code does not make obvious, goes into `docs/`, checked against the engine first. When a doc and the engine disagree, fix the doc.
 
@@ -48,6 +50,8 @@ Edit `.gd` files with Edit or Write: gdls misses changes made any other way and 
 |-----------|----------|
 | `src/<feature>/` | GDScript, with each compute shader next to the script that dispatches it; Python tools for the scenes and metrics in `src/reference/` |
 | `assets/` | Scenes, models, textures, materials |
+| `engine/` | The patch on NVIDIA's Godot fork ([README](README.md#engine)) |
+| `references/` | Path-traced references of the test scenes, rendered with `--reference` ([capture-scene](.claude/skills/capture-scene/SKILL.md)); git ignores them |
 
 | Asset prefix | Asset |
 |--------------|-------|

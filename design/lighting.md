@@ -27,19 +27,20 @@ A texel reflects `L = Le + (ρ/π) · (E_direct + E_indirect)`, with `ρ` and `L
   - A static omni or spot light against static geometry gets its visibility once at load, one bit per texel in range.
   - A moving light gets shadow rays every frame for the texels in its range.
   - Shadow rays whose segment crosses a moving object's bounds are retraced against the moving objects ([scene_and_tracer.md](scene_and_tracer.md#moving-objects)).
-- **Cost.** The direct-light line of the [budget](budget.md#the-frame) covers 200,000 rays: 30,000 texels for the sun plus about five moving lights.
+- **Cost.** At the measured shadow-ray rates, the direct-light line of the [budget](budget.md#the-frame) covers 294,000 to 480,000 rays: the sun's 30,000 texels, plus about 15 moving lights on Crytek Sponza and 9 on Intel Sponza.
 
 ## Emitters
 
 - **Large emitters stay in the solve.** A window, a glowing panel or a lit sign adds its captured emission to `Le`, and the cascades gather it like any other radiance.
-- **Small emitters become Godot lights.** A hand-over loses most of a light narrower than half its parent spacing: the kept share falls as `3.70 (a/h)²` ([paper 2, depth reprojection and small lights](../papers/02_merging_3d/paper.md)), and in the lab's closed scenes RC's first bounce from a ceiling light carried errors of 0.25 to 0.58, against 0.04 to 0.16 for the second bounce (E2). So a lamp is a Godot light plus a fixture mesh whose material is marked as a fixture: the light gives direct light on screen and in the texels, and the fixture's emission stays out of `Le`, so nothing is counted twice. Emitters smaller than about twice the texel spacing should be fixtures; M6 tests that threshold.
+- **Small emitters become Godot lights.** A hand-over loses most of a light narrower than half its parent spacing: the kept share falls as `3.70 (a/h)²` ([paper 2, depth reprojection and small lights](../papers/02_merging_3d/paper.md)), and in the lab's closed scenes RC's first bounce from a ceiling light carried errors of 0.25 to 0.58, against 0.04 to 0.16 for the second bounce (E2). So a lamp is a Godot light plus a fixture mesh that casts no shadow: the light gives direct light on screen and in the texels, and the fixture takes no part in the GI's scene, so its emission is not counted twice and it does not block its own light. The path tracer shows such a mesh to camera rays alone ([docs](../docs/path_tracer.md#the-engine-patch)), and Godot's shadow maps leave it out, so all three treat it alike. Emitters smaller than about twice the texel spacing should be fixtures; M6 tests that threshold.
 
 ## Sky
 
 - **Only the top cascade's misses read the sky.** A lower ray that misses reads its parents.
 - **Scripts get the sky only as a CPU image**, through `environment_bake_panorama` or `sky_bake_panorama`, linear and untonemapped ([docs](../docs/compositor_and_shading.md)). At load and whenever the environment changes, the panorama is baked, uploaded and integrated over each top-cascade bin into a table of one radiance per bin.
-- **The sun's disk** is part of the panorama, and the sun's light is already injected as direct light. The table replaces the disk with the sky around it before integrating.
+- **The sky has no sun disk.** The sun's light comes from its `DirectionalLight3D` alone, so a disk in the sky would count it twice. A procedural sky leaves the sun out with the light's `sky_mode` set to light only, and `build_scenes.py` paints the disk out of a panorama, filling it with the sky around it, and gives the light the disk's direction, colour and energy. The GI and the path tracer then read the same sky.
 - **The composite writes `IRRADIANCE` with alpha 1**, which removes Godot's own ambient light, so the solve supplies all sky light ([research](../research/topics/godot_integration.md)).
+- **It writes the same `E/π` as `RADIANCE` with alpha 1, with Godot's specular occlusion off.** Otherwise the indirect specular reflects the open sky, scaled only by Godot's guess from the irradiance's luminance, which keeps 70% of the sky's reflection on a hedge in Bistro's shaded street. There the sky's reflection was a third of the frame: the frame's mean was 0.0465 with Godot's default, 0.0368 with the solve's `E/π` as radiance, and 0.0334 path-traced. `E/π`, the cosine-weighted mean radiance, approximates a rough lobe well and a smooth one coarsely, where SSR adds the reflections on screen ([docs](../docs/compositor_and_shading.md#irradiance)).
 
 ## Bounces
 

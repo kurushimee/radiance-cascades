@@ -25,7 +25,7 @@ Tools and assets for measuring GI against a reference: the FLIP image metric's P
 - **Mitsuba 3** installs with `pip install mitsuba` from prebuilt wheels, under a BSD-style licence (copyright Wenzel Jakob, 2017; the clauses were not checked). Its mesh loaders read OBJ, PLY and its serialized format, not glTF. Its AOV integrator outputs albedo, depth, position, UV, geometric and shading normals, UV derivatives and primitive and shape indices, but no irradiance; `mi.cornell_box()` builds a Cornell box as a Python dictionary, not a file.
 - **Blender** imports and exports glTF 2.0 (`.glb`, `.gltf`) with metallic-roughness and specular-glossiness materials, enabled by default. Cycles' pass list was not read.
 
-**Inferred.** A glTF scene reaches Mitsuba only through conversion to OBJ or PLY, and irradiance from it has to be composed from path-traced output, for example with every albedo set to one; Blender opens glTF directly.
+**Inferred.** A glTF scene reaches Mitsuba only through conversion to OBJ or PLY, and irradiance from it has to be composed from path-traced output. On a diffuse surface that does not emit, the radiance is the albedo times `E/π`, so the radiance over the albedo AOV gives `E/π`; setting every albedo to one instead would change the light the surfaces exchange. Blender opens glTF directly.
 
 ## Test scenes
 

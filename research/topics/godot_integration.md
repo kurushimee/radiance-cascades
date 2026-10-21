@@ -153,6 +153,8 @@ The gating behind the `rbgi` row: the buffer blend runs only for instances with 
 
 **`IRRADIANCE` and `RADIANCE`.** The spatial shader reference describes both outputs as blends with the environment map: written on any branch, they blend environment irradiance (or radiance) with `.rgb` by `.a`. The compiler renames them `custom_irradiance` and `custom_radiance`, sets `CUSTOM_IRRADIANCE_USED` and `CUSTOM_RADIANCE_USED` when they appear, and the scene shader blends them into ambient and specular. The hook is per material and touches no scene-wide buffer.
 
+**Specular occlusion.** After AO, unless the material sets `specular_occlusion_disabled` or writes `BENT_NORMAL_MAP`, the indirect specular, whether from the sky, a reflection probe or `RADIANCE`, is scaled by `min(8 · luminance(ambient light), 1)`, with luminance weights 0.3, 0.59 and 0.11 and the ambient light already holding `IRRADIANCE`; smooth metals keep more (`scene_forward_clustered.glsl:2175` at the tag). The factor reads absolute units, so it occludes little in a bright scene and most reflections in one lit in physical units, and it makes the shaded frame non-affine in `IRRADIANCE`. A GI that writes only `IRRADIANCE` therefore leaves the indirect specular reflecting the open sky, scaled by that guess. Writing the same cosine-weighted mean radiance as `RADIANCE`, with specular occlusion off, gives the reflections the GI's occlusion: it fits a rough lobe and blurs a smooth one, where SSR, applied after the occlusion and unscaled by it, adds the reflections on screen.
+
 The path that composes correctly:
 
 1. Write a screen-sized RGBA16F irradiance texture in a PRE_OPAQUE callback (screen-space probes), or a probe atlas from any callback (world-space probes).

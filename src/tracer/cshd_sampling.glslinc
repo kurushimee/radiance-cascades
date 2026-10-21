@@ -1,0 +1,24 @@
+// Random numbers and cosine-weighted directions for the shaders that trace.
+
+uint hash(uint value) {
+	value ^= value >> 16u;
+	value *= 0x7FEB352Du;
+	value ^= value >> 15u;
+	value *= 0x846CA68Bu;
+	value ^= value >> 16u;
+	return value;
+}
+
+// A cosine-distributed direction around `normal` from two uniform numbers in [0, 1). Duff et al. 2017, "Building an
+// Orthonormal Basis, Revisited".
+vec3 cosine_direction(vec3 normal, vec2 random) {
+	float sign_z = normal.z >= 0.0 ? 1.0 : -1.0;
+	float a = -1.0 / (sign_z + normal.z);
+	float b = normal.x * normal.y * a;
+	vec3 tangent = vec3(1.0 + sign_z * normal.x * normal.x * a, sign_z * b, -sign_z * normal.x);
+	vec3 bitangent = vec3(b, sign_z + normal.y * normal.y * a, -normal.y);
+	float radius = sqrt(random.x);
+	float angle = 6.28318530718 * random.y;
+	return normalize(tangent * radius * cos(angle) + bitangent * radius * sin(angle)
+			+ normal * sqrt(max(1.0 - random.x, 0.0)));
+}

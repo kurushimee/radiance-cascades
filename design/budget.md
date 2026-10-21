@@ -22,7 +22,7 @@ The GI aims at 6 ms per frame at 1080p on an RTX 2070, half of its 12 ms ceiling
 | Setup | 0.2 | clears, the light list, dilation and seam stitching | M4 |
 | **Total** | **6.0** | | M6 |
 
-The ray rates behind the fixed lines assume 1 G rays/s for software traversal, below the 1.3 to 1.6 G rays/s scaled from an RTX 2080 Ti ([research](../research/sources/2026_gpu_bvh_builders_and_wide_traversal.md#software-traversal-against-rt-cores)). At that rate the direct-light line covers 200,000 shadow rays and the moving-object line 500,000 retraced records.
+The ray rates behind the fixed lines are measured with hardware ray queries on Crytek Sponza and Intel Sponza: 1.47 to 2.40 G rays/s for shadow rays and 1.88 to 2.61 G rays/s for short segments ([scene_and_tracer.md](scene_and_tracer.md#traversal)). At those rates the direct-light line covers 294,000 to 480,000 shadow rays, one per texel for the sun and for 9 to 15 moving lights over 30,000 texels. The moving-object line covers 940,000 to 1,305,000 short segments.
 
 ## What a pass costs
 
@@ -87,5 +87,5 @@ Four other levers lose more than they buy:
 - **Hit records** keep a 4-byte hit texel (or a miss), a byte of parent flags for the sphere fix and a 2-byte hit distance that only the moving-object pass reads: 56 MB at 8 M records.
 - **Merged world radiance** needs one value per probe-bin, about one per world record: 6 M values of 4 bytes (shared-exponent RGB) at the planning point.
 - **Texels** keep radiance, irradiance and their capture data, about 2 MB at 30,000 texels.
-- **Geometry** takes 48 bytes per triangle plus 19 to 24 bytes of binary BVH nodes, 17 to 19 MB for a 260,000-triangle scene. A 10.8 M-triangle scene needs about 0.8 GB, within the RTX 2070's 8 GB ([research](../research/sources/2026_gpu_bvh_builders_and_wide_traversal.md#memory-per-triangle)).
-- **At load**, the static records are traced once: 8 M segments at 1 G rays/s take 8 ms, after the BVH build ([scene_and_tracer.md](scene_and_tracer.md)).
+- **Geometry** takes 232 bytes per triangle: 48 of corners, 56 of attributes and 128 of acceleration structures with their kept build scratch. That is 61 MB for Crytek Sponza's 262,267 triangles and 2.04 GB for Intel Sponza's 8.8 M, with nothing more during the build. A 10.8 M-triangle scene needs about 2.5 GB, within the RTX 2070's 8 GB ([scene_and_tracer.md](scene_and_tracer.md#storage)).
+- **At load**, the static records are traced once: 8 M segments at the measured 0.64 to 3.96 G rays/s take 2.0 to 12.5 ms, after the acceleration structure's build ([scene_and_tracer.md](scene_and_tracer.md#traversal)).

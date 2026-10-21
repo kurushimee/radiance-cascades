@@ -1,0 +1,7 @@
+// The ray through a pixel's centre, from CameraRays.basis(): the camera's right and up vectors scaled to the edges of
+// the view, and its forward vector. Row 0 is the top of the image, as in Godot's viewport images.
+
+vec3 camera_direction(vec3 right, vec3 up, vec3 forward, uvec2 pixel, uvec2 size) {
+	vec2 ndc = (vec2(pixel) + 0.5) / vec2(size) * 2.0 - 1.0;
+	return normalize(forward + right * ndc.x - up * ndc.y);
+}

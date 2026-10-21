@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://p0s4v0umio8s"
-path="res://.godot/imported/mdl_sealed_room_plane.gltf-e446fea6883e6d9f279550ce56def37f.scn"
+uid="uid://5dk7akc6e5bx"
+path="res://.godot/imported/mdl_leak_house.gltf-c172c8efdb19809c1f79f2c983154213.scn"
 
 [deps]
 
-source_file="res://assets/models/mdl_sealed_room_plane.gltf"
-dest_files=["res://.godot/imported/mdl_sealed_room_plane.gltf-e446fea6883e6d9f279550ce56def37f.scn"]
+source_file="res://assets/models/mdl_leak_house.gltf"
+dest_files=["res://.godot/imported/mdl_leak_house.gltf-c172c8efdb19809c1f79f2c983154213.scn"]
 
 [params]
 
@@ -27,7 +27,7 @@ meshes/ensure_tangents=true
 meshes/generate_lods=true
 meshes/create_shadow_meshes=true
 meshes/light_baking=2
-meshes/lightmap_texel_size=0.087
+meshes/lightmap_texel_size=0.133
 meshes/force_disable_compression=false
 skins/use_named_skins=true
 animation/import=true

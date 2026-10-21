@@ -16,9 +16,13 @@ Dispatches in one compute list get no barrier between them, so a dispatch that r
 
 `#include "file.glsl"` works only in `.glsl` files imported as shader files, with a path relative to that file's folder or starting with `res://`. Includes do not nest: an `#include` inside an included file reaches glslang unexpanded and fails the compile. Shaders compiled at runtime from `RDShaderSource` cannot include files.
 
+An included file can have any extension. Give it one other than `.glsl`: the importer takes every `.glsl` file for a shader, and one without a stage section such as `#[compute]` fails its import with `Text was found that does not belong to a valid section`.
+
+Editing an included file does not reimport the shaders that include it, and neither does touching a shader, since the import compares file hashes. Delete the shader's `.godot/imported/<shader>.glsl-*` files and run `godot --headless --path . --import`.
+
 ## Atomics
 
-The Vulkan driver enables no float atomics and no 64-bit atomics. Accumulate floats as scaled integers with 32-bit `atomicAdd` on a storage buffer or an `r32ui` image. Give an atomic image `TEXTURE_USAGE_STORAGE_ATOMIC_BIT` as well, so `texture_create` checks that the device supports atomics on its format.
+The Vulkan driver enables no float atomics and no 64-bit atomics. Accumulate floats as scaled integers with 32-bit `atomicAdd` on a storage buffer or an `r32ui` image. Values that span too many orders of magnitude for one scale can be added as float bits in an `atomicCompSwap` loop on a `coherent` buffer. Give an atomic image `TEXTURE_USAGE_STORAGE_ATOMIC_BIT` as well, so `texture_create` checks that the device supports atomics on its format.
 
 ## Subgroups and half floats
 
@@ -26,7 +30,17 @@ GDScript cannot read the subgroup size or check half-float support: `LIMIT_SUBGR
 
 ## Limits
 
-No limit reports the largest storage buffer, and Vulkan only guarantees 128 MiB (`maxStorageBufferRange`).
+No limit reports the largest storage buffer, and Vulkan only guarantees 128 MiB (`maxStorageBufferRange`). `storage_buffer_create` checks no size of its own, so a buffer up to the device's range works: the RTX 2070 reports 4 GiB, and a 563 MB buffer binds and reads correctly.
+
+A storage-buffer uniform takes exactly one buffer, so an array of storage buffers (`buffer B { ... } b[4];`) cannot be bound.
+
+## Texture arrays
+
+On Vulkan 1.2 devices that support them, the Vulkan driver enables non-uniform indexing of sampled image arrays, runtime descriptor arrays and partially bound bindings (`rendering_device_driver_vulkan.cpp`):
+
+- An array of textures or samplers indexed per invocation needs `nonuniformEXT` on the index.
+- A sized array's uniform must supply exactly the declared count, so fill unused slots with a stand-in texture.
+- A runtime-sized array (`uniform texture2D textures[];`) takes any count: its binding is partially bound with a variable count, and `uniform_set_create` skips the count check (`rendering_device.cpp`).
 
 ## Indirect dispatch
 
@@ -73,7 +87,9 @@ A `Texture3DRD` works as a global `sampler3D` shader parameter. `set_texture_rd_
 - On the main device, a frame's timestamps become readable two frames later (`get_frame_delay()` is 2) and stay for one frame only. Read the list every frame on the render thread, match names, and check `get_captured_timestamps_frame()`.
 - On a local device, timestamps are readable right after `sync()`.
 - `capture_timestamp()` fails inside a compute list that has dispatched, a draw list that has drawn or a ray tracing list that has traced (`rendering_device.cpp`). Time a pass by capturing before its list begins and after it ends.
-- The engine captures no timestamps of its own.
+- The render graph orders every command recorded before a timestamp ahead of it and every later command after it (`rendering_device_graph.cpp`), so two captures bracket only the commands between them. An empty dispatch of 921,600 threads measured 0.04 ms.
+- `buffer_get_data()` between the two captures of a span loses the span: it flushes and stalls the device, and neither capture appears among the frame's timestamps. Read data back after the span ends.
+- The engine captures timestamps of its own only for the editor's profiler, `--gpu-profile` or a viewport set to measure its render time (`viewport_set_measure_render_time`).
 
 ## Labels
 
@@ -81,10 +97,20 @@ Wrap every pass in `draw_command_begin_label()` / `draw_command_end_label()` so 
 
 ## Ray tracing
 
-The ray tracing API (`blas_create`, `tlas_build`, `raytracing_pipeline_create`, `raytracing_list_*`, hit shader binding tables) is experimental and has these limits in 4.7.2:
+The ray tracing API (`blas_create`, `tlas_build`, `raytracing_pipeline_create`, `raytracing_list_*`, hit shader binding tables) is experimental. Only Vulkan implements it: D3D12 and Metal stub every call and report no support, and Vulkan on macOS and iOS compiles it out.
 
-- Only Vulkan implements it. D3D12 and Metal stub every call and report no support; Vulkan on macOS and iOS compiles it out.
-- `has_feature(SUPPORTS_RAY_QUERY)` is always false: the Vulkan driver never requests `VK_KHR_ray_query`. Compute shaders cannot trace; tracing needs a ray tracing pipeline (`#[raygen]`, `#[miss]`, `#[closest_hit]`, `#[any_hit]`, `#[intersection]` sections in the `.glsl` file).
-- `blas_create` fails with `The index buffer contains an index that is outside the specified vertex range.` for every indexed geometry in release builds, because release index buffers record `max_index` as `0xFFFFFFFF`. Debug builds pass only when the index buffer was created with data. Give the BLAS non-indexed triangles to work in both.
-- The engine's mesh buffers cannot feed a BLAS: `RenderingServer` returns no buffer RID for a mesh surface, and its index buffers lack the needed creation bits. Read the arrays with `mesh_surface_get_arrays()` and create the vertex buffer with `BUFFER_CREATION_DEVICE_ADDRESS_BIT | BUFFER_CREATION_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT`.
-- Push constants arrive as zeros in ray tracing stages: the shader container ORs the stage enum values instead of their bits, so the push constant range never includes the ray tracing stages. Pass per-dispatch values in a uniform buffer.
+Stock 4.7.2 has three bugs that upstream PR #122051 fixes for 4.8, and NVIDIA's fork, which this project runs on ([README](../README.md#engine)), carries the same fixes:
+
+- `has_feature(SUPPORTS_RAY_QUERY)` is always false, because the Vulkan driver never requests `VK_KHR_ray_query`, so compute shaders cannot trace.
+- `blas_create` fails with `The index buffer contains an index that is outside the specified vertex range.` for every indexed geometry in release builds, because release index buffers record `max_index` as `0xFFFFFFFF`. The fix skips the check for that value.
+- Push constants arrive as zeros in ray tracing stages: the shader container ORs the stage enum values instead of their bits, so the push constant range never includes the ray tracing stages.
+
+With ray queries:
+
+- A compute shader traces with `GL_EXT_ray_query`, which needs `#version 460`. The TLAS binds as a `UNIFORM_TYPE_ACCELERATION_STRUCTURE` uniform with one RID. The `committed` argument of the `rayQueryGetIntersection*EXT` functions must be a compile-time constant.
+- `tlas_build` refuses an instance whose `hit_sbt_range` is 0, even though ray queries never read the hit shader table, and a range comes only from a hit table, which needs a ray tracing pipeline. The check accepts any nonzero value, and `1 << 32` encodes one hit group at offset 0, so a ray-query-only scene needs no pipeline.
+- `blas_create` reads only buffers made by `vertex_buffer_create`. One made with `BUFFER_CREATION_AS_STORAGE_BIT | BUFFER_CREATION_DEVICE_ADDRESS_BIT | BUFFER_CREATION_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT` also binds as a storage buffer, so a compute shader can write the BLAS's vertices. `RenderingServer.mesh_surface_get_vertex_buffer_rd_rid()` returns a mesh surface's own vertex buffer, which the engine creates with those flags when the device supports ray tracing or ray queries (`mesh_storage.cpp`).
+- The vertex format `DATA_FORMAT_R32G32B32_SFLOAT` with a 16-byte stride reads `xyz` and leaves each vertex's `w` free for other data.
+- Freeing a BLAS's vertex buffer frees the BLAS, so the buffer must live as long as the BLAS. Freeing or rebuilding a BLAS invalidates every TLAS built over it.
+- With each triangle's corners ordered so that `cross(v1 − v0, v2 − v0)` points out of its front, `rayQueryGetIntersectionFrontFaceEXT` is true on the front with no instance flag.
+- GDScript has no BLAS update (`blas_update` is C++ only), and there is no compaction or size query. A structure keeps its build scratch buffer for as long as it lives. Only `get_memory_usage(MEMORY_TOTAL)`, the driver's allocated bytes, shows their size, from its change across the creation and build.

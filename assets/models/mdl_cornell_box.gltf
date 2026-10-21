@@ -102,6 +102,9 @@
     ],
     "metallicFactor": 0.0,
     "roughnessFactor": 1.0
+   },
+   "extras": {
+    "specular": 0.0
    }
   },
   {
@@ -115,6 +118,9 @@
     ],
     "metallicFactor": 0.0,
     "roughnessFactor": 1.0
+   },
+   "extras": {
+    "specular": 0.0
    }
   },
   {
@@ -128,6 +134,9 @@
     ],
     "metallicFactor": 0.0,
     "roughnessFactor": 1.0
+   },
+   "extras": {
+    "specular": 0.0
    }
   },
   {
@@ -151,6 +160,9 @@
     "KHR_materials_emissive_strength": {
      "emissiveStrength": 18.387
     }
+   },
+   "extras": {
+    "specular": 0.0
    }
   }
  ],

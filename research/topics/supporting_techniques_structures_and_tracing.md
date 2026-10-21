@@ -108,7 +108,7 @@ In hardware ray tracing APIs a bottom-level acceleration structure holds one geo
 
 ### Ray queries
 
-`VK_KHR_ray_query` (and DXR 1.1 inline ray tracing) lets any shader stage, compute included, traverse an acceleration structure with a loop of query steps and read the committed hit. Reference: Khronos, VK_KHR_ray_query, 2020. Godot's `RenderingDevice` does not expose it, which is why software traversal matters there ([Godot integration](godot_integration.md)).
+`VK_KHR_ray_query` (and DXR 1.1 inline ray tracing) lets any shader stage, compute included, traverse an acceleration structure with a loop of query steps and read the committed hit. Reference: Khronos, VK_KHR_ray_query, 2020. Godot 4.7.2's `RenderingDevice`, as released, does not expose it, which is why software traversal matters there ([Godot integration](godot_integration.md)); upstream PR #122051, merged on 2026-08-04 for 4.8, requests the extension on Vulkan ([Godot ray tracing](../sources/2026_godot_ray_tracing_status.md#upstream-pull-requests), [RenderingDevice notes](../../docs/rendering_device.md#ray-tracing)). Inline queries suit one simple shading model and pipelines several: Microsoft's DXR 1.1 post and NVIDIA's best practices say so without numbers, NVIDIA warns that query objects cost registers and occupancy, and Evolve found no major difference on an RTX 5070 Ti and an Arc B580 but pipelines much faster on an RX 9070 XT; no measurement compares the two on Turing ([hardware ray tracing](../sources/2026_hardware_ray_tracing_rates.md#inline-ray-queries-against-pipelines)).
 
 ### Aila and Laine traversal
 

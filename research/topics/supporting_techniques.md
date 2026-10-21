@@ -251,7 +251,7 @@ Intel Open Image Denoise, an Apache-2.0 library of pretrained neural denoisers t
 
 ### DLSS Ray Reconstruction
 
-NVIDIA's neural denoiser in DLSS 3.5 (2023), which replaces hand-tuned ray-tracing denoisers using temporal and spatial data; no algorithm is published. Used by [Solari](../sources/2025_jms55_bevy_solari.md).
+NVIDIA's neural denoiser in DLSS 3.5 (2023), which replaces hand-tuned ray-tracing denoisers using temporal and spatial data; no algorithm is published. Used by [Solari](../sources/2025_jms55_bevy_solari.md). Version 4.5 (DLSS SDK 310.9.1, 2026-09-08) is a second-generation transformer, Preset F, that runs on every RTX generation; on Turing and Ampere it costs up to 25 to 29% of the frame rate for lack of FP8. NVIDIA documents nothing on its bias or convergence against a converged image ([DLSS Ray Reconstruction 4.5](../sources/2026_dlss_ray_reconstruction_4_5.md)).
 
 ### Pull-push
 

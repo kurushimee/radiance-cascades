@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://p2dvduo3v5xw"
+path="res://.godot/imported/cshd_accumulate.glsl-68da697cacc3e4ccfac2137d2abcb2bb.res"
+
+[deps]
+
+source_file="res://src/reference/cshd_accumulate.glsl"
+dest_files=["res://.godot/imported/cshd_accumulate.glsl-68da697cacc3e4ccfac2137d2abcb2bb.res"]
+
+[params]
+

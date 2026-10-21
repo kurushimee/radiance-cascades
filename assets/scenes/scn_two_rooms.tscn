@@ -7,9 +7,19 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
+[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
 
 [sub_resource type="Environment" id="environment"]
 background_mode = 1
+tonemap_mode = 4
+tonemap_exposure = 0.45
+ssr_enabled = true
+
+[sub_resource type="Environment" id="environment_RoomB"]
+background_mode = 1
+tonemap_mode = 4
+tonemap_exposure = 1.8
+ssr_enabled = true
 
 [sub_resource type="CompositorEffect" id="gi_effect"]
 script = ExtResource("gi_effect_script")
@@ -19,31 +29,19 @@ compositor_effects = Array[CompositorEffect]([SubResource("gi_effect")])
 
 [sub_resource type="Animation" id="animated"]
 resource_name = "animated"
-length = 4
+length = 8
 loop_mode = 1
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Lamp:visible")
+tracks/0/path = NodePath("Model/light:mesh:surface_0/material:shader_parameter/emission")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
-"times": PackedFloat32Array(0, 2),
-"transitions": PackedFloat32Array(1, 1),
-"update": 1,
-"values": [true, false]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Model/fixture_lamp:mesh:surface_0/material:shader_parameter/emission_energy")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0, 2),
-"transitions": PackedFloat32Array(1, 1),
-"update": 1,
-"values": [10, 0.0]
+"times": PackedFloat32Array(0, 2, 4, 6, 8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 1), Color(0.854306, 1, 0.665185, 1), Color(0.665185, 1, 1, 1), Color(0.854306, 0.665185, 1, 1), Color(1, 1, 1, 1)]
 }
 
 [sub_resource type="AnimationLibrary" id="lighting"]
@@ -61,13 +59,11 @@ compositor = SubResource("compositor")
 
 [node name="GI" type="Node" parent="."]
 script = ExtResource("gi")
-shaders = Array[Shader]([ExtResource("shd_gi"), ExtResource("shd_gi_double_sided"), ExtResource("shd_gi_alpha_tested"), ExtResource("shd_gi_double_sided_alpha_tested")])
-fixture_materials = PackedStringArray("fixture_lamp")
-
-[node name="Lamp" type="OmniLight3D" parent="."]
-position = Vector3(6.125, 6.8, 4.125)
-shadow_enabled = true
-omni_range = 10.0
+one_sided_shader = ExtResource("shd_gi")
+two_sided_shader = ExtResource("shd_gi_double_sided")
+alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
+two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
+triangles_shader = ExtResource("triangles_shader")
 
 [node name="RoomA" type="Camera3D" parent="."]
 position = Vector3(0.8, 1.7, 7.2)
@@ -78,6 +74,7 @@ current = true
 [node name="RoomB" type="Camera3D" parent="."]
 position = Vector3(7.2, 1.7, 0.8)
 rotation = Vector3(-0.0448599, 2.37207, 0)
+environment = SubResource("environment_RoomB")
 fov = 70
 
 [node name="Lighting" type="AnimationPlayer" parent="."]

@@ -6,3 +6,5 @@
 *.rdc
 *.unwrap_cache
 /assets/downloaded/
+/references/*
+!/references/.gdignore

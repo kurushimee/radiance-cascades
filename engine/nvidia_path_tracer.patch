@@ -1,0 +1,543 @@
+diff --git a/doc/classes/Environment.xml b/doc/classes/Environment.xml
+index 8dac1c1..4e70bf1 100644
+--- a/doc/classes/Environment.xml
++++ b/doc/classes/Environment.xml
+@@ -213,7 +213,7 @@
+ 			[b]Note:[/b] Path tracing is mutually exclusive with rasterization-based rendering. When enabled, features such as SDFGI, screen-space reflections, and shadow maps are bypassed.
+ 		</member>
+ 		<member name="pathtracing_max_bounces" type="int" setter="set_pathtracing_max_bounces" getter="get_pathtracing_max_bounces" default="3">
+-			Maximum number of times a ray is allowed to bounce off surfaces before it is terminated. Higher values produce more accurate indirect lighting and inter-reflections at the cost of GPU performance. A value of [code]0[/code] produces direct illumination only.
++			Maximum number of times a ray is allowed to bounce off surfaces before it is terminated. Higher values produce more accurate indirect lighting and inter-reflections at the cost of GPU performance. From the fourth bounce on, Russian roulette ends paths early without biasing their light. The limit is [code]255[/code].
+ 			[b]Note:[/b] Only has an effect when [member pathtracing_enabled] is [code]true[/code].
+ 		</member>
+ 		<member name="pathtracing_samples_per_pixel" type="int" setter="set_pathtracing_samples_per_pixel" getter="get_pathtracing_samples_per_pixel" default="1">
+@@ -549,6 +549,9 @@
+ 		<constant name="RT_DEBUG_BRDF_REJECTION" value="22" enum="PathtracingDebugMode">
+ 			Displays rays that were rejected by the BRDF sampling process, useful for debugging importance sampling issues.
+ 		</constant>
++		<constant name="RT_DEBUG_INDIRECT_IRRADIANCE" value="23" enum="PathtracingDebugMode">
++			Displays the indirect irradiance divided by pi at each primary hit: the primary hit is treated as a white diffuse surface that neither emits nor samples lights, and the rest of the path is traced as usual.
++		</constant>
+ 		<constant name="FOG_MODE_EXPONENTIAL" value="0" enum="FogMode">
+ 			Use a physically-based fog model defined primarily by fog density.
+ 		</constant>
+diff --git a/scene/resources/environment.cpp b/scene/resources/environment.cpp
+index 436cc03..4ae7e60 100644
+--- a/scene/resources/environment.cpp
++++ b/scene/resources/environment.cpp
+@@ -633,7 +633,7 @@ int Environment::get_pathtracing_samples_per_pixel() const {
+ }
+ 
+ void Environment::set_pathtracing_max_bounces(int p_bounces) {
+-	pathtracing_max_bounces = CLAMP(p_bounces, 1, 8);
++	pathtracing_max_bounces = CLAMP(p_bounces, 1, 255);
+ 	_update_pathtracing();
+ }
+ 
+@@ -1503,9 +1503,9 @@ void Environment::_bind_methods() {
+ 
+ 	ADD_GROUP("Pathtracing", "pathtracing_");
+ 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "pathtracing_enabled", PROPERTY_HINT_GROUP_ENABLE), "set_pathtracing_enabled", "is_pathtracing_enabled");
+-	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_debug_mode", PROPERTY_HINT_ENUM, "Disabled,Mirror Reflection,Geometry Normals,Final Normals,Normal Map,Tangent,Bitangent,UV,Albedo,ORM,Diffuse Albedo,Specular Albedo,Normal+Roughness,Specular Hit Dist,Metalness,Roughness,View Normals,Diffuse+Specular,Fresnel F0,Front/Back Face,Depth,Emissive,BRDF Rejection"), "set_pathtracing_debug_mode", "get_pathtracing_debug_mode");
++	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_debug_mode", PROPERTY_HINT_ENUM, "Disabled,Mirror Reflection,Geometry Normals,Final Normals,Normal Map,Tangent,Bitangent,UV,Albedo,ORM,Diffuse Albedo,Specular Albedo,Normal+Roughness,Specular Hit Dist,Metalness,Roughness,View Normals,Diffuse+Specular,Fresnel F0,Front/Back Face,Depth,Emissive,BRDF Rejection,Indirect Irradiance"), "set_pathtracing_debug_mode", "get_pathtracing_debug_mode");
+ 	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_samples_per_pixel", PROPERTY_HINT_RANGE, "1,16,1"), "set_pathtracing_samples_per_pixel", "get_pathtracing_samples_per_pixel");
+-	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_max_bounces", PROPERTY_HINT_RANGE, "1,8,1"), "set_pathtracing_max_bounces", "get_pathtracing_max_bounces");
++	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_max_bounces", PROPERTY_HINT_RANGE, "1,255,1"), "set_pathtracing_max_bounces", "get_pathtracing_max_bounces");
+ 	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_denoiser", PROPERTY_HINT_ENUM, "None,DLSS Ray Reconstruction"), "set_pathtracing_denoiser", "get_pathtracing_denoiser");
+ 
+ 	// Glow
+@@ -1727,6 +1727,7 @@ void Environment::_bind_methods() {
+ 	BIND_ENUM_CONSTANT(RT_DEBUG_DEPTH);
+ 	BIND_ENUM_CONSTANT(RT_DEBUG_EMISSIVE);
+ 	BIND_ENUM_CONSTANT(RT_DEBUG_BRDF_REJECTION);
++	BIND_ENUM_CONSTANT(RT_DEBUG_INDIRECT_IRRADIANCE);
+ 
+ 	BIND_ENUM_CONSTANT(FOG_MODE_EXPONENTIAL);
+ 	BIND_ENUM_CONSTANT(FOG_MODE_DEPTH);
+diff --git a/scene/resources/environment.h b/scene/resources/environment.h
+index 4efbe75..4179b5b 100644
+--- a/scene/resources/environment.h
++++ b/scene/resources/environment.h
+@@ -101,6 +101,7 @@ public:
+ 		RT_DEBUG_DEPTH,
+ 		RT_DEBUG_EMISSIVE,
+ 		RT_DEBUG_BRDF_REJECTION,
++		RT_DEBUG_INDIRECT_IRRADIANCE,
+ 		RT_DEBUG_MAX
+ 	};
+ 
+diff --git a/servers/rendering/dummy/rasterizer_scene_dummy.h b/servers/rendering/dummy/rasterizer_scene_dummy.h
+index ff1965f..69b2f48 100644
+--- a/servers/rendering/dummy/rasterizer_scene_dummy.h
++++ b/servers/rendering/dummy/rasterizer_scene_dummy.h
+@@ -66,6 +66,7 @@ public:
+ 		virtual void set_lightmap_capture(const Color *p_sh9) override {}
+ 		virtual void set_instance_shader_uniforms_offset(int32_t p_offset) override {}
+ 		virtual void set_cast_double_sided_shadows(bool p_enable) override {}
++		virtual void set_cast_shadows(bool p_enable) override {}
+ 
+ 		virtual Transform3D get_transform() override { return Transform3D(); }
+ 		virtual AABB get_aabb() override { return AABB(); }
+diff --git a/servers/rendering/renderer_geometry_instance.cpp b/servers/rendering/renderer_geometry_instance.cpp
+index 69906c8..aec1c85 100644
+--- a/servers/rendering/renderer_geometry_instance.cpp
++++ b/servers/rendering/renderer_geometry_instance.cpp
+@@ -134,6 +134,12 @@ void RenderGeometryInstanceBase::set_cast_double_sided_shadows(bool p_enable) {
+ 	_mark_dirty();
+ }
+ 
++void RenderGeometryInstanceBase::set_cast_shadows(bool p_enable) {
++	data->cast_shadows = p_enable;
++
++	_mark_dirty();
++}
++
+ void RenderGeometryInstanceBase::reset_motion_vectors() {
+ }
+ 
+diff --git a/servers/rendering/renderer_geometry_instance.h b/servers/rendering/renderer_geometry_instance.h
+index 512fb06..c6e6980 100644
+--- a/servers/rendering/renderer_geometry_instance.h
++++ b/servers/rendering/renderer_geometry_instance.h
+@@ -61,6 +61,7 @@ public:
+ 	virtual void set_lightmap_capture(const Color *p_sh9) = 0;
+ 	virtual void set_instance_shader_uniforms_offset(int32_t p_offset) = 0;
+ 	virtual void set_cast_double_sided_shadows(bool p_enable) = 0;
++	virtual void set_cast_shadows(bool p_enable) = 0;
+ 
+ 	virtual void reset_motion_vectors() = 0;
+ 
+@@ -128,6 +129,7 @@ public:
+ 		bool use_baked_light = false;
+ 		bool use_dynamic_gi = false;
+ 		bool cast_double_sided_shadows = false;
++		bool cast_shadows = true;
+ 		bool dirty_dependencies = false;
+ 
+ 		DependencyTracker dependency_tracker;
+@@ -151,6 +153,7 @@ public:
+ 	virtual void set_use_dynamic_gi(bool p_enable) override;
+ 	virtual void set_instance_shader_uniforms_offset(int32_t p_offset) override;
+ 	virtual void set_cast_double_sided_shadows(bool p_enable) override;
++	virtual void set_cast_shadows(bool p_enable) override;
+ 
+ 	virtual void reset_motion_vectors() override;
+ 
+diff --git a/servers/rendering/renderer_rd/effects/dlss.cpp b/servers/rendering/renderer_rd/effects/dlss.cpp
+index de6aeba..34d81c3 100644
+--- a/servers/rendering/renderer_rd/effects/dlss.cpp
++++ b/servers/rendering/renderer_rd/effects/dlss.cpp
+@@ -145,11 +145,36 @@ public:
+ static Vector<unsigned int> g_dlss_freeViewportIndices;
+ static unsigned int g_dlss_viewportIndex = 1;
+ 
++// A context that reused a viewport handle would inherit the feature instances left on it, so a handle is freed before
++// it is reused, once the GPU is done with the frames that used it.
++struct DLSSRetiredViewport {
++	unsigned int viewport;
++	uint64_t frame;
++};
++static Vector<DLSSRetiredViewport> g_dlss_retiredViewports;
++
++static void dlss_free_retired_viewports() {
++	const uint64_t frame = RD::get_singleton()->get_frames_drawn();
++	for (int i = g_dlss_retiredViewports.size() - 1; i >= 0; i--) {
++		const DLSSRetiredViewport retired = g_dlss_retiredViewports[i];
++		if (frame <= retired.frame + RD::get_singleton()->get_frame_delay()) {
++			continue;
++		}
++		if (StreamlineContext::get().slFreeResources != nullptr) {
++			StreamlineContext::get().slFreeResources(sl::kFeatureDLSS, retired.viewport);
++			StreamlineContext::get().slFreeResources(sl::kFeatureDLSS_RR, retired.viewport);
++		}
++		g_dlss_freeViewportIndices.push_back(retired.viewport);
++		g_dlss_retiredViewports.remove_at(i);
++	}
++}
++
+ DLSSContextInner::~DLSSContextInner() {
+-	g_dlss_freeViewportIndices.push_back((unsigned int)viewport);
++	g_dlss_retiredViewports.push_back({ (unsigned int)viewport, RD::get_singleton()->get_frames_drawn() });
+ }
+ 
+ DLSSContextInner::DLSSContextInner() {
++	dlss_free_retired_viewports();
+ 	if (g_dlss_freeViewportIndices.size() == 0) {
+ 		g_dlss_freeViewportIndices.push_back(g_dlss_viewportIndex++);
+ 	}
+diff --git a/servers/rendering/renderer_rd/forward_clustered/render_raytracing.cpp b/servers/rendering/renderer_rd/forward_clustered/render_raytracing.cpp
+index 4aae528..badcdf1 100644
+--- a/servers/rendering/renderer_rd/forward_clustered/render_raytracing.cpp
++++ b/servers/rendering/renderer_rd/forward_clustered/render_raytracing.cpp
+@@ -2619,7 +2619,7 @@ RTViewportState *RenderRaytracing::build_tlas(const RenderDataRD *p_render_data,
+ 				}
+ 			}
+ 			instance_flags.push_back(inst_flags);
+-			instance_masks.push_back(0xFF);
++			instance_masks.push_back(surf->owner->data->cast_shadows ? 0xFF : SceneShaderRaytracing::RT_INSTANCE_MASK_CAMERA_ONLY);
+ 
+ 			surf = surf->next;
+ 		}
+diff --git a/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.cpp b/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.cpp
+index 65f044a..aed2c77 100644
+--- a/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.cpp
++++ b/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.cpp
+@@ -652,7 +652,6 @@ bool SceneShaderRaytracing::is_hg_ready_in_bundle(uint32_t p_slot_index, uint32_
+ uint32_t SceneShaderRaytracing::compute_rt_flags(RID p_environment, bool p_fog_enabled) {
+ 	uint32_t flags = RT_FLAG_NONE;
+ 	uint32_t sample_count = 1;
+-	uint32_t max_bounces = 3;
+ 
+ 	if (p_environment.is_valid()) {
+ 		RendererEnvironmentStorage *env_storage = RendererEnvironmentStorage::get_singleton();
+@@ -666,7 +665,6 @@ uint32_t SceneShaderRaytracing::compute_rt_flags(RID p_environment, bool p_fog_e
+ 		}
+ 
+ 		sample_count = MAX(1, env_storage->environment_get_pathtracing_samples_per_pixel(p_environment));
+-		max_bounces = CLAMP(env_storage->environment_get_pathtracing_max_bounces(p_environment), 1, 8);
+ 		if (env_storage->environment_get_pathtracing_denoiser(p_environment) == RSE::PT_DENOISER_DLSS_RAY_RECONSTRUCTION) {
+ 			flags |= RT_FLAG_DLSS_RR_ENABLED;
+ 		}
+@@ -680,7 +678,7 @@ uint32_t SceneShaderRaytracing::compute_rt_flags(RID p_environment, bool p_fog_e
+ 		flags |= RT_FLAG_SER_ENABLED;
+ 	}
+ 
+-	return rt_flags_pack(flags, sample_count, max_bounces);
++	return rt_flags_pack(flags, sample_count);
+ }
+ 
+ SceneShaderRaytracing *SceneShaderRaytracing::get_singleton() {
+diff --git a/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.h b/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.h
+index a05e26f..691aa37 100644
+--- a/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.h
++++ b/servers/rendering/renderer_rd/forward_clustered/scene_shader_raytracing.h
+@@ -84,14 +84,15 @@ public:
+ 	constexpr static uint32_t RT_SAMPLE_COUNT_SHIFT = 21;
+ 	constexpr static uint32_t RT_SAMPLE_COUNT_MASK = 0xFF;
+ 
+-	constexpr static uint32_t RT_MAX_BOUNCES_SHIFT = 29;
+-	constexpr static uint32_t RT_MAX_BOUNCES_MASK = 0x7;
+-
+ 	// RT pipeline limits (must match GLSL payload/hit attribute struct sizes).
+ 	// 1: primary/bounce from raygen
+ 	// 2: shadow ray from closest_hit (NEE)
+ 	constexpr static uint32_t RT_MAX_RECURSION_DEPTH = 2;
+ 
++	// Must match RT_INSTANCE_MASK_CAMERA_ONLY in raytracing_inc.glsl: instances that cast no shadows, seen only by
++	// primary rays.
++	constexpr static uint32_t RT_INSTANCE_MASK_CAMERA_ONLY = 0x01;
++
+ 	// Pathtracing parameter indices for the float[16] params buffer.
+ 	// Must match RT_PARAM_* defines in raytracing_inc.glsl.
+ 	static constexpr int RT_PARAM_VIS_MODE = 0;
+@@ -102,11 +103,9 @@ public:
+ 	static constexpr int RT_PARAM_LIGHT_COUNT = 14;
+ 	static constexpr int RT_PARAM_FRAME_INDEX = 15;
+ 
+-	static inline uint32_t rt_flags_pack(uint32_t p_flags, uint32_t p_sample_count, uint32_t p_max_bounces) {
++	static inline uint32_t rt_flags_pack(uint32_t p_flags, uint32_t p_sample_count) {
+ 		uint32_t result = p_flags;
+ 		result |= (p_sample_count & RT_SAMPLE_COUNT_MASK) << RT_SAMPLE_COUNT_SHIFT;
+-		// Max bounces is offset by 1 (0=1 bounce, 7=8 bounces)
+-		result |= (MAX(1u, MIN(8u, p_max_bounces)) - 1u) << RT_MAX_BOUNCES_SHIFT;
+ 		return result;
+ 	}
+ 
+diff --git a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl
+index b3c2e4d..7ad6912 100644
+--- a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl
++++ b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl
+@@ -438,6 +438,30 @@ void debug_visualize(
+ // SHADE AND BOUNCE
+ // ============================================================================
+ 
++#ifdef RT_DEBUG_ENABLED
++/// Irradiance view at the primary hit: a white Lambertian surface, cosine-sampled, so the sample weight is one and
++/// the path's radiance estimates the indirect irradiance over pi. The vertex normal, without normal mapping, matches
++/// a lightmap texel's.
++void irradiance_bounce(HitData h, PathState ps) {
++#ifdef DLSS_RR_ENABLED
++	if (is_sample_zero(ps.packed_bounces_flags)) {
++		ivec2 pixel = ivec2(gl_LaunchIDEXT.xy);
++		imageStore(dlss_rr_diffuse_albedo, pixel, vec4(1.0));
++		imageStore(dlss_rr_specular_albedo, pixel, vec4(vec3(0.04), 1.0));
++		imageStore(dlss_rr_normal_roughness, pixel, vec4(h.geometry_normal, 1.0));
++		imageStore(dlss_rr_specular_hit_dist, pixel, vec4(-1.0));
++	}
++#endif
++
++	vec4 to_normal_space = getRotationToZAxis(h.geometry_normal);
++	ps.next_ray_dir = normalize(rotatePoint(invertRotation(to_normal_space), sampleHemisphere(rand2(ps.rng_state))));
++	ps.packed_bounces_flags = inc_diffuse_bounce(ps.packed_bounces_flags);
++	ps.hit_t = gl_HitTEXT;
++	ps.offset_normal = h.geometry_normal;
++	path_pack(payload, ps);
++}
++#endif // RT_DEBUG_ENABLED
++
+ /// Production shading: emissive + NEE direct lighting + BRDF importance sampling + next bounce.
+ /// Also handles DLSS-RR G-buffer output on primary ray.
+ void shade_and_bounce(HitData h, MaterialResult m) {
+@@ -455,11 +479,18 @@ void shade_and_bounce(HitData h, MaterialResult m) {
+ 	// Environment fog for this ray segment (before surface contribution).
+ 	apply_segment_fog(gl_HitTEXT, ps.radiance, ps.throughput);
+ 
++#ifdef RT_DEBUG_ENABLED
++	if (int(get_rt_param(RT_PARAM_VIS_MODE)) == RT_VIS_IRRADIANCE && total_bounces == 0u) {
++		irradiance_bounce(h, ps);
++		return;
++	}
++#endif // RT_DEBUG_ENABLED
++
+ 	// Emissive contribution.
+ 	ps.radiance += ps.throughput * m.emissive;
+ 
+ 	// Bounce limit check.
+-	if (total_bounces >= RT_GET_MAX_BOUNCES() || diffuse_bounces >= MAX_DIFFUSE_BOUNCES) {
++	if (total_bounces >= RT_GET_MAX_BOUNCES()) {
+ 		ps.packed_bounces_flags = set_path_terminated(ps.packed_bounces_flags);
+ 		path_pack(payload, ps);
+ 		return;
+@@ -501,7 +532,7 @@ void shade_and_bounce(HitData h, MaterialResult m) {
+ 
+ 			rayQueryEXT spec_rq;
+ 			rayQueryInitializeEXT(spec_rq, tlas, RT_RAY_FLAGS | gl_RayFlagsTerminateOnFirstHitEXT,
+-					0xFF, spec_origin, 0.001, spec_dir, 10000.0);
++					RT_RAY_MASK_SECONDARY, spec_origin, 0.001, spec_dir, 10000.0);
+ 			while (rayQueryProceedEXT(spec_rq)) {
+ 				if (rayQueryGetIntersectionTypeEXT(spec_rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT) {
+ 					if (ray_query_alpha_test(
+@@ -578,6 +609,16 @@ void shade_and_bounce(HitData h, MaterialResult m) {
+ 
+ 	ps.throughput *= brdf_weight;
+ 
++	if (total_bounces >= RT_ROULETTE_START_BOUNCE) {
++		float survival = min(max(ps.throughput.r, max(ps.throughput.g, ps.throughput.b)), RT_ROULETTE_MAX_SURVIVAL);
++		if (rand(ps.rng_state) >= survival) {
++			ps.packed_bounces_flags = set_path_terminated(ps.packed_bounces_flags);
++			path_pack(payload, ps);
++			return;
++		}
++		ps.throughput /= survival;
++	}
++
+ 	if (brdfType == DIFFUSE_TYPE) {
+ 		ps.packed_bounces_flags = inc_diffuse_bounce(ps.packed_bounces_flags);
+ 	} else {
+diff --git a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_common_inc.glsl b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_common_inc.glsl
+index ec1485e..65df48d 100644
+--- a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_common_inc.glsl
++++ b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_common_inc.glsl
+@@ -2,7 +2,7 @@
+ // Include AFTER raytracing_inc.glsl and scene_data_inc.glsl.
+ // The includer must set exactly one of RT_STAGE_{RAYGEN,MISS,CLOSEST_HIT,ANY_HIT,INTERSECTION}.
+ 
+-// Specialization constant (bits 0-20: flags, 21-28: samples, 29-31: bounces).
++// Specialization constant (bits 0-20: flags, 21-28: samples).
+ layout(constant_id = 0) const uint RT_FLAGS = 0u;
+ 
+ #define RT_FLAG_DLSS_RR_ENABLED (1u << 1)
+@@ -12,9 +12,8 @@ layout(constant_id = 0) const uint RT_FLAGS = 0u;
+ #define RT_SAMPLE_COUNT_MASK 0xFFu
+ #define RT_GET_SAMPLE_COUNT() max(1u, (RT_FLAGS >> RT_SAMPLE_COUNT_SHIFT) & RT_SAMPLE_COUNT_MASK)
+ 
+-#define RT_MAX_BOUNCES_SHIFT 29u
+-#define RT_MAX_BOUNCES_MASK 0x7u
+-#define RT_GET_MAX_BOUNCES() (((RT_FLAGS >> RT_MAX_BOUNCES_SHIFT) & RT_MAX_BOUNCES_MASK) + 1u)
++// A parameter rather than a specialization constant, so that the cap can reach the 8-bit bounce counter's limit.
++#define RT_GET_MAX_BOUNCES() uint(get_rt_param(RT_PARAM_MAX_BOUNCES))
+ 
+ // Cull back faces by default; double-sided instances override via CULL_DISABLE flag.
+ #define RT_RAY_FLAGS gl_RayFlagsCullBackFacingTrianglesEXT
+diff --git a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_custom_fragment_inc.glsl b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_custom_fragment_inc.glsl
+index e8fde62..d057e7e 100644
+--- a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_custom_fragment_inc.glsl
++++ b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_custom_fragment_inc.glsl
+@@ -85,6 +85,10 @@ float alpha_scissor_threshold = 0.0;
+ float alpha_hash_scale = 1.0;
+ float alpha_antialiasing_edge = 0.0;
+ vec2 alpha_texture_coordinate = vec2(0.0);
++// Overrides of the rasterizer's ambient light, which the path tracer ignores, declared so that shaders writing
++// RADIANCE or IRRADIANCE compile.
++vec4 custom_radiance = vec4(0.0);
++vec4 custom_irradiance = vec4(0.0);
+ 
+ {
+ 	/* RT_CUSTOM_FRAGMENT_CODE */
+diff --git a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl
+index ead637e..2220688 100644
+--- a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl
++++ b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl
+@@ -130,10 +130,22 @@ bool is_path_terminated(uint packed) {
+ 	return (packed & PATH_TERMINATED_FLAG) != 0u;
+ }
+ 
+-// Bounce limits
+-#define MAX_DIFFUSE_BOUNCES 2u
+ #define MAX_DENOISER_SPECULAR_HIT_THRESHOLD 0.25
+ 
++// Paths face Russian roulette from this bounce on, so deep paths end without losing their light on average.
++#define RT_ROULETTE_START_BOUNCE 3u
++#define RT_ROULETTE_MAX_SURVIVAL 0.95
++
++// Debug view in which the primary hit is a white diffuse surface that neither emits nor samples lights, so a path
++// estimates the indirect irradiance over pi that arrives there.
++#define RT_VIS_IRRADIANCE 23
++
++// Instance masks: camera-only instances, such as a lamp's fixture, are hidden from every ray past the primary one,
++// so they neither shadow their own light nor add their emission to the light's.
++#define RT_INSTANCE_MASK_CAMERA_ONLY 0x01u
++#define RT_RAY_MASK_PRIMARY 0xFFu
++#define RT_RAY_MASK_SECONDARY 0xFEu
++
+ // ============================================================================
+ // CONSTANTS
+ // ============================================================================
+@@ -156,9 +168,9 @@ uint pcg_hash(uint seed) {
+ 
+ /// Initialize RNG state with improved mixing to eliminate patterns
+ uint init_rng(uvec2 pixel, uint frame, uint sample_idx) {
+-	// Use Wang hash for better mixing - eliminates linear patterns
+-	uint seed = pixel.x + pixel.y * 65536u + frame * 1000000u + sample_idx * 100000000u;
+-	return pcg_hash(seed);
++	// The frame and sample are hashed before they meet the pixel: a linear seed gives two pixels the same seeds a
++	// fixed number of frames apart, which correlates their means over many frames.
++	return pcg_hash((pixel.x + pixel.y * 65536u) ^ pcg_hash(frame * 256u + sample_idx));
+ }
+ 
+ /// Random float in [0, 1)
+@@ -176,6 +188,8 @@ vec2 rand2(inout uint state) {
+ // RAY ORIGIN OFFSET (prevents self-intersection)
+ // Wachter-Binder method: offsets in integer float representation so the
+ // displacement scales naturally with position magnitude.
++// Rays leave the offset origin with a minimum distance of 0: any larger one would let them pass
++// through a surface that close, such as the other side of a corner.
+ // ============================================================================
+ float _offset_component(float p, float n_comp, int of_comp) {
+ 	const float origin = 1.0 / 32.0;
+diff --git a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_lights_inc.glsl b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_lights_inc.glsl
+index a3b1b3d..a17b795 100644
+--- a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_lights_inc.glsl
++++ b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_lights_inc.glsl
+@@ -134,7 +134,7 @@ float lights_get_attenuation(LightSample ls, float inv_max_range, float decay) {
+ 	}
+ 
+ 	float distance = sqrt(ls.distance_sq);
+-	float atten = min(pow(max(distance, 0.0001), -decay), 1.0);
++	float atten = pow(max(distance, 0.0001), -decay);
+ 
+ 	// Windowed falloff if range is finite (inv_max_range >= 0).
+ 	if (inv_max_range >= 0.0) {
+@@ -194,7 +194,7 @@ bool lights_trace_shadow_ray(vec3 origin, vec3 direction, float max_dist, inout
+ 	rayQueryEXT shadow_rq;
+ 	rayQueryInitializeEXT(shadow_rq, tlas,
+ 			gl_RayFlagsTerminateOnFirstHitEXT,
+-			0xFF, origin, 0.001, direction, max_dist - 0.001);
++			RT_RAY_MASK_SECONDARY, origin, 0.0, direction, max_dist - 0.001);
+ 
+ 	while (rayQueryProceedEXT(shadow_rq)) {
+ 		if (rayQueryGetIntersectionTypeEXT(shadow_rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT) {
+@@ -214,8 +214,8 @@ bool lights_trace_shadow_ray(vec3 origin, vec3 direction, float max_dist, inout
+ 	hitObjectEXT hitObject;
+ 	hitObjectTraceRayEXT(hitObject, tlas,
+ 			gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT,
+-			0xFF, 0, 0, 0,
+-			origin, 0.001, direction, max_dist - 0.001, 0);
++			RT_RAY_MASK_SECONDARY, 0, 0, 0,
++			origin, 0.0, direction, max_dist - 0.001, 0);
+ 
+ 	return !(hitObjectIsHitEXT(hitObject));
+ #else
+@@ -236,8 +236,8 @@ bool lights_trace_shadow_ray(vec3 origin, vec3 direction, float max_dist, inout
+ 
+ 	traceRayEXT(tlas,
+ 			gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsSkipClosestHitShaderEXT,
+-			0xFF, 0, 0, 0,
+-			origin, 0.001, direction, max_dist - 0.001, 0);
++			RT_RAY_MASK_SECONDARY, 0, 0, 0,
++			origin, 0.0, direction, max_dist - 0.001, 0);
+ 
+ 	// Unpack to check visibility (miss shader packs radiance = 1.0).
+ 	shadow_ps = path_unpack(payload);
+diff --git a/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl b/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl
+index 117b266..890e7bd 100644
+--- a/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl
++++ b/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl
+@@ -48,7 +48,7 @@ void main() {
+ 	// Accumulate multiple samples per pixel
+ 	vec3 total_radiance = vec3(0.0);
+ 
+-	const uint max_bounces = RT_GET_MAX_BOUNCES();
++	uint max_bounces = RT_GET_MAX_BOUNCES();
+ 
+ 	// TODO: when we have a spp > 0 the first raycast is always identical,
+ 	// we should move it out of the loop
+@@ -65,10 +65,11 @@ void main() {
+ 
+ 		[[dont_unroll]] for (uint bounce = 0u; bounce <= max_bounces; bounce++) {
+ 			path_pack(payload, ps);
++			const uint ray_mask = (bounce == 0u) ? RT_RAY_MASK_PRIMARY : RT_RAY_MASK_SECONDARY;
+ 
+ #ifdef USE_SER
+ 			hitObjectEXT hitObject;
+-			hitObjectTraceRayEXT(hitObject, tlas, RT_RAY_FLAGS, 0xFF, 0, 0, 0, ray_origin, 0.001, ray_dir, 10000.0, 0);
++			hitObjectTraceRayEXT(hitObject, tlas, RT_RAY_FLAGS, ray_mask, 0, 0, 0, ray_origin, 0.0, ray_dir, 10000.0, 0);
+ 
+ 			// Reorder with a coherence hint that has 8 bits
+ 			uint hint = 0;
+@@ -80,7 +81,7 @@ void main() {
+ 
+ 			hitObjectExecuteShaderEXT(hitObject, 0);
+ #else
+-			traceRayEXT(tlas, RT_RAY_FLAGS, 0xFF, 0, 0, 0, ray_origin, 0.001, ray_dir, 10000.0, 0);
++			traceRayEXT(tlas, RT_RAY_FLAGS, ray_mask, 0, 0, 0, ray_origin, 0.0, ray_dir, 10000.0, 0);
+ #endif
+ 
+ 			ps = path_unpack(payload);
+@@ -237,7 +238,7 @@ void main() {
+ 		int VIS_MODE = int(get_rt_param(RT_PARAM_VIS_MODE));
+ 		if (VIS_MODE == 20) {
+ 			ps.radiance = vec3(1.0);
+-		} else if (VIS_MODE == 0) {
++		} else if (VIS_MODE == 0 || VIS_MODE == RT_VIS_IRRADIANCE) {
+ 			ps.radiance += ps.throughput * sky_color;
+ 		} else {
+ 			ps.radiance = sky_color;
+@@ -393,7 +394,7 @@ void main() {
+ #ifdef RT_DEBUG_ENABLED
+ 	{
+ 		int VIS_MODE = int(get_rt_param(RT_PARAM_VIS_MODE));
+-		if (VIS_MODE != 0) {
++		if (VIS_MODE != 0 && VIS_MODE != RT_VIS_IRRADIANCE) {
+ 			vec3 V = -gl_WorldRayDirectionEXT;
+ 			float NdotV = max(dot(m.normal, V), 0.0001);
+ 			vec3 orm = vec3(1.0, m.roughness, m.metalness);
+@@ -445,7 +446,7 @@ void main() {
+ #ifdef RT_DEBUG_ENABLED
+ 	{
+ 		int VIS_MODE = int(get_rt_param(RT_PARAM_VIS_MODE));
+-		if (VIS_MODE != 0) {
++		if (VIS_MODE != 0 && VIS_MODE != RT_VIS_IRRADIANCE) {
+ 			vec3 V = -gl_WorldRayDirectionEXT;
+ 			float NdotV = max(dot(m.normal, V), 0.0001);
+ 			debug_visualize(VIS_MODE, h.geometry_normal, final_normal, tangent_space_normal,
+diff --git a/servers/rendering/renderer_scene_cull.cpp b/servers/rendering/renderer_scene_cull.cpp
+index c8d5f52..f5ed9aa 100644
+--- a/servers/rendering/renderer_scene_cull.cpp
++++ b/servers/rendering/renderer_scene_cull.cpp
+@@ -739,6 +739,7 @@ void RendererSceneCull::instance_set_base(RID p_instance, RID p_base) {
+ 				geom->geometry_instance->set_use_lightmap(RID(), instance->lightmap_uv_scale, instance->lightmap_slice_index);
+ 				geom->geometry_instance->set_instance_shader_uniforms_offset(instance->instance_uniforms.location());
+ 				geom->geometry_instance->set_cast_double_sided_shadows(instance->cast_shadows == RSE::SHADOW_CASTING_SETTING_DOUBLE_SIDED);
++				geom->geometry_instance->set_cast_shadows(instance->cast_shadows != RSE::SHADOW_CASTING_SETTING_OFF);
+ 				if (instance->lightmap_sh.size() == 9) {
+ 					geom->geometry_instance->set_lightmap_capture(instance->lightmap_sh.ptr());
+ 				}
+@@ -1368,6 +1369,7 @@ void RendererSceneCull::instance_geometry_set_cast_shadows_setting(RID p_instanc
+ 		ERR_FAIL_NULL(geom->geometry_instance);
+ 
+ 		geom->geometry_instance->set_cast_double_sided_shadows(instance->cast_shadows == RSE::SHADOW_CASTING_SETTING_DOUBLE_SIDED);
++		geom->geometry_instance->set_cast_shadows(instance->cast_shadows != RSE::SHADOW_CASTING_SETTING_OFF);
+ 	}
+ 
+ 	_instance_queue_update(instance, false, true);

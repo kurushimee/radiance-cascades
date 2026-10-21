@@ -1,7 +1,7 @@
 ---
 name: capture-scene
 description: >-
-  Renders a scene, saves a screenshot and render timings, and quits. Use
+  Renders a scene, saves each camera's frame and render timings, and quits. Use
   before finishing any change that can affect what the project renders, before
   claiming that something renders correctly, and when asked to show,
   screenshot, or measure a scene.
@@ -11,15 +11,25 @@ description: >-
 
 ```bash
 capture_dir="$TEMP/rc_capture"
-godot --path "$(pwd -W)" --resolution 1280x720 --position 40,40 --disable-vsync \
+timeout 300 godot --path "$(pwd -W)" --resolution 1280x720 --position 40,40 --disable-vsync \
   --scene res://assets/scenes/scn_<name>.tscn -- --capture="$capture_dir"
 ```
 
-The capture directory then holds `screenshot.png`, `capture.json` and a folder per camera with `final.exr` and `irradiance.exr`, the final image and the `E/π` the GI materials receive, both linear. Look at the screenshot before saying anything about how the scene looks. Run one capture at a time.
+`godot` is the project's engine build ([README](../../../README.md#engine)): a stock Godot has neither the ray queries nor the path tracer.
+
+The capture directory then holds `capture.json` and a folder per camera with `final.png`, the frame as the game shows it, and `final.exr` and `irradiance.exr`, the final image and the `E/π` the GI materials receive, both linear and without tonemapping or anti-aliasing. Look at `final.png` before saying anything about how the scene looks. Run one capture at a time.
 
 `--animation=animated` plays the scene's animated lighting, and `--time=<seconds>` holds it at that time. `uv run src/reference/metrics.py` compares two camera folders.
 
-Any entry in `errors` invalidates the capture. Engine errors before the project boots, and crashes, show only in the command output.
+`--benchmark=<texel spacing in metres>` traces the tracer's benchmark rays every frame and times each kind as a pass in `gi_ms`. `--check` adds a check of the tracer's hits against brute force over every triangle, which takes too long on scenes of millions of triangles. Their counts go into `capture.json` under `tracer`.
+
+`--reference` captures the path-traced reference instead of the GI, denoised by DLSS Ray Reconstruction ([evaluation.md](../../../design/evaluation.md#reference)). Each camera folder then holds `irradiance.exr`, the path tracer's `E/π`; `path_traced.exr` and `path_traced.png`, the path-traced frame; `final.exr` and `final.png`, Godot's frame with the reference's `E/π`; `no_indirect.exr` and `unit_indirect.exr`, Godot's final image at an irradiance of 0 and 1; and `position.exr`, the surfaces' world positions. `--accumulate=<frames>` averages that many raw frames of one sample per pixel instead, writing `irradiance_half.exr` over the even ones in place of the path-traced frame, for the Cornell box's cross-check against Mitsuba. The test scenes' references are kept in `references/<scene>`; compare a GI capture with those. `metrics.py flip-limit` gives the HDR-FLIP that the indirect-error limits allow, and `flip-floor` the HDR-FLIP between Godot's frame with the reference's `E/π` and the path-traced one.
+
+`metrics.py agree` reads `albedo.exr` from its first folder, which only `src/reference/mitsuba_cornell.py` writes, so Mitsuba's Cornell box goes first.
+
+Editing a `.glslinc` file does not reimport the shaders that include it: delete their `.godot/imported/<shader>.glsl-*` files before the import.
+
+Any entry in `errors` invalidates the capture, so the first logged error ends it: `capture.json` keeps the errors so far, and Godot exits with code 1. A clean capture exits with 0. The `timeout` ends a capture that hangs without logging an error; size it to the run, since the window stays on screen until then. Engine errors before the project boots, and crashes, show only in the command output.
 
 The downloaded scenes (Crytek Sponza, Intel Sponza, Bistro) load only after `python src/reference/fetch_scenes.py` and an import.
 

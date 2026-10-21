@@ -1,0 +1,153 @@
+// The tracer's scene, materials and ray queries against the hardware acceleration structure, with segments, any-hit
+// queries, alpha tests and back-face culling.
+//
+// An including shader enables GL_EXT_ray_query and GL_KHR_shader_subgroup_ballot and defines TRACE_SET, the uniform
+// set of Tracer.get_uniforms().
+
+const uint MATERIAL_TWO_SIDED = 1u;
+const uint MATERIAL_ALPHA_TESTED = 2u;
+const uint MAX_TEXTURES = 512u; // TracerScene.MAX_TEXTURES
+
+const uint TRACE_MISS = 0xFFFFFFFFu;
+const uint TRACE_ANY = 1u; // stop at the first hit
+const uint TRACE_CULL = 2u; // pass through the back of single-sided triangles, as the raster does
+const float TRACE_FAR = 1e30;
+
+struct Material {
+	vec4 albedo;
+	vec4 emission; // w: alpha scissor
+	uvec4 data; // albedo texture, emission texture, flags
+};
+
+struct TraceAttributes {
+	vec2 uv[3];
+	vec2 uv2[3];
+	uint material;
+	uint instance;
+};
+
+// `triangle` indexes the triangles and their attributes, and is TRACE_MISS on a miss. The hit point is
+// v0 + u · (v1 − v0) + v · (v2 − v0), with (u, v) in `barycentrics`.
+struct TraceHit {
+	float t;
+	vec2 barycentrics;
+	uint triangle;
+	bool back;
+};
+
+layout(set = TRACE_SET, binding = 0) uniform accelerationStructureEXT trace_scene;
+// Three corners per triangle, in the order that makes cross(v1 − v0, v2 − v0) the front normal. The second corner's w
+// holds the material word: the material in bits 0 to 23, its flags above.
+layout(set = TRACE_SET, binding = 1, std430) readonly buffer TraceTriangles { vec4 trace_triangles[]; };
+layout(set = TRACE_SET, binding = 2, std430) readonly buffer TraceAttributeBuffer { TraceAttributes trace_attributes[]; };
+layout(set = TRACE_SET, binding = 3, std430) readonly buffer Materials { Material materials[]; };
+layout(set = TRACE_SET, binding = 4) uniform texture2D material_textures[MAX_TEXTURES];
+layout(set = TRACE_SET, binding = 5) uniform sampler material_sampler;
+
+// Godot enables no non-uniform descriptor indexing, so each subgroup samples one texture at a time.
+vec4 material_texture(uint texture_index, vec2 uv) {
+	vec4 texel = vec4(0.0);
+	while (true) {
+		uint current = subgroupBroadcastFirst(texture_index);
+		if (current == texture_index) {
+			texel = textureLod(sampler2D(material_textures[current], material_sampler), uv, 0.0);
+			break;
+		}
+	}
+	return texel;
+}
+
+vec4 material_albedo(uint material, vec2 uv) {
+	return materials[material].albedo * material_texture(materials[material].data.x, uv);
+}
+
+vec3 material_emission(uint material, vec2 uv) {
+	return materials[material].emission.rgb * material_texture(materials[material].data.y, uv).rgb;
+}
+
+vec2 trace_interpolate(vec2 corners[3], vec2 barycentrics) {
+	return corners[0] * (1.0 - barycentrics.x - barycentrics.y) + corners[1] * barycentrics.x
+			+ corners[2] * barycentrics.y;
+}
+
+vec2 trace_uv(uint triangle, vec2 barycentrics) {
+	return trace_interpolate(trace_attributes[triangle].uv, barycentrics);
+}
+
+vec3 trace_front_normal(uint triangle) {
+	vec3 corner = trace_triangles[3u * triangle].xyz;
+	return normalize(cross(trace_triangles[3u * triangle + 1u].xyz - corner,
+			trace_triangles[3u * triangle + 2u].xyz - corner));
+}
+
+// The raster discards a fragment whose alpha is below the scissor.
+bool trace_opaque(uint triangle, uint material, vec2 barycentrics) {
+	return material_albedo(material, trace_uv(triangle, barycentrics)).a >= materials[material].emission.w;
+}
+
+// The opaque triangles come first and form the BLAS's first geometry, the alpha-tested ones its second, and the
+// instance's custom index is the first alpha-tested triangle.
+uint trace_candidate_triangle(rayQueryEXT query) {
+	return rayQueryGetIntersectionPrimitiveIndexEXT(query, false)
+			+ rayQueryGetIntersectionGeometryIndexEXT(query, false)
+			* rayQueryGetIntersectionInstanceCustomIndexEXT(query, false);
+}
+
+uint trace_committed_triangle(rayQueryEXT query) {
+	return rayQueryGetIntersectionPrimitiveIndexEXT(query, true)
+			+ rayQueryGetIntersectionGeometryIndexEXT(query, true)
+			* rayQueryGetIntersectionInstanceCustomIndexEXT(query, true);
+}
+
+// Only alpha-tested triangles reach the shader as candidates, and every triangle does when back faces are culled.
+bool trace_accepts(rayQueryEXT query, uint flags) {
+	uint triangle = trace_candidate_triangle(query);
+	uint material_word = floatBitsToUint(trace_triangles[3u * triangle + 1u].w);
+	uint material_flags = material_word >> 24u;
+	bool back = !rayQueryGetIntersectionFrontFaceEXT(query, false);
+	if (back && (flags & TRACE_CULL) != 0u && (material_flags & MATERIAL_TWO_SIDED) == 0u) {
+		return false;
+	}
+	return (material_flags & MATERIAL_ALPHA_TESTED) == 0u
+			|| trace_opaque(triangle, material_word & 0xFFFFFFu, rayQueryGetIntersectionBarycentricsEXT(query, false));
+}
+
+TraceHit trace(vec3 origin, vec3 direction, float t_min, float t_max, uint flags) {
+	uint ray_flags = (flags & TRACE_ANY) != 0u ? gl_RayFlagsTerminateOnFirstHitEXT : gl_RayFlagsNoneEXT;
+	if ((flags & TRACE_CULL) != 0u) {
+		ray_flags |= gl_RayFlagsNoOpaqueEXT;
+	}
+
+	rayQueryEXT query;
+	rayQueryInitializeEXT(query, trace_scene, ray_flags, 0xFFu, origin, t_min, direction, t_max);
+	while (rayQueryProceedEXT(query)) {
+		if (trace_accepts(query, flags)) {
+			rayQueryConfirmIntersectionEXT(query);
+		}
+	}
+
+	if (rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT) {
+		return TraceHit(t_max, vec2(0.0), TRACE_MISS, false);
+	}
+	return TraceHit(rayQueryGetIntersectionTEXT(query, true), rayQueryGetIntersectionBarycentricsEXT(query, true),
+			trace_committed_triangle(query), !rayQueryGetIntersectionFrontFaceEXT(query, true));
+}
+
+bool trace_occluded(vec3 origin, vec3 direction, float t_min, float t_max) {
+	return trace(origin, direction, t_min, t_max, TRACE_ANY).triangle != TRACE_MISS;
+}
+
+// Wächter and Binder, "A Fast and Robust Method for Avoiding Self-Intersection" (Ray Tracing Gems, 2019): moves a
+// hit point off its surface by a few units in the last place, along the normal on the side the ray leaves from.
+vec3 trace_offset(vec3 position, vec3 normal) {
+	const float origin = 1.0 / 32.0;
+	const float float_scale = 1.0 / 65536.0;
+	const float int_scale = 256.0;
+	ivec3 offset = ivec3(int_scale * normal);
+	vec3 moved = intBitsToFloat(floatBitsToInt(position) + ivec3(
+			position.x < 0.0 ? -offset.x : offset.x, position.y < 0.0 ? -offset.y : offset.y,
+			position.z < 0.0 ? -offset.z : offset.z));
+	return vec3(abs(position.x) < origin ? position.x + float_scale * normal.x : moved.x,
+			abs(position.y) < origin ? position.y + float_scale * normal.y : moved.y,
+			abs(position.z) < origin ? position.z + float_scale * normal.z : moved.z);
+}
