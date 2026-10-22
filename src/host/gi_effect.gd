@@ -6,6 +6,7 @@ extends CompositorEffect
 const FRAME_PASS: StringName = &"GI"
 
 var _solved_frame: int = -1
+var _direct_light: DirectLight = null
 var _pass_milliseconds: Dictionary[StringName, float] = {}
 var _timed_frame: int = -1
 
@@ -23,7 +24,14 @@ func _render_callback(_effect_callback_type: int, _render_data: RenderData) -> v
 	var device: RenderingDevice = RenderingServer.get_rendering_device()
 	_read_timestamps(device)
 	GpuPass.begin(device, FRAME_PASS)
+	if is_instance_valid(_direct_light):
+		_direct_light.update()
 	GpuPass.end(device, FRAME_PASS)
+
+
+## The GI's direct light, which the render thread sets once built and clears before freeing it.
+func set_direct_light(direct_light: DirectLight) -> void:
+	_direct_light = direct_light
 
 
 ## The latest GPU milliseconds of every pass timed so far. Passes that ran once, such as the load's, keep their time.

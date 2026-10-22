@@ -1,5 +1,5 @@
 diff --git a/doc/classes/Environment.xml b/doc/classes/Environment.xml
-index 8dac1c1..4e70bf1 100644
+index 8dac1c1..f25eb5f 100644
 --- a/doc/classes/Environment.xml
 +++ b/doc/classes/Environment.xml
 @@ -213,7 +213,7 @@
@@ -11,18 +11,21 @@ index 8dac1c1..4e70bf1 100644
  			[b]Note:[/b] Only has an effect when [member pathtracing_enabled] is [code]true[/code].
  		</member>
  		<member name="pathtracing_samples_per_pixel" type="int" setter="set_pathtracing_samples_per_pixel" getter="get_pathtracing_samples_per_pixel" default="1">
-@@ -549,6 +549,9 @@
+@@ -549,6 +549,12 @@
  		<constant name="RT_DEBUG_BRDF_REJECTION" value="22" enum="PathtracingDebugMode">
  			Displays rays that were rejected by the BRDF sampling process, useful for debugging importance sampling issues.
  		</constant>
 +		<constant name="RT_DEBUG_INDIRECT_IRRADIANCE" value="23" enum="PathtracingDebugMode">
 +			Displays the indirect irradiance divided by pi at each primary hit: the primary hit is treated as a white diffuse surface that neither emits nor samples lights, and the rest of the path is traced as usual.
 +		</constant>
++		<constant name="RT_DEBUG_DIRECT_IRRADIANCE" value="24" enum="PathtracingDebugMode">
++			Displays the direct irradiance divided by pi at each primary hit: the primary hit is treated as a white Lambertian surface with its geometry normal, which samples the lights as usual, adds no emission and sends no further ray.
++		</constant>
  		<constant name="FOG_MODE_EXPONENTIAL" value="0" enum="FogMode">
  			Use a physically-based fog model defined primarily by fog density.
  		</constant>
 diff --git a/scene/resources/environment.cpp b/scene/resources/environment.cpp
-index 436cc03..4ae7e60 100644
+index 436cc03..0753db5 100644
 --- a/scene/resources/environment.cpp
 +++ b/scene/resources/environment.cpp
 @@ -633,7 +633,7 @@ int Environment::get_pathtracing_samples_per_pixel() const {
@@ -39,30 +42,32 @@ index 436cc03..4ae7e60 100644
  	ADD_GROUP("Pathtracing", "pathtracing_");
  	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "pathtracing_enabled", PROPERTY_HINT_GROUP_ENABLE), "set_pathtracing_enabled", "is_pathtracing_enabled");
 -	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_debug_mode", PROPERTY_HINT_ENUM, "Disabled,Mirror Reflection,Geometry Normals,Final Normals,Normal Map,Tangent,Bitangent,UV,Albedo,ORM,Diffuse Albedo,Specular Albedo,Normal+Roughness,Specular Hit Dist,Metalness,Roughness,View Normals,Diffuse+Specular,Fresnel F0,Front/Back Face,Depth,Emissive,BRDF Rejection"), "set_pathtracing_debug_mode", "get_pathtracing_debug_mode");
-+	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_debug_mode", PROPERTY_HINT_ENUM, "Disabled,Mirror Reflection,Geometry Normals,Final Normals,Normal Map,Tangent,Bitangent,UV,Albedo,ORM,Diffuse Albedo,Specular Albedo,Normal+Roughness,Specular Hit Dist,Metalness,Roughness,View Normals,Diffuse+Specular,Fresnel F0,Front/Back Face,Depth,Emissive,BRDF Rejection,Indirect Irradiance"), "set_pathtracing_debug_mode", "get_pathtracing_debug_mode");
++	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_debug_mode", PROPERTY_HINT_ENUM, "Disabled,Mirror Reflection,Geometry Normals,Final Normals,Normal Map,Tangent,Bitangent,UV,Albedo,ORM,Diffuse Albedo,Specular Albedo,Normal+Roughness,Specular Hit Dist,Metalness,Roughness,View Normals,Diffuse+Specular,Fresnel F0,Front/Back Face,Depth,Emissive,BRDF Rejection,Indirect Irradiance,Direct Irradiance"), "set_pathtracing_debug_mode", "get_pathtracing_debug_mode");
  	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_samples_per_pixel", PROPERTY_HINT_RANGE, "1,16,1"), "set_pathtracing_samples_per_pixel", "get_pathtracing_samples_per_pixel");
 -	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_max_bounces", PROPERTY_HINT_RANGE, "1,8,1"), "set_pathtracing_max_bounces", "get_pathtracing_max_bounces");
 +	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_max_bounces", PROPERTY_HINT_RANGE, "1,255,1"), "set_pathtracing_max_bounces", "get_pathtracing_max_bounces");
  	ADD_PROPERTY(PropertyInfo(Variant::INT, "pathtracing_denoiser", PROPERTY_HINT_ENUM, "None,DLSS Ray Reconstruction"), "set_pathtracing_denoiser", "get_pathtracing_denoiser");
  
  	// Glow
-@@ -1727,6 +1727,7 @@ void Environment::_bind_methods() {
+@@ -1727,6 +1727,8 @@ void Environment::_bind_methods() {
  	BIND_ENUM_CONSTANT(RT_DEBUG_DEPTH);
  	BIND_ENUM_CONSTANT(RT_DEBUG_EMISSIVE);
  	BIND_ENUM_CONSTANT(RT_DEBUG_BRDF_REJECTION);
 +	BIND_ENUM_CONSTANT(RT_DEBUG_INDIRECT_IRRADIANCE);
++	BIND_ENUM_CONSTANT(RT_DEBUG_DIRECT_IRRADIANCE);
  
  	BIND_ENUM_CONSTANT(FOG_MODE_EXPONENTIAL);
  	BIND_ENUM_CONSTANT(FOG_MODE_DEPTH);
 diff --git a/scene/resources/environment.h b/scene/resources/environment.h
-index 4efbe75..4179b5b 100644
+index 4efbe75..ebec1eb 100644
 --- a/scene/resources/environment.h
 +++ b/scene/resources/environment.h
-@@ -101,6 +101,7 @@ public:
+@@ -101,6 +101,8 @@ public:
  		RT_DEBUG_DEPTH,
  		RT_DEBUG_EMISSIVE,
  		RT_DEBUG_BRDF_REJECTION,
 +		RT_DEBUG_INDIRECT_IRRADIANCE,
++		RT_DEBUG_DIRECT_IRRADIANCE,
  		RT_DEBUG_MAX
  	};
  
@@ -244,18 +249,16 @@ index a05e26f..691aa37 100644
  	}
  
 diff --git a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl
-index b3c2e4d..7ad6912 100644
+index b3c2e4d..cbc0786 100644
 --- a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl
 +++ b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_closest_hit_common_inc.glsl
-@@ -438,6 +438,30 @@ void debug_visualize(
+@@ -438,6 +438,57 @@ void debug_visualize(
  // SHADE AND BOUNCE
  // ============================================================================
  
 +#ifdef RT_DEBUG_ENABLED
-+/// Irradiance view at the primary hit: a white Lambertian surface, cosine-sampled, so the sample weight is one and
-+/// the path's radiance estimates the indirect irradiance over pi. The vertex normal, without normal mapping, matches
-+/// a lightmap texel's.
-+void irradiance_bounce(HitData h, PathState ps) {
++/// Ray Reconstruction's guides for a white diffuse surface with the geometry normal.
++void store_white_diffuse_guides(HitData h, PathState ps) {
 +#ifdef DLSS_RR_ENABLED
 +	if (is_sample_zero(ps.packed_bounces_flags)) {
 +		ivec2 pixel = ivec2(gl_LaunchIDEXT.xy);
@@ -265,7 +268,13 @@ index b3c2e4d..7ad6912 100644
 +		imageStore(dlss_rr_specular_hit_dist, pixel, vec4(-1.0));
 +	}
 +#endif
++}
 +
++/// Irradiance view at the primary hit: a white Lambertian surface, cosine-sampled, so the sample weight is one and
++/// the path's radiance estimates the indirect irradiance over pi. The vertex normal, without normal mapping, matches
++/// a lightmap texel's.
++void irradiance_bounce(HitData h, PathState ps) {
++	store_white_diffuse_guides(h, ps);
 +	vec4 to_normal_space = getRotationToZAxis(h.geometry_normal);
 +	ps.next_ray_dir = normalize(rotatePoint(invertRotation(to_normal_space), sampleHemisphere(rand2(ps.rng_state))));
 +	ps.packed_bounces_flags = inc_diffuse_bounce(ps.packed_bounces_flags);
@@ -273,18 +282,45 @@ index b3c2e4d..7ad6912 100644
 +	ps.offset_normal = h.geometry_normal;
 +	path_pack(payload, ps);
 +}
++
++/// Direct irradiance view at the primary hit: the same white Lambertian surface samples the lights as a primary hit
++/// does and ends the path, so the path's radiance estimates the direct irradiance over pi. A zero F0 makes the
++/// Fresnel term zero, which leaves Lambert's lobe alone.
++void direct_irradiance(HitData h, PathState ps) {
++	store_white_diffuse_guides(h, ps);
++	uint light_count = uint(get_rt_param(RT_PARAM_LIGHT_COUNT));
++	if (light_count > 0u) {
++		MaterialProperties white;
++		white.baseColor = vec3(1.0);
++		white.metalness = 0.0;
++		white.roughness = 1.0;
++		white.dielectricF0 = 0.0;
++		white.emissive = vec3(0.0);
++		white.transmissivness = 0.0;
++		white.opacity = 1.0;
++		vec3 origin = offset_ray_origin(h.hit_pos, h.geometry_normal);
++		ps.radiance += ps.throughput * lights_evaluate_direct_lighting(
++				origin, h.geometry_normal, -gl_WorldRayDirectionEXT, white, ps.rng_state, false, light_count);
++	}
++	ps.packed_bounces_flags = set_path_terminated(ps.packed_bounces_flags);
++	path_pack(payload, ps);
++}
 +#endif // RT_DEBUG_ENABLED
 +
  /// Production shading: emissive + NEE direct lighting + BRDF importance sampling + next bounce.
  /// Also handles DLSS-RR G-buffer output on primary ray.
  void shade_and_bounce(HitData h, MaterialResult m) {
-@@ -455,11 +479,18 @@ void shade_and_bounce(HitData h, MaterialResult m) {
+@@ -455,11 +506,22 @@ void shade_and_bounce(HitData h, MaterialResult m) {
  	// Environment fog for this ray segment (before surface contribution).
  	apply_segment_fog(gl_HitTEXT, ps.radiance, ps.throughput);
  
 +#ifdef RT_DEBUG_ENABLED
 +	if (int(get_rt_param(RT_PARAM_VIS_MODE)) == RT_VIS_IRRADIANCE && total_bounces == 0u) {
 +		irradiance_bounce(h, ps);
++		return;
++	}
++	if (int(get_rt_param(RT_PARAM_VIS_MODE)) == RT_VIS_DIRECT_IRRADIANCE && total_bounces == 0u) {
++		direct_irradiance(h, ps);
 +		return;
 +	}
 +#endif // RT_DEBUG_ENABLED
@@ -298,7 +334,7 @@ index b3c2e4d..7ad6912 100644
  		ps.packed_bounces_flags = set_path_terminated(ps.packed_bounces_flags);
  		path_pack(payload, ps);
  		return;
-@@ -501,7 +532,7 @@ void shade_and_bounce(HitData h, MaterialResult m) {
+@@ -501,7 +563,7 @@ void shade_and_bounce(HitData h, MaterialResult m) {
  
  			rayQueryEXT spec_rq;
  			rayQueryInitializeEXT(spec_rq, tlas, RT_RAY_FLAGS | gl_RayFlagsTerminateOnFirstHitEXT,
@@ -307,7 +343,7 @@ index b3c2e4d..7ad6912 100644
  			while (rayQueryProceedEXT(spec_rq)) {
  				if (rayQueryGetIntersectionTypeEXT(spec_rq, false) == gl_RayQueryCandidateIntersectionTriangleEXT) {
  					if (ray_query_alpha_test(
-@@ -578,6 +609,16 @@ void shade_and_bounce(HitData h, MaterialResult m) {
+@@ -578,6 +640,16 @@ void shade_and_bounce(HitData h, MaterialResult m) {
  
  	ps.throughput *= brdf_weight;
  
@@ -365,10 +401,10 @@ index e8fde62..d057e7e 100644
  {
  	/* RT_CUSTOM_FRAGMENT_CODE */
 diff --git a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl
-index ead637e..2220688 100644
+index ead637e..1bab9fc 100644
 --- a/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl
 +++ b/servers/rendering/renderer_rd/shaders/raytracing/raytracing_inc.glsl
-@@ -130,10 +130,22 @@ bool is_path_terminated(uint packed) {
+@@ -130,10 +130,26 @@ bool is_path_terminated(uint packed) {
  	return (packed & PATH_TERMINATED_FLAG) != 0u;
  }
  
@@ -384,6 +420,10 @@ index ead637e..2220688 100644
 +// estimates the indirect irradiance over pi that arrives there.
 +#define RT_VIS_IRRADIANCE 23
 +
++// Debug view in which the primary hit is a white Lambertian surface that samples the lights and ends the path, so a
++// path estimates the direct irradiance over pi that arrives there.
++#define RT_VIS_DIRECT_IRRADIANCE 24
++
 +// Instance masks: camera-only instances, such as a lamp's fixture, are hidden from every ray past the primary one,
 +// so they neither shadow their own light nor add their emission to the light's.
 +#define RT_INSTANCE_MASK_CAMERA_ONLY 0x01u
@@ -393,7 +433,7 @@ index ead637e..2220688 100644
  // ============================================================================
  // CONSTANTS
  // ============================================================================
-@@ -156,9 +168,9 @@ uint pcg_hash(uint seed) {
+@@ -156,9 +172,9 @@ uint pcg_hash(uint seed) {
  
  /// Initialize RNG state with improved mixing to eliminate patterns
  uint init_rng(uvec2 pixel, uint frame, uint sample_idx) {
@@ -406,7 +446,7 @@ index ead637e..2220688 100644
  }
  
  /// Random float in [0, 1)
-@@ -176,6 +188,8 @@ vec2 rand2(inout uint state) {
+@@ -176,6 +192,8 @@ vec2 rand2(inout uint state) {
  // RAY ORIGIN OFFSET (prevents self-intersection)
  // Wachter-Binder method: offsets in integer float representation so the
  // displacement scales naturally with position magnitude.
@@ -460,7 +500,7 @@ index a3b1b3d..a17b795 100644
  	// Unpack to check visibility (miss shader packs radiance = 1.0).
  	shadow_ps = path_unpack(payload);
 diff --git a/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl b/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl
-index 117b266..890e7bd 100644
+index 117b266..71efc36 100644
 --- a/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl
 +++ b/servers/rendering/renderer_rd/shaders/raytracing/scene_raytracing_raygen.glsl
 @@ -48,7 +48,7 @@ void main() {
@@ -508,7 +548,7 @@ index 117b266..890e7bd 100644
  	{
  		int VIS_MODE = int(get_rt_param(RT_PARAM_VIS_MODE));
 -		if (VIS_MODE != 0) {
-+		if (VIS_MODE != 0 && VIS_MODE != RT_VIS_IRRADIANCE) {
++		if (VIS_MODE != 0 && VIS_MODE != RT_VIS_IRRADIANCE && VIS_MODE != RT_VIS_DIRECT_IRRADIANCE) {
  			vec3 V = -gl_WorldRayDirectionEXT;
  			float NdotV = max(dot(m.normal, V), 0.0001);
  			vec3 orm = vec3(1.0, m.roughness, m.metalness);
@@ -517,7 +557,7 @@ index 117b266..890e7bd 100644
  	{
  		int VIS_MODE = int(get_rt_param(RT_PARAM_VIS_MODE));
 -		if (VIS_MODE != 0) {
-+		if (VIS_MODE != 0 && VIS_MODE != RT_VIS_IRRADIANCE) {
++		if (VIS_MODE != 0 && VIS_MODE != RT_VIS_IRRADIANCE && VIS_MODE != RT_VIS_DIRECT_IRRADIANCE) {
  			vec3 V = -gl_WorldRayDirectionEXT;
  			float NdotV = max(dot(m.normal, V), 0.0001);
  			debug_visualize(VIS_MODE, h.geometry_normal, final_normal, tangent_space_normal,

@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dd4n56o0dn7m8"
+path="res://.godot/imported/cshd_probe_map.glsl-fc876b9e1f962194c30acdadfa74a9a3.res"
+
+[deps]
+
+source_file="res://src/atlas/cshd_probe_map.glsl"
+dest_files=["res://.godot/imported/cshd_probe_map.glsl-fc876b9e1f962194c30acdadfa74a9a3.res"]
+
+[params]
+

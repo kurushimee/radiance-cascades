@@ -28,6 +28,10 @@ var surfaces: PackedByteArray = []
 var materials: PackedByteArray = []
 ## Texture `i + 1` of the material table; texture 0 is white.
 var textures: Array[Texture2D] = []
+## Each instance's lightmap size hint, the extent of its UV2 in texels.
+var lightmap_sizes: Array[Vector2i] = []
+## Whether each instance has a two-sided surface.
+var two_sided: Array[bool] = []
 
 var _material_indices: Dictionary[ShaderMaterial, int] = {}
 var _material_flags: PackedInt32Array = []
@@ -35,11 +39,15 @@ var _texture_indices: Dictionary[Texture2D, int] = {}
 
 
 func _init(instances: Array[MeshInstance3D], gi: GI) -> void:
+	for instance: MeshInstance3D in instances:
+		lightmap_sizes.append((instance.mesh as ArrayMesh).lightmap_size_hint)
+		two_sided.append(false)
 	for alpha_tested: bool in [false, true]:
 		for instance_index: int in instances.size():
 			var instance: MeshInstance3D = instances[instance_index]
 			for surface: int in instance.mesh.get_surface_count():
 				var material: int = _add_material(instance.get_active_material(surface) as ShaderMaterial, gi)
+				two_sided[instance_index] = two_sided[instance_index] || bool(_material_flags[material] & TWO_SIDED)
 				if bool(_material_flags[material] & ALPHA_TESTED) == alpha_tested:
 					_add_surface(instance, instance_index, surface, material)
 		if !alpha_tested:

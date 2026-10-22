@@ -7,7 +7,7 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
-[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
+[ext_resource type="Resource" path="res://src/host/gi_shaders.tres" id="gi_shaders"]
 
 [sub_resource type="Environment" id="environment"]
 background_mode = 1
@@ -129,7 +129,9 @@ one_sided_shader = ExtResource("shd_gi")
 two_sided_shader = ExtResource("shd_gi_double_sided")
 alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
 two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
-triangles_shader = ExtResource("triangles_shader")
+shaders = ExtResource("gi_shaders")
+effect = SubResource("gi_effect")
+texel_size = 0.219
 
 [node name="Lamp1" type="OmniLight3D" parent="."]
 position = Vector3(4.991, 3.031, -0.489)
@@ -137,6 +139,7 @@ light_size = 0.1
 shadow_enabled = true
 omni_range = 20
 omni_attenuation = 2.0
+light_bake_mode = 1
 
 [node name="Lamp2" type="OmniLight3D" parent="."]
 position = Vector3(7.989, 3.074, 1.015)
@@ -144,6 +147,7 @@ light_size = 0.1
 shadow_enabled = true
 omni_range = 20
 omni_attenuation = 2.0
+light_bake_mode = 1
 
 [node name="Lamp3" type="OmniLight3D" parent="."]
 position = Vector3(4.263, 3.095, -4.92)
@@ -151,6 +155,7 @@ light_size = 0.1
 shadow_enabled = true
 omni_range = 20
 omni_attenuation = 2.0
+light_bake_mode = 1
 
 [node name="Lamp4" type="OmniLight3D" parent="."]
 position = Vector3(6.107, 2.939, -8.468)
@@ -158,6 +163,7 @@ light_size = 0.1
 shadow_enabled = true
 omni_range = 20
 omni_attenuation = 2.0
+light_bake_mode = 1
 
 [node name="Lighting" type="AnimationPlayer" parent="."]
 libraries/ = SubResource("lighting")

@@ -1,0 +1,82 @@
+// The rules that turn the atlas's texels into probes, shared by the probe passes. An including shader includes
+// cshd_atlas.glslinc and declares the resolved capture images `positions` (w: covered share of the samples) and
+// `normals` (w: world area) first.
+
+// The world area, in texels, that makes a texel a probe of its own.
+const float PROBE_SOLID_SHARE = 0.5;
+// Group keys hold cells this far on either side of the origin.
+const int PROBE_CELL_OFFSET = 8192;
+const int PROBE_CELL_LIMIT = 2 * PROBE_CELL_OFFSET;
+
+// A group's texels in fixed point. Each value is quantized to PROBE_GROUP_STEPS and weighted by
+// probe_group_weight(), whose most is 128, so the sums of up to PROBE_GROUP_MEMBER_LIMIT texels fit in 32 bits.
+const float PROBE_GROUP_STEPS = 255.0;
+const uint PROBE_GROUP_MEMBER_LIMIT = 131586u;
+
+struct ProbeGroup {
+	uint members;
+	uint weight;
+	uint emission_scale; // the bits of the brightest emission component, which order like the floats themselves
+	uint unused;
+	uint sums[12]; // the position within the cell, the normal, the albedo and the emission over the scale
+};
+
+bool probe_in_atlas(ivec2 texel) {
+	return all(greaterThanEqual(texel, ivec2(0))) && all(lessThan(texel, atlas_size));
+}
+
+bool probe_covered(ivec2 texel) {
+	return imageLoad(positions, texel).w > 0.0;
+}
+
+// The texel of the eight around `texel` that covers the most world area of those that are probes of their own, ties
+// going to the lower index, or ATLAS_NO_PROBE. Charts lie at least two texels apart, so it belongs to the same chart.
+uint probe_solid_neighbour(ivec2 texel, float solid_area) {
+	uint best = ATLAS_NO_PROBE;
+	float best_area = 0.0;
+	for (int y = -1; y <= 1; y++) {
+		for (int x = -1; x <= 1; x++) {
+			ivec2 neighbour = texel + ivec2(x, y);
+			if ((x == 0 && y == 0) || !probe_in_atlas(neighbour)) {
+				continue;
+			}
+
+			float area = imageLoad(normals, neighbour).w;
+			if (area >= solid_area && area > best_area) {
+				best = atlas_index(neighbour);
+				best_area = area;
+			}
+		}
+	}
+	return best;
+}
+
+ivec3 probe_cell(vec3 position, float texel_size) {
+	return ivec3(floor(position / texel_size)) + PROBE_CELL_OFFSET;
+}
+
+bool probe_cell_inside(ivec3 cell) {
+	return all(greaterThanEqual(cell, ivec3(0))) && all(lessThan(cell, ivec3(PROBE_CELL_LIMIT)));
+}
+
+// One of six classes, by the normal's largest component and its sign.
+uint probe_normal_class(vec3 normal) {
+	vec3 size = abs(normal);
+	uint axis = size.x >= size.y && size.x >= size.z ? 0u : (size.y >= size.z ? 1u : 2u);
+	return 2u * axis + (normal[axis] < 0.0 ? 1u : 0u);
+}
+
+// A group's key as a 64-bit number, low word first, ordered by instance, normal class and cell. The top bit stays
+// clear, so the CPU's signed sort orders keys as unsigned numbers.
+uvec2 probe_group_key(uint instance, ivec3 cell, vec3 normal) {
+	uvec3 bits = uvec3(cell);
+	uint low = bits.x | (bits.y << 14u) | ((bits.z & 0xFu) << 28u);
+	uint high = (bits.z >> 4u) | (probe_normal_class(normal) << 10u) | (instance << 13u);
+	return uvec2(low, high);
+}
+
+// A grouped texel's weight: its world area in 1/256 of a texel's, at least 1. Grouped texels cover less than half a
+// texel.
+uint probe_group_weight(float area, float texel_size) {
+	return max(1u, uint(round(area / (texel_size * texel_size) * 256.0)));
+}

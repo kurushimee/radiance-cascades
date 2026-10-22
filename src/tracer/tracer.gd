@@ -9,6 +9,7 @@ const GROUP_SIZE: int = 256
 const TRIANGLE_BYTES: int = 48
 const CORNER_BYTES: int = 16
 const ATTRIBUTE_BYTES: int = 56
+const CORNER_NORMAL_BYTES: int = 4
 const STATISTICS_BYTES: int = 4
 ## Ray queries never read the hit shader table, but tlas_build refuses an instance without a range of it. This is one
 ## hit group at offset 0.
@@ -26,6 +27,7 @@ var _structure_bytes: int = 0
 var _triangles: RID = RID()
 var _attributes: RID = RID()
 var _statistics: RID = RID()
+var _corner_normals: RID = RID()
 var _materials: RID = RID()
 var _blas: RID = RID()
 var _tlas: RID = RID()
@@ -78,6 +80,18 @@ func get_winding_disagreements() -> int:
 	return _device.buffer_get_data(_statistics).decode_u32(0)
 
 
+## The world-space vertex normals of every triangle's corners, packed by cshd_normals.glslinc, which the atlas capture
+## reads until free_corner_normals().
+func get_corner_normals() -> RID:
+	return _corner_normals
+
+
+func free_corner_normals() -> void:
+	_free_buffer(_corner_normals)
+	_corner_normals = RID()
+	resident_bytes = _total_bytes()
+
+
 func free_rids() -> void:
 	for owned: RID in [_tlas, _blas]:
 		if owned.is_valid():
@@ -103,10 +117,11 @@ func _gather_triangles(scene: TracerScene, file: RDShaderFile) -> void:
 	_attributes = _create_buffer(ATTRIBUTE_BYTES * triangle_count)
 	_statistics = _create_buffer(STATISTICS_BYTES)
 	_device.buffer_clear(_statistics, 0, STATISTICS_BYTES)
+	_corner_normals = _create_buffer(3 * CORNER_NORMAL_BYTES * triangle_count)
 
 	var shader := ComputeShader.new(_device, file)
 	var buffers: Array[RID] = inputs.duplicate()
-	buffers.append_array([_triangles, _attributes, _statistics])
+	buffers.append_array([_triangles, _attributes, _statistics, _corner_normals])
 	var uniform_set: RID = shader.create_uniform_set(ComputeShader.storage_uniforms(buffers))
 	var parameters: PackedByteArray = PackedInt32Array([scene.triangle_count, scene.surface_count]).to_byte_array()
 	shader.dispatch([uniform_set], parameters, ComputeShader.group_count(triangle_count, GROUP_SIZE))

@@ -7,7 +7,7 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
-[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
+[ext_resource type="Resource" path="res://src/host/gi_shaders.tres" id="gi_shaders"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 ground_bottom_color = Color(0.35, 0.35, 0.35, 1)
@@ -78,7 +78,9 @@ one_sided_shader = ExtResource("shd_gi")
 two_sided_shader = ExtResource("shd_gi_double_sided")
 alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
 two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
-triangles_shader = ExtResource("triangles_shader")
+shaders = ExtResource("gi_shaders")
+effect = SubResource("gi_effect")
+texel_size = 0.462
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.975639, -1.75929, 0)

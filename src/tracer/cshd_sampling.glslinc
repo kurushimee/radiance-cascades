@@ -9,16 +9,33 @@ uint hash(uint value) {
 	return value;
 }
 
-// A cosine-distributed direction around `normal` from two uniform numbers in [0, 1). Duff et al. 2017, "Building an
-// Orthonormal Basis, Revisited".
+// Two unit vectors that make a right-handed orthonormal basis with the unit vector `axis`. Duff et al. 2017, "Building
+// an Orthonormal Basis, Revisited".
+void orthonormal_basis(vec3 axis, out vec3 tangent, out vec3 bitangent) {
+	float sign_z = axis.z >= 0.0 ? 1.0 : -1.0;
+	float a = -1.0 / (sign_z + axis.z);
+	float b = axis.x * axis.y * a;
+	tangent = vec3(1.0 + sign_z * axis.x * axis.x * a, sign_z * b, -sign_z * axis.x);
+	bitangent = vec3(b, sign_z + axis.y * axis.y * a, -axis.y);
+}
+
+// The direction at polar angle acos(`cos_theta`) from `axis` and azimuth 2π · `turn`.
+vec3 axis_direction(vec3 axis, float cos_theta, float turn) {
+	vec3 tangent;
+	vec3 bitangent;
+	orthonormal_basis(axis, tangent, bitangent);
+	float sin_theta = sqrt(max(1.0 - cos_theta * cos_theta, 0.0));
+	float angle = 6.28318530718 * turn;
+	return normalize(tangent * sin_theta * cos(angle) + bitangent * sin_theta * sin(angle) + axis * cos_theta);
+}
+
+// A cosine-distributed direction around `normal` from two uniform numbers in [0, 1).
 vec3 cosine_direction(vec3 normal, vec2 random) {
-	float sign_z = normal.z >= 0.0 ? 1.0 : -1.0;
-	float a = -1.0 / (sign_z + normal.z);
-	float b = normal.x * normal.y * a;
-	vec3 tangent = vec3(1.0 + sign_z * normal.x * normal.x * a, sign_z * b, -sign_z * normal.x);
-	vec3 bitangent = vec3(b, sign_z + normal.y * normal.y * a, -normal.y);
-	float radius = sqrt(random.x);
-	float angle = 6.28318530718 * random.y;
-	return normalize(tangent * radius * cos(angle) + bitangent * radius * sin(angle)
-			+ normal * sqrt(max(1.0 - random.x, 0.0)));
+	return axis_direction(normal, sqrt(max(1.0 - random.x, 0.0)), random.y);
+}
+
+// A direction distributed uniformly over the cone of half-angle acos(`cos_max`) around `axis`, from two uniform numbers
+// in [0, 1).
+vec3 cone_direction(vec3 axis, float cos_max, vec2 random) {
+	return axis_direction(axis, 1.0 - random.x * (1.0 - cos_max), random.y);
 }

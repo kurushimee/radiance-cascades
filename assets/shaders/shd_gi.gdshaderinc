@@ -9,6 +9,9 @@ const int VIEW_NO_INDIRECT = 2;
 const int VIEW_UNIT_INDIRECT = 3;
 const int VIEW_REFERENCE = 4;
 const int VIEW_POSITION = 5;
+const int VIEW_NORMAL = 6;
+const int VIEW_DISTANCE = 7;
+const int VIEW_NORMAL_REMAINDER = 8;
 
 // Not named "albedo": NVIDIA's path tracer takes a material with a colour parameter of that name for a
 // StandardMaterial3D and skips this shader.
@@ -34,6 +37,11 @@ uniform sampler2D emission_texture : source_color, hint_default_white, filter_li
 global uniform sampler2D gi_irradiance : hint_default_black, filter_linear;
 global uniform int gi_view;
 
+// The value with its float's top 10 mantissa bits, which a half float keeps exactly.
+vec3 half_part(vec3 value) {
+	return uintBitsToFloat(floatBitsToUint(value) & uvec3(0xFFFFE000u));
+}
+
 void fragment() {
 	vec4 base = albedo_color * texture(albedo_texture, UV);
 	vec3 irradiance = texture(gi_irradiance, gi_view == VIEW_REFERENCE ? SCREEN_UV : UV2).rgb;
@@ -46,11 +54,25 @@ void fragment() {
 	ALPHA_SCISSOR_THRESHOLD = alpha_scissor;
 #endif
 
-	// With no albedo and no specular, the pixel shows only its emission: here, the irradiance or the position.
-	if (gi_view == VIEW_IRRADIANCE || gi_view == VIEW_POSITION) {
+	// With no albedo and no specular, the pixel shows only its emission: here, the irradiance, the world position, the
+	// world normal, which Godot turns toward the camera on a two-sided surface's back, or the distance from the camera.
+	// The half-float frame keeps the distance and the normal to a float's precision as their half-float parts and the
+	// remainders, the normal's remainders in a view of their own.
+	if (gi_view == VIEW_IRRADIANCE || gi_view == VIEW_POSITION || gi_view == VIEW_NORMAL
+			|| gi_view == VIEW_NORMAL_REMAINDER || gi_view == VIEW_DISTANCE) {
 		ALBEDO = vec3(0.0);
 		SPECULAR = 0.0;
-		EMISSION = gi_view == VIEW_POSITION ? (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz : irradiance;
+		EMISSION = irradiance;
+		if (gi_view == VIEW_POSITION) {
+			EMISSION = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		} else if (gi_view == VIEW_NORMAL || gi_view == VIEW_NORMAL_REMAINDER) {
+			vec3 normal = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+			EMISSION = gi_view == VIEW_NORMAL ? half_part(normal) : normal - half_part(normal);
+		} else if (gi_view == VIEW_DISTANCE) {
+			float distance = length(VERTEX);
+			float half_distance = half_part(vec3(distance)).x;
+			EMISSION = vec3(half_distance, distance - half_distance, 0.0);
+		}
 	} else {
 		vec3 normal_map = texture(normal_texture, UV).rgb;
 		if (normal_green_down) {

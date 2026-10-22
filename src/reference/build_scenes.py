@@ -362,7 +362,9 @@ def intel_sponza():
               "Ivy": f"{DOWNLOADED}/intel_sponza_ivy/NewSponza_IvyGrowth_glTF.gltf"}
     cameras = ("PhysCamera001", "PhysCamera002", "PhysCamera004", "PhysCamera005", "PhysCamera006")
     exposures = dict(zip((f"Model/{camera}" for camera in cameras), (110.0, 22.0, 440.0, 53.0, 16.0)))
-    return Scene("intel_sponza", [], {}, {}, models=models, sky=True, sun=SPONZA_SUN, exposure=75.0,
+    hidden = ("HDRI_SKY", "SUN", *(f"lamp_light_1st_floor_{i:02}" for i in range(1, 15)),
+              *(f"lamp_light_2nd_floor_{i:02}" for i in range(1, 9)))
+    return Scene("intel_sponza", [], {}, {}, models=models, sky=True, sun=SPONZA_SUN, hidden=hidden, exposure=75.0,
                  camera_exposures=exposures)
 
 
@@ -634,8 +636,7 @@ def tscn(scene):
                   '[ext_resource type="Script" path="res://src/host/gi_effect.gd" id="gi_effect_script"]']
     resources += [f'[ext_resource type="Shader" path="res://assets/shaders/{shader}.gdshader" id="{shader}"]'
                   for shader in SHADERS.values()]
-    resources.append('[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" '
-                     'id="triangles_shader"]')
+    resources.append('[ext_resource type="Resource" path="res://src/host/gi_shaders.tres" id="gi_shaders"]')
     if scene.panorama:
         resources.append(f'[ext_resource type="Texture2D" path="{scene.panorama}" id="panorama"]')
     shaders = "".join(f'{slot} = ExtResource("{shader}")\n' for slot, shader in SHADERS.items())
@@ -662,7 +663,7 @@ def tscn(scene):
         '[node name="WorldEnvironment" type="WorldEnvironment" parent="."]\n'
         'environment = SubResource("environment")\ncompositor = SubResource("compositor")',
         '[node name="GI" type="Node" parent="."]\nscript = ExtResource("gi")\n'
-        f'{shaders}triangles_shader = ExtResource("triangles_shader")',
+        f'{shaders}shaders = ExtResource("gi_shaders")\neffect = SubResource("gi_effect")',
     ]
     if scene.sun:
         # Light only: a sun disk in the sky would add the sun's light a second time to every path that sees it.
@@ -675,7 +676,7 @@ def tscn(scene):
     for name, lamp in scene.lamps.items():
         sections.append(f'[node name="{name}" type="OmniLight3D" parent="."]\nposition = {vector(lamp.position)}\n'
                         f"light_size = {lamp.size:.6g}\nshadow_enabled = true\nomni_range = {LAMP_RANGE:.6g}\n"
-                        "omni_attenuation = 2.0")
+                        "omni_attenuation = 2.0\nlight_bake_mode = 1")  # static: lamps switch but never move
     for index, (name, (eye, target)) in enumerate(scene.cameras.items()):
         current = "\ncurrent = true" if index == 0 else ""
         own_environment = (f'\nenvironment = SubResource("{camera_environment(name)}")'

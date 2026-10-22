@@ -3,7 +3,10 @@
 
 // Puts the scene's triangles in world space with their attributes, one thread per triangle, as the acceleration
 // structure's vertices. Each triangle is stored so that cross(v1 − v0, v2 − v0) is its front normal: Godot's front faces
-// wind clockwise, and a mirroring transform turns that around.
+// wind clockwise, and a mirroring transform turns that around. The corners' vertex normals go to a buffer of their own,
+// in the same order.
+
+#include "cshd_normals.glslinc"
 
 layout(local_size_x = 256) in;
 
@@ -29,6 +32,7 @@ layout(set = 0, binding = 5, std430) readonly buffer Surfaces { Surface surfaces
 layout(set = 0, binding = 6, std430) writeonly buffer Triangles { vec4 triangles[]; };
 layout(set = 0, binding = 7, std430) writeonly buffer TriangleAttributes { Attributes attributes[]; };
 layout(set = 0, binding = 8, std430) buffer Statistics { uint winding_disagreements; };
+layout(set = 0, binding = 9, std430) writeonly buffer CornerNormals { uint corner_normals[]; };
 
 layout(push_constant, std430) uniform Parameters {
 	uint triangle_count;
@@ -55,6 +59,16 @@ vec3 local_position(uint vertex) {
 
 vec3 local_normal(uint vertex) {
 	return vec3(normals[3u * vertex], normals[3u * vertex + 1u], normals[3u * vertex + 2u]);
+}
+
+// The inverse transpose of the transform's linear part, as its cofactors over its determinant, keeps a normal
+// perpendicular under any scale and flips it with a mirroring transform as the surface flips.
+vec3 world_normal(vec3 normal, mat3x4 to_world) {
+	vec3 a = to_world[0].xyz;
+	vec3 b = to_world[1].xyz;
+	vec3 c = to_world[2].xyz;
+	vec3 cofactors = vec3(dot(cross(b, c), normal), dot(cross(c, a), normal), dot(cross(a, b), normal));
+	return normalize(cofactors) * sign(dot(a, cross(b, c)));
 }
 
 void main() {
@@ -85,6 +99,7 @@ void main() {
 		world[corner] = vec4(local_position(order[corner]), 1.0) * to_world;
 		corner_attributes.uv[corner] = uvs[order[corner]];
 		corner_attributes.uv2[corner] = uv2s[order[corner]];
+		corner_normals[3u * triangle + corner] = normal_pack(world_normal(local_normal(order[corner]), to_world));
 	}
 	corner_attributes.material = surface.offsets.w;
 	corner_attributes.instance = surface.instance.x;

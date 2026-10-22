@@ -7,7 +7,7 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
-[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
+[ext_resource type="Resource" path="res://src/host/gi_shaders.tres" id="gi_shaders"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 ground_bottom_color = Color(0.35, 0.35, 0.35, 1)
@@ -103,7 +103,9 @@ one_sided_shader = ExtResource("shd_gi")
 two_sided_shader = ExtResource("shd_gi_double_sided")
 alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
 two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
-triangles_shader = ExtResource("triangles_shader")
+shaders = ExtResource("gi_shaders")
+effect = SubResource("gi_effect")
+texel_size = 0.133
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.610865, 0.523599, 0)
@@ -122,6 +124,7 @@ light_size = 0.1
 shadow_enabled = true
 omni_range = 20
 omni_attenuation = 2.0
+light_bake_mode = 1
 
 [node name="LampPlane" type="OmniLight3D" parent="."]
 position = Vector3(11.5, 3.1, 6.25)
@@ -129,6 +132,7 @@ light_size = 0.1
 shadow_enabled = true
 omni_range = 20
 omni_attenuation = 2.0
+light_bake_mode = 1
 
 [node name="Facade" type="Camera3D" parent="."]
 position = Vector3(8, 1.7, 14)

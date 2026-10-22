@@ -66,7 +66,13 @@ A set must cover every binding the shader declares, including bindings the code 
 
 ## Push constants
 
-A push constant block needs no padding to 16 bytes: a 4-byte block works.
+A push constant block needs no padding to 16 bytes: a 4-byte block works. The size handed to `compute_list_set_push_constant` or `draw_list_set_push_constant` must equal the block's exactly; debug builds reject any other size (`rendering_device.cpp`).
+
+## Raster passes
+
+- A render pipeline created with `INVALID_FORMAT_ID` as its vertex format takes no vertex array: `draw_list_draw(list, false, 1, vertex_count)` runs the vertex shader `vertex_count` times, and the shader reads its data from storage buffers by `gl_VertexIndex`.
+- An `R32_UINT` colour attachment stores an integer per pixel, such as a triangle's index, with blending off, as `RDPipelineColorBlendStateAttachment` has it by default.
+- `texture_clear` needs `TEXTURE_USAGE_CAN_COPY_TO_BIT` on the texture, storage textures included.
 
 ## Shader compile errors
 

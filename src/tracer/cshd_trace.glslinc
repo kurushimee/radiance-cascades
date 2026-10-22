@@ -44,7 +44,9 @@ layout(set = TRACE_SET, binding = 3, std430) readonly buffer Materials { Materia
 layout(set = TRACE_SET, binding = 4) uniform texture2D material_textures[MAX_TEXTURES];
 layout(set = TRACE_SET, binding = 5) uniform sampler material_sampler;
 
-// Godot enables no non-uniform descriptor indexing, so each subgroup samples one texture at a time.
+// Each subgroup samples one texture at a time; Godot enables non-uniform indexing, so a `nonuniformEXT` index can
+// replace the loop when its cost matters. It reads the full-resolution level, as the path tracer does: Godot averages
+// mipmaps in sRGB, which darkens them.
 vec4 material_texture(uint texture_index, vec2 uv) {
 	vec4 texel = vec4(0.0);
 	while (true) {
@@ -82,7 +84,8 @@ vec3 trace_front_normal(uint triangle) {
 
 // The raster discards a fragment whose alpha is below the scissor.
 bool trace_opaque(uint triangle, uint material, vec2 barycentrics) {
-	return material_albedo(material, trace_uv(triangle, barycentrics)).a >= materials[material].emission.w;
+	return material_albedo(material, trace_uv(triangle, barycentrics)).a
+			>= materials[material].emission.w;
 }
 
 // The opaque triangles come first and form the BLAS's first geometry, the alpha-tested ones its second, and the

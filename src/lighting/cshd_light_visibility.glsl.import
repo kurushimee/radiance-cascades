@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://0pw6ge02kur6"
+path="res://.godot/imported/cshd_light_visibility.glsl-6b9904624a30c3dc038c78689be0edc5.res"
+
+[deps]
+
+source_file="res://src/lighting/cshd_light_visibility.glsl"
+dest_files=["res://.godot/imported/cshd_light_visibility.glsl-6b9904624a30c3dc038c78689be0edc5.res"]
+
+[params]
+

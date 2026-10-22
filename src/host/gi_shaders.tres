@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="GIShaders" format=3]
+
+[ext_resource type="Script" path="res://src/host/gi_shaders.gd" id="script"]
+[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_capture.glsl" id="capture"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_capture_samples.glsl" id="capture_samples"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_probe_classify.glsl" id="probe_classify"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_probe_map.glsl" id="probe_map"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_probe_groups.glsl" id="probe_groups"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_probe_data.glsl" id="probe_data"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_atlas_view.glsl" id="atlas_view"]
+[ext_resource type="RDShaderFile" path="res://src/atlas/cshd_texel_view.glsl" id="texel_view"]
+[ext_resource type="RDShaderFile" path="res://src/lighting/cshd_light_visibility.glsl" id="light_visibility"]
+[ext_resource type="RDShaderFile" path="res://src/lighting/cshd_direct.glsl" id="direct"]
+[ext_resource type="RDShaderFile" path="res://src/lighting/cshd_direct_view.glsl" id="direct_view"]
+[ext_resource type="RDShaderFile" path="res://src/lighting/cshd_sky_table.glsl" id="sky_table"]
+
+[resource]
+script = ExtResource("script")
+triangles = ExtResource("triangles")
+capture = ExtResource("capture")
+capture_samples = ExtResource("capture_samples")
+probe_classify = ExtResource("probe_classify")
+probe_map = ExtResource("probe_map")
+probe_groups = ExtResource("probe_groups")
+probe_data = ExtResource("probe_data")
+atlas_view = ExtResource("atlas_view")
+texel_view = ExtResource("texel_view")
+light_visibility = ExtResource("light_visibility")
+direct = ExtResource("direct")
+direct_view = ExtResource("direct_view")
+sky_table = ExtResource("sky_table")

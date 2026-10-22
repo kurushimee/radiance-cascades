@@ -20,6 +20,8 @@ A `GI` node in the scene collects every GI mesh instance and light, then runs th
 4. Trace every static record, and the visibility of static lights.
 5. Precompute the dilation map and the seam pairs.
 
+After the first frame, which fills Godot's radiance map, the node bakes the sky's panorama and the render thread integrates it into the sky table ([lighting.md](lighting.md#sky)).
+
 ## Frame
 
 The `CompositorEffect` runs at PRE_OPAQUE, where Forward+ has ended the depth pre-pass's draw list and none is open ([docs](../docs/compositor_and_shading.md)). The solve needs neither depth nor normals; this callback is simply the last point in the frame before the opaque pass reads the atlas. Its compute list:

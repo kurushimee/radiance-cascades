@@ -51,18 +51,17 @@ Done when the tracer's rates and build times are measured on the RTX 2070, the r
 
 ### M2. Atlas and direct light
 
-Done when the texels' direct irradiance matches the path tracer's direct irradiance at the texel probes within 2%, on every scene.
+Done when the GI's light code, run at each pixel's primary hit with every light's cone sampled, agrees with the path tracer's direct irradiance view on every scene with Godot lights: the squared difference's excess over the reference's noise is within three of its standard errors of zero, and the relative bias is within three standard deviations of the reference's mean, once the pixels lit on one side alone are counted out and their cause is measured. On the scenes without lights the GI's direct light is zero. The path tracer renders only camera pixels, so the probes run the same code and their one sun ray is measured, not gated.
 
-- [ ] Packing of instance rectangles; atlas use and chart counts per scene
-- [ ] Capture pass at 4×4 samples per texel: position, normal, albedo, emission, coverage
-- [ ] Probes, frames from the normal, two-sided charts
-- [ ] Dilation map and seam pairs
-- [ ] Direct light: sun shadow rays, cached visibility for static lights, shadow rays for moving lights, Godot's attenuation and units
-- [ ] Sky table from the baked panorama, with the sun's disk removed
-- [ ] Debug views of the atlas and the texels' direct light
-- [ ] Measure: albedo capture at 4×4 against 16×16 samples; one sun ray against several
-
-**Fallback.** If Godot exposes no rectangle packer to GDScript, a skyline packer is written in GDScript. If one sun ray per texel shows texel-scale aliasing in the indirect light, the sun gets a few rays per texel.
+- [x] The engine's direct irradiance view, and hit matching between the raster, the GI's tracer and the path tracer
+- [x] Packing of instance rectangles; atlas use per scene
+- [x] Capture pass at 4×4 samples per texel: position, normal, albedo, emission, coverage
+- [x] Probes, frames from the normal, two-sided charts
+- [x] Dilation map
+- [x] Direct light: sun shadow rays, cached visibility for static lights, shadow rays for moving lights, Godot's attenuation and units
+- [x] Sky table from the baked panorama, with the sun's disk removed
+- [x] Debug views of the atlas and the texels' direct light
+- [x] Measure: albedo capture at 4×4 against 16×16 samples; one sun ray against several
 
 ### M3. Cascades and one bounce
 
@@ -76,6 +75,7 @@ Done when the furnace, sealed-box and determinism checks of [cascades.md](../../
 - [ ] Measure: 16 against 36 bins at equal cost
 - [ ] Measure: the sphere fix against Kuhn at the first world hand-over in the sealed sunlit rooms
 - [ ] Measure: pre-averaged cascade 1 reads against the exact reads
+- [ ] Decide the sun's rays per probe: one ray toward its centre, or a few, from the first bounce's aliasing and M2's measurement of the one ray
 
 **Fallback.** If world probes cost more than the budget allows on large planar charts, those charts take lattice upper cascades (E1). If the sealed rooms leak more than 0.001 of the outside, the first world hand-over takes the Kuhn fix.
 
@@ -94,7 +94,8 @@ Done when the indirect error after the tail meets the acceptance limits on the C
 Done when the full frame meets the indirect-error limits on every scene and the decision on cascade −1 is recorded.
 
 - [ ] GI material: atlas read at UV2, `IRRADIANCE = RADIANCE = vec4(E/π, 1)`; SSAO and SSIL off
-- [ ] Dilation and seam stitching after the last pass; seams checked in renders
+- [ ] Seam pairs at load; dilation and seam stitching after the last pass; seams checked in renders
+- [ ] The material's atlas lookup without `instance uniform`, which the path tracer's hit groups cannot compile
 - [ ] Measure: error under objects smaller than a texel, on the small-objects scene and Bistro
 - [ ] If that error decides acceptance: the cascade −1 candidate of [near_field.md](../../design/near_field.md#the-candidate-for-m5), against the default, within 1 ms
 
@@ -117,7 +118,7 @@ Done when moving objects stay within the budget's 0.5 ms on the test scenes and 
 - [ ] BLAS per moving mesh, TLAS per frame
 - [ ] Moving objects' charts and per-frame records
 - [ ] Retrace of static records near moving objects
-- [ ] Performance pass: occupancy, memory layout of records and probe-bins
+- [ ] Performance pass: occupancy, memory layout of records and probe-bins, the direct pass's ray rate on Bistro's exterior
 - [ ] Skinned meshes, if the budget allows
 
 **Fallback.** If retracing near moving objects exceeds its line, moving objects receive GI but stop casting indirect shadows on static surfaces beyond their own texels.
@@ -237,8 +238,86 @@ Done when moving objects stay within the budget's 0.5 ms on the test scenes and 
 - **Seams of single-plane walls.** The fork skipped hits closer than 1 mm on top of its origin offset, so rays that left a wall within a millimetre of the ceiling passed through it. The unlit leak house's single-plane room showed bright lines along every seam, up to 0.028 against an outside `E/π` of 0.16, in both views; with a minimum distance of 0 it is black, below 1e-5 of the outside. The thick room was black throughout, since a ray that skipped its inner face still met the wall's outer one.
 - **Fireflies on Crytek Sponza.** In 65,536 accumulated frames of the Atrium's irradiance view, 0.01% of the pixels carry 98% of the variance, from single samples up to 8 million times the mean; without them the noise is 8 times lower. Two of its metals have roughness maps that reach 0, and the path tracer samples the sun with no roughness floor and no MIS. At 255 samples a frame takes 5 to 10 s there.
 - **`flip-limit`** compares the perturbed frames with the reference's own composed frame: a denoised reference has no mean over even frames to stand in for a second noisy sample.
-- **M2's check** compares the texels' direct irradiance with the path tracer's, but the fork has no view of direct light alone; M2 needs one, as a patch like the irradiance view, or another check.
+- **A view of direct light alone.** The fork had none, so the patch adds one beside the irradiance view, for M2's check ([docs](../../docs/path_tracer.md#the-engine-patch)).
 - **Godot's specular occlusion.** Godot scaled the indirect specular by `min(8 · luminance(IRRADIANCE), 1)`, so in Bistro's shaded Corner a hedge kept 70% of the open sky's reflection and showed grey-blue, its lamp post light grey and its cobbles flat, where the path tracer shows them green, dark and textured. The frame was also not affine in `E/π`: Godot's frame with the reference's `E/π` was 65% above the composed frame in the median pixel of the Corner, 8 to 36% in Bistro's other views, 14 to 17% in Crytek Sponza's and 0.3 to 1.5% in the leak house's, and equal indoors. The GI materials now write `E/π` as `RADIANCE` too, with the occlusion off ([lighting.md](../../design/lighting.md#sky)); the frame then agrees with the composed one within 0.06% in 98% of the pixels of every view except the two Sponzas', where screen-space reflections, the one term left that reads other pixels, move 1 to 18% of the pixels by more than 1% and the frame's mean by at most 0.2%.
 - **Textures without mipmaps.** Every downloaded texture had imported lossless and without mipmaps, since only the editor's first 3D draw switches a texture to VRAM compression with mipmaps ([docs](../../docs/scene_import.md#textures-used-in-3d)). On Intel Sponza, Ray Reconstruction then failed with `sl::eWarnOutOfVRAM`, also without the GI node. The import tool now sets the 3D import on the 144 textures that the materials of Crytek Sponza, Intel Sponza and its ivy use; Bistro's are DDS.
-- **Acceptance limits.** The reference counts as exact, so the lab's indirect-error limits stand, with both Sponzas and Bistro under the tighter ones of open scenes and single rooms. The HDR-FLIP limits per camera run from 0.023 on the leak house's sunlit facade to 0.157 in the two rooms and the pillar hall ([evaluation.md](../../design/evaluation.md#acceptance)). On the downloaded scenes the image floor is 1.7 to 4.0 times the limit, so Godot's ready-made rendering, not the GI, decides how close their final images come to the path tracer's. Blurring both images by 4 pixels lowers the floor by only 2 to 20%, so it is not anti-aliasing or texture filtering. Denoised references had saved `irradiance.exr` without alpha, since an opaque viewport reads back RGB; the capture now adds the alpha that marks the surfaces, and the rendered references got it from their `position.exr`.
+- **Acceptance limits.** The reference counts as exact, so the lab's indirect-error limits stand, with both Sponzas and Bistro under the tighter ones of open scenes and single rooms. The HDR-FLIP limits per camera run from 0.023 on the leak house's sunlit facade to 0.157 in the two rooms and the pillar hall ([evaluation.md](../../design/evaluation.md#acceptance)). On the downloaded scenes the image floor is 1.7 to 3.6 times the limit, so Godot's ready-made rendering, not the GI, decides how close their final images come to the path tracer's. Blurring both images by 4 pixels lowers the floor by only 2 to 20%, so it is not anti-aliasing or texture filtering. Denoised references had saved `irradiance.exr` without alpha, since an opaque viewport reads back RGB; the capture now adds the alpha that marks the surfaces, and the rendered references got it from their `position.exr`.
 - **The sky behind the path tracer.** Camera rays that miss read the sky's radiance map, 256² by default ([docs](../../docs/path_tracer.md#lights)), which blurred the buildings of Bistro's panorama behind the plaza into horizontal smears. Bistro's sky now has a 2048² map.
+
+### M2
+
+- **The direct check.** The GI's light code ran at each pixel's primary hit with every light's cone sampled by 1,024 directions, against the path tracer's direct view averaged over 1,024 raw frames. The excess is the squared difference beyond the reference's noise, as a share of the noise's: the square of the RMSE's ratio to the noise's RMSE, less 1. Its standard error comes from the spread of the pixels' own excesses. The bias is in standard deviations of the reference's mean. The Cornell box, the pillar hall and the two rooms have no Godot lights, and the GI's direct light there is zero.
+
+  | Scene | Camera | Excess | Bias | Flips |
+  |---|---|---|---|---|
+  | Leak house | Back, Facade, InsidePlane, InsideThick | +0.1 ± 0.4%, −0.3 ± 0.3%, −0.3 ± 0.3%, −0.3 ± 0.3% | −0.09σ, +0.01σ, +2.24σ, +2.20σ | 0 |
+  | Leak house without lamps | Back, Facade | +1.0 ± 2.5%, −22 ± 15% | −1.07σ, +2.94σ | 0 |
+  | | InsidePlane, InsideThick | zero on both sides | | |
+  | Small objects | Low, Overview | +0.0 ± 4.1%, +3.8 ± 3.3% | +3.36σ, +1.16σ | 0 |
+  | Crytek Sponza | Arcade, Atrium, Gallery | −33 ± 33%, +3.2 ± 5.9%, −2.1 ± 8.7% | −0.26σ, +0.57σ, −0.96σ | 0 |
+  | Intel Sponza | 001, 002, 004, 005 | +9.1 ± 7.0%, +0.7 ± 8.0%, +14 ± 14%, +10.5 ± 5.0% | −0.63σ, −0.41σ, −1.28σ, +0.15σ | 0, 0, 1, 0 |
+  | | 006 | +147 ± 147%, +0.0 ± 3.0% without its flip | +1.50σ, +2.71σ without | 1 |
+  | | 003 | zero on both sides | | |
+  | Bistro interior | Camera | −0.0 ± 0.4% | +0.19σ | 1 |
+  | Bistro exterior | Camera | +1.8 ± 1.6% | −1.94σ | 0 |
+  | | Corner | +9.3 ± 4.9%, +5.5 ± 3.1% without flips | +0.75σ, +0.55σ without | 2 |
+  | | Plaza | +87 ± 24%, +13.6 ± 5.3% without flips | −1.52σ, −1.01σ without | 13 |
+  | | Terrace | +130 ± 55%, −0.4 ± 1.8% without flips | +5.12σ, +1.96σ without | 9 |
+
+  Without the flips, every excess is within 2.6 standard errors of zero, the most on Bistro's Plaza and Intel's 005, and every bias is within three standard deviations but small objects' Low, where the GI's quadrature decides it (below). The ratio of the RMSEs alone hides how well the noise itself is known: the excess's standard error runs from 0.3% of the noise on the leak house to 33% on Crytek's Arcade.
+- **Hit matching.** Both sides must see the raster's surface. A GI pixel counts when its primary ray's hit distance `t` is within `t/4096` of the raster's. A reference pixel counts when its depth, scaled by the median ratio of the two views' depths, is within 1/1024 of the raster's, and its normal meets the raster's at a cosine of at least 0.99999. At 0.99 the stacked cloth layers of Bistro's awnings passed as one surface: Terrace's RMSE was 0.0211 against the noise's 0.0118, with a bias of 8.4σ. At 0.99999 the awnings differ by an RMS of 0.0016 against the noise's 0.0017. The path tracer's half-float normal view keeps one surface within a cosine of 0.999999 of the raster's. The raster draws its views at full detail, as the tracers hold the meshes: at Godot's default level-of-detail threshold, 12% of Intel Sponza's pixels had normals more than 0.26° from the path tracer's ([docs](../../docs/path_tracer.md#frames)), and each of its cameras compared about 800,000 pixels instead of about 920,000.
+- **Quadrature.** A grid of rings and sectors over the cone errs along a whole sector edge where a shadow's edge crosses the cone's centre: Crytek's Arcade gave an RMSE of 0.151 at 8×8 and 0.089 at 16×16 against the noise's 0.083. A Fibonacci lattice spreads that error, which falls at an edge about as `N^(−3/4)`. The check uses 1,024 directions and the static lamps' cache the same lattice at 64. At 2,048 directions the excess fell by 1 to 3% of the noise on most sunlit cameras: Bistro's Camera from +1.8% to +0.2%, Corner's from +5.5% to +3.1% and Plaza's from +13.6% to +10.7% without flips, and Intel's 001 from +9.1% to +6.8%. Small objects' Low bias fell from +3.36σ to +0.75σ. The lampless leak house's Facade went from +2.94σ to −6.94σ, at relative biases of 7·10⁻⁷ and −1.7·10⁻⁶: where the reference's noise is that low, the GI's own quadrature decides a bias of a few σ.
+- **Flips.** A pixel lit on one side and below 5% of it on the other, where the lit side is above a fifth of the frame's mean, is counted apart. Intel Sponza had 23 to 64 per camera, dim tails of sun streaks through the ivy, 0.008 to 0.026 on the GI side and 0 in the reference. The model brings 24 lights of zero intensity, and the path tracer samples every visible light, so the sun got one light sample in 25, and a pixel that sees a few percent of its disk often got none in 1,024 frames ([docs](../../docs/path_tracer.md#lights)). The reference's relative noise on the fully sunlit floor, 0.153 or √(24/1,024), measured that share. With the lights hidden, Intel's 004 and 006 keep 1 flip each. What remains on Intel and Bistro are single pixels of three kinds:
+  - **The shadow terminator.** Where a mesh's interpolated normal turns far from its triangle's face, a ray toward the light grazes the face or leaves below its plane, and whether it clears its own mesh is decided within a millimetre. Both sides start it at Wächter and Binder's offset along the interpolated normal, so rounding decides. At Intel 006's flip, on a carved corbel, the normal is 41° from the face and the sun 9.5° above the face's plane: the GI's ray met its own triangle from behind at 10⁻⁷ m, which left the pixel dark against the reference's 0.76, while a start 1 mm out or an offset along the face lit it fully. At 001's largest difference, on a column's base, 0.305 against 0.401 and three quarters of that camera's excess, the sun is 6° below the face: a start 1 mm out lights the pixel fully, and an offset along the face leaves it dark. Bistro's exterior has such rays too, grazing the surfaces they leave.
+  - **Leaves** on Bistro that the reference's depth view cannot tell from parallel ones behind them.
+  - **Dim penumbrae of a dark frame.** Intel's 004 looks almost entirely into shade, with a mean of 0.001, so a tail of 0.001 on the GI side against 0 in the reference counts.
+
+  Corner's 2, Terrace's 9, 6 of Plaza's 13 and the Bistro interior's 1 are lit on the GI side.
+- **Intel Sponza's reference**, rendered again with the model's lights hidden, has a mean `E/π` 0.3 to 1.8% higher per camera than it had with one sun sample in 25. Its HDR-FLIP limits moved by at most 0.001, and its floors fell by 0.010 to 0.021 ([evaluation.md](../../design/evaluation.md#acceptance)).
+- **Views at full precision.** The GI's light code reaches the capture through Godot's half-float frame as a half and its remainder, split with a mantissa mask ([docs](../../docs/compositor_and_shading.md#hdr-readback)), and so do the raster's distances and normals. Half-float normals alone match the same pixels within a few dozen per camera, but they turned the GI's direct light by an RMS of 0.03% per pixel on Intel's 001 and 005, up to 2% where the light grazes, and moved 005's bias from +0.15σ to +0.68σ. The path tracer's first two frames after it is enabled are blank ([docs](../../docs/path_tracer.md#frames)).
+- **The path tracer's normals** turn wrongly under a non-uniform scale. Among the test scenes, only Bistro's four string-light cables and one building of Bistro's interior are scaled that way ([docs](../../docs/path_tracer.md#materials)).
+- **`instance uniform` in hit groups** does not compile ([docs](../../docs/path_tracer.md#materials)), so the debug views trace their own primary rays, and M5 gives the material its atlas rectangle another way.
+- **Non-uniform indexing** of sampled images is on for Vulkan 1.2 devices ([docs](../../docs/rendering_device.md#texture-arrays)). The tracer keeps its subgroup loop until its cost matters.
+- **Lights.** No test scene has a spot light, a light without shadows that gives light, or physical light units, so those are errors. A model's light that gives no light at load, because the scene's own lights replace it, is left out ([lighting.md](../../design/lighting.md#direct-light)). The path tracer still samples such a light, so the scenes hide them (Flips, above).
+- **Packing.** Godot binds `Geometry2D.make_atlas` for scripts, so no packer of the project's own is needed.
+- **The atlas** at 4×4 samples, with the build's wall-clock time on the render thread. The first capture after a shader import took 157 ms on Crytek Sponza, the next 23.4 ms:
+
+  | Scene | Atlas | Texel | Rectangles | Covered texels | Use | Probes | Own | Groups | Moved | Memory | Build |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | Cornell box | 220×160 | 0.009 m | 4 | 27,289 | 0.775 | 24,992 | 24,992 | 0 | 0 | 2.1 MB | 8.4 ms |
+  | Two rooms | 240×188 | 0.121 m | 4 | 33,972 | 0.753 | 31,029 | 30,816 | 213 | 81 | 2.7 MB | 9.8 ms |
+  | Leak house | 244×264 | 0.133 m | 7 | 35,335 | 0.549 | 31,683 | 31,275 | 408 | 204 | 2.8 MB | 10.7 ms |
+  | Pillar hall | 340×284 | 0.133 m | 3 | 55,204 | 0.572 | 34,764 | 18,804 | 15,960 | 6,384 | 3.2 MB | 12.9 ms |
+  | Small objects | 448×268 | 0.235 m | 2 | 57,644 | 0.480 | 33,918 | 29,584 | 4,334 | 862 | 3.2 MB | 12.8 ms |
+  | Crytek Sponza | 568×1136 | 0.462 m | 2 | 131,653 | 0.204 | 48,186 | 35,310 | 12,876 | 10,019 | 6.4 MB | 23.4 ms |
+  | Intel Sponza | 2036×1168 | 0.529 m | 119 | 452,868 | 0.190 | 58,017 | 25,393 | 32,624 | 15,438 | 14.2 MB | 267 ms |
+  | Bistro interior | 1024×1260 | 0.219 m | 955 | 264,159 | 0.205 | 61,011 | 19,849 | 41,162 | 23,103 | 10.1 MB | 53.4 ms |
+  | Bistro exterior | 2048×3160 | 2.146 m | 1,264 | 1,253,522 | 0.194 | 84,196 | 13,790 | 70,406 | 35,135 | 32.7 MB | 199 ms |
+
+  The probes run from 24,992 to 84,196 against the budget's 30,000 ([budget.md](../../design/budget.md#texel-spacing)), and groups of charts smaller than a texel make the difference. A fifth to two fifths of the downloaded scenes' probes move out of a back face, most of them groups. At 16×16 the build takes 27 ms on small objects, 99 ms on Crytek Sponza, 1,242 ms on Intel Sponza, 247 ms on Bistro's interior and 781 ms on its exterior. The probes pass takes 0.04 to 5.1 ms of GPU time.
+- **Albedo.** Read at the footprint of a sample, the textured scenes' albedo came out 3.1% darker than read at full resolution on Crytek Sponza, 1.7% on Intel Sponza and 1.3 and 1.4% on Bistro's interior and exterior, and 0.2 to 2.0% darker at 4×4 than at 16×16: Godot averages mipmaps in sRGB terms ([docs](../../docs/scene_import.md#textures-used-in-3d)). The capture now reads full resolution, as the path tracer does. On texels that are probes of their own in both captures, 4×4 against 16×16:
+
+  | Scene | Texels | RMSE | Bias |
+  |---|---|---|---|
+  | Crytek Sponza | 48,607 | 10.5% | 0.00% |
+  | Intel Sponza | 41,096 | 9.2% | −0.20% |
+  | Bistro interior | 34,762 | 4.5% | +0.09% |
+  | Bistro exterior | 26,847 | 5.2% | −0.10% |
+
+  Small objects' materials are untextured, and both captures agree exactly. The alpha test reads full resolution too, so Bistro's exterior covers 9% more texels than at the footprint and Crytek Sponza 3% more; Intel Sponza's ivy is opaque and keeps its count.
+- **One sun ray toward the centre against the sampled cone**, over the atlas's texels:
+
+  | Scene | RMSE | Bias |
+  |---|---|---|
+  | Leak house | 0.0152 | +0.0002 |
+  | Leak house without lamps | 0.0179 | +0.0003 |
+  | Small objects | 0.0145 | −0.0001 |
+  | Crytek Sponza | 0.083 | −0.0025 |
+  | Intel Sponza | 0.124 | +0.0020 |
+  | Bistro exterior | 0.557 | +0.0057 |
+
+  Bistro's interior has no sun, and its lamps are cached. One ray is unbiased within 0.6%, and apart texel by texel by up to 56% on Bistro's exterior, whose texels are 2.1 m across. M3 decides the rays from the first bounce's aliasing.
+- **Times.** With the sun alone, the direct pass takes 0.017 ms on the leak house and small objects, 0.045 ms on Crytek Sponza, 0.068 ms on Intel Sponza and 0.30 to 0.33 ms on Bistro's exterior, which runs at a quarter of the Sponzas' ray rate for a cause not yet measured. Bistro's interior, with cached lamps only, takes 0.02 ms. The lamps' visibility at load takes 1.8 ms on the leak house and 9.0 ms on Bistro's interior, and the sky table 0.02 to 0.047 ms.
+- **Determinism.** Two captures of Crytek Sponza write byte-identical atlas images, probe direct light and texel views.
+- **Sky.** The table's `E/π` on surfaces facing the six axes is within 1.1·10⁻⁴ of the panorama's cosine integral on the leak house and small objects, 128×64 bins, 5.9·10⁻⁴ on the Sponzas, 64×32 bins, and 8.1·10⁻⁴ on Bistro's exterior. A bake in `_ready` returned black, since Godot fills the radiance map while it draws the first frame ([docs](../../docs/compositor_and_shading.md#sky)).
+- **Settings before the GI's `_ready`.** The main scene enters the tree before an autoload's `_ready`, so a `node_added` handler connected there misses it. The capture sets `--atlas-samples` on the GI from its own `_ready`, which runs before the GI's.

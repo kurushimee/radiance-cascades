@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://d1mukaafthwlm"
+path="res://.godot/imported/cshd_direct.glsl-de431669d6860350c1c6b418c12b404b.res"
+
+[deps]
+
+source_file="res://src/lighting/cshd_direct.glsl"
+dest_files=["res://.godot/imported/cshd_direct.glsl-de431669d6860350c1c6b418c12b404b.res"]
+
+[params]
+

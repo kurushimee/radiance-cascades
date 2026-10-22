@@ -28,7 +28,7 @@ Sources, licences and sizes are recorded in [research](../research/sources/2026_
 
 **Built scenes.** `src/reference/build_scenes.py` writes them as glTF models and Godot scenes. The rooms are built on the lab's 32-voxel grid ([experiments.md](experiments.md)) at 0.25 m per voxel, with walls of albedo 0.7 and floors of 0.45 where the lab had 0.9 throughout. A lower albedo weakens the higher bounces, through which the solve's error compounds, so the lab's errors at 0.9 bound the rooms' from above. The Cornell box has the published geometry with Mitsuba 3's RGB reflectances and light radiance, so Mitsuba builds the same box from the same numbers. Those are diffuse reflectances, so its surfaces are matte: with Godot's default specular, the path tracer's GGX lobe at roughness 1 reflects 3.7% less light than a Lambertian surface of the same albedo ([docs](../docs/path_tracer.md#materials)).
 
-**Downloaded scenes.** `src/reference/fetch_scenes.py` fetches them from their sources into `assets/downloaded/`, which git ignores, and `build_scenes.py` writes their Godot scenes. Their own lights are replaced: Intel Sponza exports its lights with zero intensity, and Bistro's FBX intensities are in its authoring tool's units. The sun points the way Intel Sponza's and Bistro's own suns do, Crytek Sponza takes Intel Sponza's, and Bistro's interior gets a lamp at each of its four point lights, with the ceiling lamps as fixtures. Bistro's exterior keeps its HDR sky, with the sun's disk painted out of a copy and its light moved into the sun. Bistro's other emissive materials, such as its string lights, shop signs, lanterns, fans and wall lights, stay in the solve. Its glass panes are left out: neither the GI nor the path tracer transmits light, and thin panes pass nearly all of it. Intel Sponza and Bistro bring their own cameras; Crytek Sponza gets three and Bistro's exterior three more, in its streets and plaza.
+**Downloaded scenes.** `src/reference/fetch_scenes.py` fetches them from their sources into `assets/downloaded/`, which git ignores, and `build_scenes.py` writes their Godot scenes. Their own lights are hidden and replaced: Intel Sponza exports its lights with zero intensity, which the path tracer would still sample ([docs](../docs/path_tracer.md#lights)), and Bistro's FBX intensities are in its authoring tool's units. The sun points the way Intel Sponza's and Bistro's own suns do, Crytek Sponza takes Intel Sponza's, and Bistro's interior gets a lamp at each of its four point lights, with the ceiling lamps as fixtures. Bistro's exterior keeps its HDR sky, with the sun's disk painted out of a copy and its light moved into the sun. Bistro's other emissive materials, such as its string lights, shop signs, lanterns, fans and wall lights, stay in the solve. Its glass panes are left out: neither the GI nor the path tracer transmits light, and thin panes pass nearly all of it. Intel Sponza and Bistro bring their own cameras; Crytek Sponza gets three and Bistro's exterior three more, in its streets and plaza.
 
 **Lighting.** Every scene has a static setup and an animated one: the sun moving across the sky, lamps switching, an emissive panel changing colour. Lamps are Godot lights with fixture meshes ([lighting.md](lighting.md#emitters)), with inverse-square falloff and a radius that softens their shadows. The leak house also comes unlit, without its lamps and fixtures, so that no light belongs inside its rooms.
 
@@ -66,7 +66,7 @@ The limits depend on the kind of scene, because the solve's own error does. In t
 | Determinism | bit-identical |
 | HDR-FLIP | per camera, below |
 
-**HDR-FLIP.** A camera's limit is the FLIP between the reference's final image and the same image with the reference's `E/π` perturbed to the indirect-error limits: scaled by 1 ± the bias limit and by value noise on a world lattice at the scene's texel spacing, sized to the RMSE limit, whichever sign of the bias gives the smaller FLIP (`metrics.py flip-limit`). The floor, reported and not gated, is the FLIP between the reference's final image and its path-traced frame (`flip-floor`). On the downloaded scenes the floor is 1.7 to 4.0 times the limit: Godot's ready-made direct light, shadows and reflections sit further from path tracing than the GI may. The unlit leak house measures leaks only, so it has no FLIP limit.
+**HDR-FLIP.** A camera's limit is the FLIP between the reference's final image and the same image with the reference's `E/π` perturbed to the indirect-error limits: scaled by 1 ± the bias limit and by value noise on a world lattice at the scene's texel spacing, sized to the RMSE limit, whichever sign of the bias gives the smaller FLIP (`metrics.py flip-limit`). The floor, reported and not gated, is the FLIP between the reference's final image and its path-traced frame (`flip-floor`). On the downloaded scenes the floor is 1.7 to 3.6 times the limit: Godot's ready-made direct light, shadows and reflections sit further from path tracing than the GI may. The unlit leak house measures leaks only, so it has no FLIP limit.
 
 | Scene | Camera | Limit | Floor |
 |---|---|---|---|
@@ -85,12 +85,12 @@ The limits depend on the kind of scene, because the solve's own error does. In t
 | Crytek Sponza | Arcade | 0.066 | 0.209 |
 | Crytek Sponza | Atrium | 0.079 | 0.270 |
 | Crytek Sponza | Gallery | 0.062 | 0.180 |
-| Intel Sponza | PhysCamera001 | 0.085 | 0.227 |
-| Intel Sponza | PhysCamera002 | 0.100 | 0.225 |
-| Intel Sponza | PhysCamera003 | 0.097 | 0.240 |
-| Intel Sponza | PhysCamera004 | 0.058 | 0.231 |
-| Intel Sponza | PhysCamera005 | 0.093 | 0.213 |
-| Intel Sponza | PhysCamera006 | 0.081 | 0.223 |
+| Intel Sponza | PhysCamera001 | 0.084 | 0.213 |
+| Intel Sponza | PhysCamera002 | 0.099 | 0.213 |
+| Intel Sponza | PhysCamera003 | 0.097 | 0.229 |
+| Intel Sponza | PhysCamera004 | 0.058 | 0.211 |
+| Intel Sponza | PhysCamera005 | 0.092 | 0.192 |
+| Intel Sponza | PhysCamera006 | 0.080 | 0.213 |
 | Bistro exterior | Camera | 0.102 | 0.226 |
 | Bistro exterior | Corner | 0.115 | 0.191 |
 | Bistro exterior | Plaza | 0.074 | 0.143 |

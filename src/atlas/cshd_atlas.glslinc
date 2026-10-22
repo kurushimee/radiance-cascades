@@ -1,0 +1,44 @@
+// The surface atlas: each GI instance's UV2 at its mesh's lightmap size in a rectangle of its own, a second rectangle
+// for the back of an instance's two-sided surfaces, and the map that sends every atlas texel to the probe it reads.
+//
+// An including shader defines ATLAS_SET, the uniform set of Atlas.get_uniforms(), and ATLAS_WRITES_MAP if it builds
+// the map. One that also includes cshd_trace.glslinc first gets atlas_hit_probe().
+
+const uint ATLAS_NO_PROBE = 0xFFFFFFFFu;
+
+struct AtlasRect {
+	ivec2 front; // the first texel inside the rectangle's padding
+	ivec2 back; // the back's, or -1 for an instance without two-sided surfaces
+	ivec2 size; // the mesh's lightmap size hint
+	ivec2 unused;
+};
+
+layout(set = ATLAS_SET, binding = 0, std430) readonly buffer AtlasRects {
+	ivec2 atlas_size;
+	ivec2 atlas_unused;
+	AtlasRect atlas_rects[];
+};
+#ifdef ATLAS_WRITES_MAP
+layout(set = ATLAS_SET, binding = 1, std430) buffer AtlasMap { uint atlas_map[]; };
+#else
+layout(set = ATLAS_SET, binding = 1, std430) readonly buffer AtlasMap { uint atlas_map[]; };
+#endif
+
+// A UV2 point of an instance in atlas texels, whose centres sit at half-integers.
+vec2 atlas_point(uint instance, vec2 uv2, bool back) {
+	AtlasRect rect = atlas_rects[instance];
+	return vec2(back ? rect.back : rect.front) + uv2 * vec2(rect.size);
+}
+
+uint atlas_index(ivec2 texel) {
+	return uint(texel.y * atlas_size.x + texel.x);
+}
+
+#ifdef TRACE_SET
+// The probe whose light a hit reads. A back hit reads the back rectangle, which only two-sided surfaces have.
+uint atlas_hit_probe(TraceHit hit) {
+	TraceAttributes attributes = trace_attributes[hit.triangle];
+	vec2 point = atlas_point(attributes.instance, trace_interpolate(attributes.uv2, hit.barycentrics), hit.back);
+	return atlas_map[atlas_index(ivec2(floor(point)))];
+}
+#endif

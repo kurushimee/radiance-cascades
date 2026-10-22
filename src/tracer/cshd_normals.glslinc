@@ -1,0 +1,23 @@
+// Unit vectors packed into one word each, as two signed 16-bit coordinates of the octahedral map. Cigolle et al. 2014,
+// "A Survey of Efficient Representations for Independent Unit Vectors".
+
+vec2 normal_sign(vec2 value) {
+	return vec2(value.x >= 0.0 ? 1.0 : -1.0, value.y >= 0.0 ? 1.0 : -1.0);
+}
+
+uint normal_pack(vec3 normal) {
+	vec2 folded = normal.xy / (abs(normal.x) + abs(normal.y) + abs(normal.z));
+	if (normal.z < 0.0) {
+		folded = (1.0 - abs(folded.yx)) * normal_sign(folded);
+	}
+	return packSnorm2x16(folded);
+}
+
+vec3 normal_unpack(uint packed) {
+	vec2 folded = unpackSnorm2x16(packed);
+	vec3 normal = vec3(folded, 1.0 - abs(folded.x) - abs(folded.y));
+	if (normal.z < 0.0) {
+		normal.xy = (1.0 - abs(normal.yx)) * normal_sign(normal.xy);
+	}
+	return normalize(normal);
+}

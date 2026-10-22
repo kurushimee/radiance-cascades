@@ -1,0 +1,46 @@
+// The probe values that the atlas and texel views show, by Atlas.View. An including shader includes
+// cshd_probe.glslinc first.
+
+const uint VIEW_ALBEDO = 0u;
+const uint VIEW_NORMAL = 1u;
+const uint VIEW_POSITION = 2u;
+const uint VIEW_EMISSION = 3u;
+const uint VIEW_PROBES = 4u; // a colour per probe
+const uint VIEW_KINDS = 5u; // grey: a texel of its own, blue: a group, red: moved out of geometry
+const uint VIEW_DIRECT = 6u;
+
+vec3 view_probe_colour(uint probe) {
+	uint bits = probe * 0x9E3779B1u;
+	bits ^= bits >> 15u;
+	bits *= 0x85EBCA77u;
+	bits ^= bits >> 13u;
+	return vec3(bits & 0xFFu, (bits >> 8u) & 0xFFu, (bits >> 16u) & 0xFFu) / 255.0;
+}
+
+vec3 view_kind_colour(Probe probe) {
+	uint kind = uint(probe.normal.w);
+	if ((kind & PROBE_MOVED) != 0u) {
+		return vec3(1.0, 0.1, 0.1);
+	}
+	return (kind & PROBE_GROUP) != 0u ? vec3(0.2, 0.4, 1.0) : vec3(0.7);
+}
+
+vec3 view_value(uint index, uint mode) {
+	Probe probe = probes[index];
+	switch (mode) {
+		case VIEW_NORMAL:
+			return probe.normal.xyz * 0.5 + 0.5;
+		case VIEW_POSITION:
+			return probe.position.xyz;
+		case VIEW_EMISSION:
+			return probe.emission.rgb;
+		case VIEW_PROBES:
+			return view_probe_colour(index);
+		case VIEW_KINDS:
+			return view_kind_colour(probe);
+		case VIEW_DIRECT:
+			return probe_direct[index].rgb;
+		default:
+			return probe.albedo.rgb;
+	}
+}

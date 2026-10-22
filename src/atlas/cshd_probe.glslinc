@@ -1,0 +1,26 @@
+// The atlas's probes: the texels that are probes of their own, in atlas order, then the groups of sub-texel charts in
+// key order. An including shader defines PROBE_SET, the uniform set of Atlas.get_probe_uniforms(), PROBE_WRITES if
+// it writes the probes and PROBE_WRITES_DIRECT if it writes their direct light.
+
+const uint PROBE_GROUP = 1u; // the probe groups sub-texel charts
+const uint PROBE_MOVED = 2u; // it sat behind a one-sided surface and moved out through it
+
+struct Probe {
+	vec4 position; // w: the world area it stands for
+	vec4 normal; // w: PROBE_GROUP and PROBE_MOVED as a float
+	vec4 albedo; // w: the instance
+	vec4 emission;
+};
+
+#ifdef PROBE_WRITES
+layout(set = PROBE_SET, binding = 0, std430) writeonly buffer Probes { Probe probes[]; };
+#else
+layout(set = PROBE_SET, binding = 0, std430) readonly buffer Probes { Probe probes[]; };
+#endif
+
+// Each probe's direct light, E/π, which DirectLight writes every frame; w is unused.
+#ifdef PROBE_WRITES_DIRECT
+layout(set = PROBE_SET, binding = 1, std430) writeonly buffer ProbeDirect { vec4 probe_direct[]; };
+#else
+layout(set = PROBE_SET, binding = 1, std430) readonly buffer ProbeDirect { vec4 probe_direct[]; };
+#endif

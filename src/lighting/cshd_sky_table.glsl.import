@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://dte2igrqjci2t"
+path="res://.godot/imported/cshd_sky_table.glsl-3efa68a3174baf0575af73662935fae9.res"
+
+[deps]
+
+source_file="res://src/lighting/cshd_sky_table.glsl"
+dest_files=["res://.godot/imported/cshd_sky_table.glsl-3efa68a3174baf0575af73662935fae9.res"]
+
+[params]
+

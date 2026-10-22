@@ -4,7 +4,7 @@ extends SceneTree
 ##     godot --headless --path . --script res://src/editor/import_options.gd -- res://assets/scenes/<scene>.tscn ...
 ##
 ## The models get UV2 unwrapping, the GI material import script and the texel size that the budget model
-## (design/checks/budget.py) gets from the scene's surface area. The textures their materials use get Godot's 3D import,
+## (design/checks/budget.py) gets from the scene's surface area, which the scene's GI node gets too. The textures their materials use get Godot's 3D import,
 ## VRAM compression with mipmaps, which the editor sets when it first draws a texture in 3D and a headless import never
 ## does. The models must have been imported once, so that their .import files exist.
 
@@ -14,6 +14,8 @@ const STATIC_LIGHTMAPS: int = 2
 const TEXEL_STEPS_PER_METRE: float = 1000.0  # the import option's 0.001 m step
 const VRAM_COMPRESSED: int = 2  # ResourceImporterTexture's COMPRESS_VRAM_COMPRESSED
 const NORMAL_TEXTURE: StringName = &"normal_texture"
+const GI_NODE: String = '[node name="GI" type="Node" parent="."]'
+const TEXEL_SIZE_PROPERTY: String = "texel_size = "
 
 var _two_sided: Array[Shader] = [
 	load("res://assets/shaders/shd_gi_double_sided.gdshader"),
@@ -50,6 +52,7 @@ func _configure(scene_path: String) -> void:
 	var texel_size: float = ceilf(spacing * TEXEL_STEPS_PER_METRE) / TEXEL_STEPS_PER_METRE
 	for model: String in models:
 		_write_import_options(model, _model_options(texel_size))
+	_write_texel_size(scene_path, texel_size)
 	print("%s: %.1f m² of surface, %.1f m across, texel size %.3f m, %d textures" % [scene_path, surface.area, diameter,
 			texel_size, textures.size()])
 
@@ -106,6 +109,26 @@ func _budget_spacing(area: float, diameter: float) -> float:
 		push_error("%s failed: %s" % [BUDGET_SCRIPT, "".join(output)])
 		return 0.0
 	return output[0].strip_edges().to_float()
+
+
+# Edits the scene's text, since saving the instantiated scene would rewrite all of it.
+func _write_texel_size(scene_path: String, texel_size: float) -> void:
+	var text: String = FileAccess.get_file_as_string(scene_path)
+	var start: int = text.find(GI_NODE)
+	if start < 0:
+		push_error("%s has no GI node." % scene_path)
+		return
+
+	var end: int = text.find("\n\n", start)
+	if end < 0:
+		end = text.length()
+	var lines: PackedStringArray = []
+	for line: String in text.substr(start, end - start).split("\n"):
+		if !line.begins_with(TEXEL_SIZE_PROPERTY):
+			lines.append(line)
+	lines.append(TEXEL_SIZE_PROPERTY + str(texel_size))
+	var file: FileAccess = FileAccess.open(scene_path, FileAccess.WRITE)
+	file.store_string(text.substr(0, start) + "\n".join(lines) + text.substr(end))
 
 
 func _model_options(texel_size: float) -> Dictionary[String, Variant]:

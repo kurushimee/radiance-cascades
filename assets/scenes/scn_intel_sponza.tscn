@@ -8,7 +8,7 @@
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided.gdshader" id="shd_gi_double_sided"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_alpha_tested.gdshader" id="shd_gi_alpha_tested"]
 [ext_resource type="Shader" path="res://assets/shaders/shd_gi_double_sided_alpha_tested.gdshader" id="shd_gi_double_sided_alpha_tested"]
-[ext_resource type="RDShaderFile" path="res://src/tracer/cshd_triangles.glsl" id="triangles_shader"]
+[ext_resource type="Resource" path="res://src/host/gi_shaders.tres" id="gi_shaders"]
 
 [sub_resource type="ProceduralSkyMaterial" id="sky_material"]
 ground_bottom_color = Color(0.35, 0.35, 0.35, 1)
@@ -92,6 +92,78 @@ _data = {
 
 [node name="Ivy" parent="." instance=ExtResource("Ivy")]
 
+[node name="HDRI_SKY" parent="Model"]
+visible = false
+
+[node name="SUN" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_01" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_02" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_03" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_04" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_05" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_06" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_07" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_08" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_09" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_10" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_11" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_12" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_13" parent="Model"]
+visible = false
+
+[node name="lamp_light_1st_floor_14" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_01" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_02" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_03" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_04" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_05" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_06" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_07" parent="Model"]
+visible = false
+
+[node name="lamp_light_2nd_floor_08" parent="Model"]
+visible = false
+
 [node name="PhysCamera001" parent="Model"]
 environment = SubResource("environment_PhysCamera001")
 
@@ -117,7 +189,9 @@ one_sided_shader = ExtResource("shd_gi")
 two_sided_shader = ExtResource("shd_gi_double_sided")
 alpha_tested_shader = ExtResource("shd_gi_alpha_tested")
 two_sided_alpha_tested_shader = ExtResource("shd_gi_double_sided_alpha_tested")
-triangles_shader = ExtResource("triangles_shader")
+shaders = ExtResource("gi_shaders")
+effect = SubResource("gi_effect")
+texel_size = 0.529
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation = Vector3(-0.975639, -1.75929, 0)

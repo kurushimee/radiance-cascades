@@ -1,0 +1,14 @@
+// The world cascades' direction bins (design/cascades.md#directions): an equal-area cylindrical map of 2m azimuth by
+// m height bins, turned by a fixed rotation. Bin (j, k) has index j · m + k. CascadeLayout holds the same map.
+
+// The lab's generic_rotation(3), by columns: it turns a map direction into the world.
+const mat3 DIRECTIONS_ROTATION = mat3(vec3(0.69724373, -0.193968391, -0.690092345),
+		vec3(-0.705504985, -0.356164345, -0.612706843), vec3(-0.126940528, 0.914069594, -0.385179023));
+
+// The world direction at map coordinates `cell`, in [0, 2m) × [0, m).
+vec3 directions_world(vec2 cell, uint bins_per_side) {
+	float azimuth = cell.x * 3.14159265359 / float(bins_per_side);
+	float height = cell.y * 2.0 / float(bins_per_side) - 1.0;
+	float radius = sqrt(max(1.0 - height * height, 0.0));
+	return DIRECTIONS_ROTATION * vec3(radius * cos(azimuth), radius * sin(azimuth), height);
+}

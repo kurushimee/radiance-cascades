@@ -8,13 +8,16 @@ reference holds the path tracer's E/π in irradiance.exr, Godot's final image wi
 image at an irradiance of 0 and of 1, from which flip-limit composes the final image for other irradiances, and the
 surfaces' world positions in position.exr. A denoised reference adds the path-traced final image, path_traced.exr; an
 accumulated one adds E/π over its even frames, irradiance_half.exr. Pixels without a surface, alpha 0 in
-irradiance.exr, are left out.
+irradiance.exr, are left out. A GI capture's direct.exr holds its light code's E/π at the pixels, and a direct
+reference's direct.exr and direct_half.exr the path tracer's direct E/π over all frames and the even ones.
 
     uv run src/reference/metrics.py compare <test camera folder> <reference camera folder>
     uv run src/reference/metrics.py leak <inside camera folder> <outside camera folder>
     uv run src/reference/metrics.py agree <reference camera folder with albedo.exr> <other reference's camera folder>
     uv run src/reference/metrics.py flip-limit <reference camera folder> <texel spacing> <RMSE limit> <bias limit>
     uv run src/reference/metrics.py flip-floor <denoised reference camera folder>
+    uv run src/reference/metrics.py direct <GI camera folder> <direct reference camera folder>
+    uv run src/reference/metrics.py texels <atlas EXR> <atlas EXR of the same atlas>
 
 All print JSON. A relative figure is null when the reference's mean is zero, and HDR-FLIP when the reference's final
 image has no light.
@@ -37,9 +40,13 @@ ALBEDO = "albedo.exr"
 POSITION = "position.exr"
 NO_INDIRECT = "no_indirect.exr"
 UNIT_INDIRECT = "unit_indirect.exr"
+DIRECT = "direct.exr"
+DIRECT_HALF = "direct_half.exr"
 LUMINANCE = np.array([0.2126, 0.7152, 0.0722], dtype=np.float32)
 CREASE = 0.1  # a bend in the positions this large against their step marks a crease or a jump
 ALBEDO_STEP = 1e-3
+FLIP_SHARE = 0.05  # a pixel this dark beside the other side's value sees the light blocked on that side alone
+FLIP_LEVEL = 0.2  # of the mean, so that a flip is a lit pixel, not a dim one
 LATTICE_PRIMES = np.array([73856093, 19349663, 83492791], dtype=np.uint64)  # Teschner et al. 2003
 
 
@@ -49,10 +56,15 @@ def read(path):
     return np.asarray(channels["RGBA" if "RGBA" in channels else "RGB"].pixels, dtype=np.float32)
 
 
+def masked(path):
+    """An RGBA EXR's colour, and the mask of its pixels with alpha."""
+    pixels = read(path)
+    return pixels[..., :3], pixels[..., 3] > 0.5
+
+
 def irradiance(folder):
     """E/π, and the mask of the pixels with a surface."""
-    pixels = read(Path(folder) / IRRADIANCE)
-    return pixels[..., :3], pixels[..., 3] > 0.5
+    return masked(Path(folder) / IRRADIANCE)
 
 
 def half_difference(folder):
@@ -134,21 +146,72 @@ def flip_floor(reference):
 def agree(first, second):
     """Two references of one view, compared over the pixels both see, away from the edges in the first, whose albedo
     and positions come from the pixels' centres. They agree when the relative bias is within three standard deviations
-    of the mean and the relative RMSE is the one their noise accounts for."""
+    of the mean and the squared difference's excess over their noise within three of its standard errors of zero."""
     first_values, first_mask = irradiance(first)
     second_values, second_mask = irradiance(second)
     mask = first_mask & second_mask & interior(first)
-    difference = (first_values - second_values)[mask]
     halves = [half_difference(folder)[mask] for folder in (first, second)]
+    return agreement((first_values - second_values)[mask], halves, float(np.mean(second_values[mask])))
+
+
+def direct(test, reference):
+    """The GI's light code at the pixels against the path tracer's direct view, over the pixels both see. Both read
+    the pixels' centres, so no edge is left out. The GI's side has no noise, so the reference's half difference alone
+    feeds the deviations. A scene without lights gives the GI's largest value, which must be zero.
+
+    A few pixels are lit on one side and dark on the other. A ray toward the light that grazes the surface it leaves,
+    or leaves it below its face where the interpolated normal turns far from the face, clears its own mesh or meets it
+    as rounding decides, and a leaf that the reference's depth view cannot tell from a parallel one behind it passes
+    for the same surface. They are counted, and the agreement is given again without them."""
+    test_values, test_mask = masked(Path(test) / DIRECT)
+    reference_values, reference_mask = masked(Path(reference) / DIRECT)
+    mask = test_mask & reference_mask
+    test_values, reference_values = test_values[mask], reference_values[mask]
+    scale = float(np.mean(reference_values))
+    if scale == 0.0:
+        return {"largest": float(test_values.max()), "pixels": int(mask.sum())}
+
+    half = reference_values - read(Path(reference) / DIRECT_HALF)[..., :3][mask]
+    result = agreement(test_values - reference_values, [half], scale)
+    test_level, reference_level = test_values.mean(axis=-1), reference_values.mean(axis=-1)
+    brighter = np.maximum(test_level, reference_level)
+    flips = (np.minimum(test_level, reference_level) < FLIP_SHARE * brighter) & (brighter > FLIP_LEVEL * scale)
+    kept = ~flips
+    result["flips"] = int(flips.sum())
+    result["without_flips"] = agreement((test_values - reference_values)[kept], [half[kept]],
+                                        float(np.mean(reference_values[kept])))
+    return result
+
+
+def agreement(difference, halves, scale):
+    """The relative bias of the pixels' `difference`, with its count of standard deviations of the noise that the
+    `halves` estimate, the relative RMSE, the relative RMSE that the noise alone accounts for, all normalized by
+    `scale`, and the squared difference's excess over the noise's, as a share of the noise's, with its standard
+    error."""
     pixel_variance = sum(np.mean(half, axis=-1) ** 2 for half in halves)
-    scale = float(np.mean(second_values[mask]))
+    noise_squares = sum(np.sum(half ** 2, axis=-1) for half in halves)
+    # Without a difference of their own, a pixel's squared difference less its noise's averages zero, and the
+    # pixels' noise is independent.
+    excess = np.sum(difference ** 2, axis=-1) - noise_squares
     return {
         "relative_bias": float(np.mean(difference)) / scale,
         "bias_deviations": float(np.mean(difference) / (np.sqrt(np.sum(pixel_variance)) / len(difference))),
         "relative_rmse": float(np.sqrt(np.mean(difference ** 2))) / scale,
-        "noise_rmse": float(np.sqrt(np.mean(sum(half ** 2 for half in halves)))) / scale,
-        "pixels": int(mask.sum()),
+        "noise_rmse": float(np.sqrt(np.mean(noise_squares) / difference.shape[-1])) / scale,
+        "excess": float(np.sum(excess) / np.sum(noise_squares)),
+        "excess_error": float(np.sqrt(np.sum(excess ** 2)) / np.sum(noise_squares)),
+        "pixels": len(difference),
     }
+
+
+def texels(first, second):
+    """Two views of one atlas, compared over the texels both cover: the relative RMSE and bias of the second against
+    the first."""
+    first_values, first_mask = masked(first)
+    second_values, second_mask = masked(second)
+    mask = first_mask & second_mask
+    rmse, bias = relative(second_values[mask], first_values[mask])
+    return {"relative_rmse": rmse, "relative_bias": bias, "texels": int(mask.sum())}
 
 
 def lattice_noise(points, spacing):
@@ -201,7 +264,7 @@ def noise_scale(values, pattern, bias, rmse_limit):
 
 
 COMMANDS = {"compare": compare, "leak": leak, "agree": agree, "flip-limit": flip_limit,
-            "flip-floor": flip_floor}
+            "flip-floor": flip_floor, "direct": direct, "texels": texels}
 
 if __name__ == "__main__":
     command = COMMANDS.get(sys.argv[1] if len(sys.argv) > 1 else "")

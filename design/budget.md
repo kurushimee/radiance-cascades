@@ -24,6 +24,8 @@ The GI aims at 6 ms per frame at 1080p on an RTX 2070, half of its 12 ms ceiling
 
 The ray rates behind the fixed lines are measured with hardware ray queries on Crytek Sponza and Intel Sponza: 1.47 to 2.40 G rays/s for shadow rays and 1.88 to 2.61 G rays/s for short segments ([scene_and_tracer.md](scene_and_tracer.md#traversal)). At those rates the direct-light line covers 294,000 to 480,000 shadow rays, one per texel for the sun and for 9 to 15 moving lights over 30,000 texels. The moving-object line covers 940,000 to 1,305,000 short segments.
 
+With the sun alone, the direct-light pass took 0.045 ms over Crytek Sponza's 48,186 probes and 0.068 ms over Intel Sponza's 58,017, about 1 G rays/s. Over Bistro's exterior's 84,196 probes it took 0.30 to 0.33 ms, at 0.27 G rays/s, for a cause not yet measured (plan 004 M2).
+
 ## What a pass costs
 
 A pass traces nothing. It reads every stored hit record, looks up the radiance of the texel it hit, and merges the cascades from the top down into the texels ([lighting.md](lighting.md)). Its cost is records × `c_r`.
@@ -57,6 +59,8 @@ At 3,000 m², the spacing moves with each assumption:
 | 36 bins | 0.42 m |
 
 **So the GI resolves light at 20 to 45 cm on typical game scenes.** Light that changes faster than that, such as contact shading under small objects, is below the solve's resolution. The texel spacing of each scene is computed from its surface area at import.
+
+**The test scenes get more probes than the planning point.** Every chart smaller than a texel, such as a leaf or a bolt, still adds probes, so the import's spacing gives 25,000 to 84,000 probes. On Bistro's exterior, 70,406 of its 84,196 are groups of small charts, 2.8 times the planning point ([atlas.md](atlas.md#probes), plan 004 M2). M3 measures the records per probe that follow.
 
 The downloaded test scenes have more surface than the planning point assumed, with double-sided surfaces counted twice:
 

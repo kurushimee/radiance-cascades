@@ -1,0 +1,14 @@
+[remap]
+
+importer="glsl"
+type="RDShaderFile"
+uid="uid://nd7gkjyypvwy"
+path="res://.godot/imported/cshd_capture.glsl-e6f05f167fcecdaf9675e19d95f460f3.res"
+
+[deps]
+
+source_file="res://src/atlas/cshd_capture.glsl"
+dest_files=["res://.godot/imported/cshd_capture.glsl-e6f05f167fcecdaf9675e19d95f460f3.res"]
+
+[params]
+

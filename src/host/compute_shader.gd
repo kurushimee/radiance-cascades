@@ -39,14 +39,14 @@ func create_uniform_set(uniforms: Array[RDUniform], set_index: int = 0) -> RID:
 
 
 ## Binds `uniform_sets` as sets 0, 1, ... in order.
-func dispatch(uniform_sets: Array[RID], push_constant: PackedByteArray, groups: int) -> void:
+func dispatch(uniform_sets: Array[RID], push_constant: PackedByteArray, groups: int, groups_y: int = 1) -> void:
 	var list: int = _device.compute_list_begin()
 	_device.compute_list_bind_compute_pipeline(list, _pipeline)
 	for set_index: int in uniform_sets.size():
 		_device.compute_list_bind_uniform_set(list, uniform_sets[set_index], set_index)
 	if !push_constant.is_empty():
 		_device.compute_list_set_push_constant(list, push_constant, push_constant.size())
-	_device.compute_list_dispatch(list, groups, 1, 1)
+	_device.compute_list_dispatch(list, groups, groups_y, 1)
 	_device.compute_list_end()
 
 

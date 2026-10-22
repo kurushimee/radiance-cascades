@@ -1,0 +1,105 @@
+// Godot's omni and directional lights in E/π units, sampled as the engine's path tracer samples them
+// (raytracing_lights_inc.glsl): uniform directions over the cone the light subtends, each weighted by its cosine, the
+// light's emission and the attenuation at the light's centre, with no division by the cone's solid angle.
+//
+// An including shader includes cshd_trace.glslinc and cshd_sampling.glslinc first, defines LIGHT_SET, the uniform set
+// of DirectLight.get_uniforms(), and LIGHT_WRITES_CACHE if it writes the static lights' cache.
+
+const uint LIGHT_OMNI = 0u;
+const uint LIGHT_SUN = 1u;
+const uint LIGHT_NO_SLOT = 0xFFFFFFFFu;
+// The path tracer treats an omni light this small as a point.
+const float LIGHT_POINT_RADIUS = 0.01;
+// The path tracer's cap, which keeps a cone from closing to a single direction.
+const float LIGHT_MAX_COS = 0.999999;
+// The path tracer ends shadow rays this far short of the light.
+const float LIGHT_SHADOW_GAP = 0.001;
+
+struct Light {
+	vec4 position; // omni: the centre, w: radius; sun: the direction toward it, w: the cone's half-angle in radians
+	vec4 emission; // rgb: linear colour × energy, w: the indirect energy, which scales the light that bounces
+	vec4 falloff; // omni: x: the attenuation exponent, y: 1 / range
+	uvec4 data; // x: LIGHT_OMNI or LIGHT_SUN, y: the static light's slot in the visibility cache, or LIGHT_NO_SLOT
+};
+
+layout(set = LIGHT_SET, binding = 0, std430) readonly buffer Lights {
+	uint light_count;
+	uint light_static_count;
+	uvec2 light_unused;
+	Light lights[];
+};
+
+// A byte per probe and static light, slot after slot: the mean of cos · visibility over the light's cone, in 255ths.
+#ifdef LIGHT_WRITES_CACHE
+layout(set = LIGHT_SET, binding = 1, std430) buffer LightCache { uint light_cache[]; };
+#else
+layout(set = LIGHT_SET, binding = 1, std430) readonly buffer LightCache { uint light_cache[]; };
+#endif
+
+// The cone of directions toward a light seen from a point.
+struct LightCone {
+	vec3 axis;
+	float cos_max;
+	float distance; // to the centre; 0 for the sun
+};
+
+LightCone light_cone(Light light, vec3 position) {
+	if (light.data.x == LIGHT_SUN) {
+		return LightCone(light.position.xyz, min(cos(light.position.w), LIGHT_MAX_COS), 0.0);
+	}
+
+	vec3 to_light = light.position.xyz - position;
+	float distance = length(to_light);
+	float sin_max = clamp(light.position.w / max(distance, 1e-5), 0.0, 1.0);
+	return LightCone(to_light / max(distance, 1e-5), min(sqrt(1.0 - sin_max * sin_max), LIGHT_MAX_COS), distance);
+}
+
+// Godot's windowed falloff, max(1 − (d/r)⁴, 0)² · d^(−decay), at the distance to the centre.
+float light_attenuation(Light light, LightCone cone) {
+	if (light.data.x == LIGHT_SUN) {
+		return 1.0;
+	}
+
+	float window = cone.distance * light.falloff.y;
+	window *= window;
+	window = max(1.0 - window * window, 0.0);
+	return window * window * pow(max(cone.distance, 0.0001), -light.falloff.x);
+}
+
+// The direction of sample `random`, a point in [0, 1)², toward the light. A point light has the one direction.
+vec3 light_direction(Light light, LightCone cone, vec2 random) {
+	if (light.data.x == LIGHT_OMNI && light.position.w <= LIGHT_POINT_RADIUS) {
+		return cone.axis;
+	}
+	return cone_direction(cone.axis, cone.cos_max, random);
+}
+
+// Whether the shadow ray from `origin` along `direction` reaches the light: to the sphere's near side for an omni light.
+bool light_visible(Light light, LightCone cone, vec3 origin, vec3 direction) {
+	float reach = TRACE_FAR;
+	if (light.data.x == LIGHT_OMNI) {
+		float along = cone.distance * dot(cone.axis, direction);
+		float radius = light.position.w > LIGHT_POINT_RADIUS ? light.position.w : 0.0;
+		float aside = cone.distance * cone.distance - along * along;
+		reach = along - sqrt(max(radius * radius - aside, 0.0)) - LIGHT_SHADOW_GAP;
+	}
+	return !trace_occluded(origin, direction, 0.0, max(reach, 0.0));
+}
+
+// The mean of cos · visibility over `count` directions toward the light on a Fibonacci lattice. A grid of rings and
+// sectors would line its sector edges up with a shadow's edge through the cone's centre, and err on every ring at once.
+float light_visible_cosine(Light light, LightCone cone, vec3 origin, vec3 normal, uint count) {
+	const float GOLDEN_RATIO_FRACTION = 0.61803398875;
+	bool point = light.data.x == LIGHT_OMNI && light.position.w <= LIGHT_POINT_RADIUS;
+	uint directions = point ? 1u : count;
+	float sum = 0.0;
+	for (uint index = 0u; index < directions; index++) {
+		vec2 random = vec2((float(index) + 0.5) / float(directions), fract(float(index) * GOLDEN_RATIO_FRACTION));
+		vec3 direction = light_direction(light, cone, random);
+		float cosine = dot(normal, direction);
+		if (cosine > 0.0 && light_visible(light, cone, origin, direction)) {
+			sum += cosine;
+		}
+	}
+	return sum / float(directions);
+}
